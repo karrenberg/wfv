@@ -366,7 +366,7 @@ private:
 		// create a phi operation in first block of second path.
 		if (firstPathValI) {
 			// firstPathValue == trueValI
-			PHINode* phi = PHINode::Create(select->getType(), "", secondBlock->getFirstNonPHI());
+			PHINode* phi = PHINode::Create(select->getType(), 2U, "", secondBlock->getFirstNonPHI());
 			//firstPathValI->replaceAllUsesWith(phi); // before adding firstPathValue as incoming value ;)
 			//replaceDominatedUsesOfWith(firstPathValI, phi, phi);
 			replaceUsesOfWithBelow(firstPathValI, phi, phi);
@@ -379,7 +379,7 @@ private:
 
 		// Create phi operation in join block with the select and
 		// the original first-path-value as incoming values.
-		PHINode* phi2 = PHINode::Create(select->getType(), "", joinBlock->getFirstNonPHI());
+		PHINode* phi2 = PHINode::Create(select->getType(), 2U, "", joinBlock->getFirstNonPHI());
 		select->replaceAllUsesWith(phi2); // before adding select as incoming value ;)
 		phi2->addIncoming(select, secondPathEndBlock);
 		phi2->addIncoming(firstPathValue, firstPathEndBlock);

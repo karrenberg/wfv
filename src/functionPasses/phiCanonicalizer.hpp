@@ -428,7 +428,7 @@ private:
 		Value* valJ = phi->getIncomingValueForBlock(predJ);
 
 		//create new phi with incoming values from predecessors i and j
-		PHINode* newPhi = PHINode::Create(phi->getType(), "phi_c", joinBB);
+		PHINode* newPhi = PHINode::Create(phi->getType(), 2U, "phi_c", joinBB);
 		newPhi->addIncoming(valI, predI);
 		newPhi->addIncoming(valJ, predJ);
 

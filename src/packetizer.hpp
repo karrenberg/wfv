@@ -67,7 +67,7 @@ public:
 	inline bool addVaryingFunctionMapping(const std::string& scalarName, const int maskIndex, Function* nativeF);
 	inline bool addValueInfo(Value* value, const bool uniform, const bool consecutive, const bool aligned);
 	bool isPacketizable(const Function* f) const;
-	bool isPacketizableType(const Type* type) const;
+	bool isPacketizableType(Type* type) const;
 	virtual void print(raw_ostream& o, const Module *M) const;
 	virtual void getAnalysisUsage(AnalysisUsage& AU) const;
 	bool wfvSuccessful(const std::string& simdFunctionName, const Module& module) const;
@@ -172,7 +172,7 @@ private:
 	void transformCalls(Function* f);
 
 	bool verifyFunctionSignaturesMatch(const Function* f, const Function* f_SIMD);
-	bool verifyPacketizedType(const Type* scalarType, const Type* vecType);
+	bool verifyPacketizedType(Type* scalarType, Type* vecType);
 };
 
 char WholeFunctionVectorizer::ID = 0;

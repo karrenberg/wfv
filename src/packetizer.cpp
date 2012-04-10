@@ -686,9 +686,9 @@ bool WholeFunctionVectorizer::verifyFunctionSignaturesMatch(const Function* f, c
 	}
 
 	// check argument and return types
-	const Type* scalarReturnType = f->getReturnType();
-	const Type* foundPacketReturnType = f_SIMD->getReturnType();
-	//const Type* expectedPacketReturnType = scalarReturnType->isVoidTy() ? scalarReturnType : packetizeType(packetize4xType(scalarReturnType));
+	Type* scalarReturnType = f->getReturnType();
+	Type* foundPacketReturnType = f_SIMD->getReturnType();
+	//Type* expectedPacketReturnType = scalarReturnType->isVoidTy() ? scalarReturnType : packetizeType(packetize4xType(scalarReturnType));
 	if (!verifyPacketizedType(scalarReturnType, foundPacketReturnType)) {
 		errs() << "ERROR: return type does not match!\n";
 		errs() << "       scalar      : " << *scalarReturnType << "\n";
@@ -699,10 +699,10 @@ bool WholeFunctionVectorizer::verifyFunctionSignaturesMatch(const Function* f, c
 
 	for (Function::const_arg_iterator A=f->arg_begin(), extA=f_SIMD->arg_begin();
 			A!=f->arg_end() && extA!=f_SIMD->arg_end(); ++A, ++extA) {
-		const Type* scalarType = A->getType();
+		Type* scalarType = A->getType();
 		assert (!scalarType->isVoidTy() && "if this ever fires, modify creation of foundPacketType to handle void ;)");
-		const Type* foundPacketType = extA->getType();
-		//const Type* expectedPacketType = packetizeType(packetize4xType(A->getType()));
+		Type* foundPacketType = extA->getType();
+		//Type* expectedPacketType = packetizeType(packetize4xType(A->getType()));
 		if (!verifyPacketizedType(scalarType, foundPacketType)) {
 			errs() << "ERROR: argument type does not match: " << *A << "\n";
 			errs() << "       scalar      : " << *scalarType << "\n";
@@ -715,7 +715,7 @@ bool WholeFunctionVectorizer::verifyFunctionSignaturesMatch(const Function* f, c
 	return verified;
 }
 
-bool WholeFunctionVectorizer::verifyPacketizedType(const Type* scalarType, const Type* vecType) {
+bool WholeFunctionVectorizer::verifyPacketizedType(Type* scalarType, Type* vecType) {
 	// first perform tests for exact matching and exact packetization
 	if (scalarType == vecType) return true;
 	if (scalarType->isVoidTy() || vecType->isVoidTy()) return false; // if one of both types is void, types cannot match!
@@ -744,8 +744,8 @@ bool WholeFunctionVectorizer::verifyPacketizedType(const Type* scalarType, const
 		case Type::StructTyID:
 			{
 				if (!vecType->isStructTy()) return false;
-				const StructType* scalarSType = cast<StructType>(scalarType);
-				const StructType* vecSType = cast<StructType>(vecType);
+				StructType* scalarSType = cast<StructType>(scalarType);
+				StructType* vecSType = cast<StructType>(vecType);
 				if (scalarSType->getNumContainedTypes() != vecSType->getNumContainedTypes()) return false;
 				for (unsigned i=0; i<scalarSType->getNumContainedTypes(); ++i) {
 					const bool elemVerified = verifyPacketizedType(scalarSType->getElementType(i), vecSType->getElementType(i));
@@ -837,7 +837,7 @@ bool WholeFunctionVectorizer::isPacketizable(const Function* f) const {
 	} //BB
 	return packetizable;
 }
-bool WholeFunctionVectorizer::isPacketizableType(const Type* type) const {
+bool WholeFunctionVectorizer::isPacketizableType(Type* type) const {
 	//first check most common types
 	if (type->isFloatTy() ||
 			type->isVoidTy() ||
@@ -858,7 +858,7 @@ bool WholeFunctionVectorizer::isPacketizableType(const Type* type) const {
 		case Type::ArrayTyID: return isPacketizableType(cast<ArrayType>(type)->getElementType());
 		case Type::StructTyID:
 		{
-			const StructType* sType = cast<StructType>(type);
+			StructType* sType = cast<StructType>(type);
 			for (unsigned i=0; i<sType->getNumContainedTypes(); ++i) {
 				if (!isPacketizableType(sType->getElementType(i))) return false;
 			}
@@ -909,7 +909,7 @@ bool WholeFunctionVectorizer::transformConstants(Instruction* I) {
 		Value* OP = I->getOperand(i);
 		if (!isa<Constant>(OP)) continue;
 
-		const Type* opType = OP->getType();
+		Type* opType = OP->getType();
 
 		Constant* newC = NULL;
 

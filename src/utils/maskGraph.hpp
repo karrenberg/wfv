@@ -546,6 +546,7 @@ public:
 
 			PHINode* phi = PHINode::Create(
 					Type::getInt1Ty(getGlobalContext()),
+					2U,
 					"loop.mask.phi", pos);
 
 			// We mark the phi as UNIFORM before completion:
@@ -1823,6 +1824,7 @@ public:
 
 				PHINode* phi = PHINode::Create(
 						Type::getInt1Ty(getGlobalContext()),
+						2U,
 						"loop.exit.mask.phi",
 						loop->getHeader()->getFirstNonPHI());
 

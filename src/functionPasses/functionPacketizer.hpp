@@ -282,7 +282,7 @@ private:
 				MDNode* mtd = MDNode::get(getGlobalContext(), arg);
 				bc->setMetadata(Packetizer::WFV_META_ARG_CAST, mtd);
 
-				A->uncheckedReplaceAllUsesWith(bc);
+				Packetizer::uncheckedReplaceAllUsesWith(A, bc);
 				bc->replaceUsesOfWith(bc, A);
 
 				// Update splitting info of argument (does not
@@ -412,7 +412,7 @@ private:
 
 
 		// collect split values
-		// TODO: remove splitInfoMap stuff!
+		// TODO: remove splitInfoMap stuff (#16)!
 		SplitInfoMapType splitInfoMap;
 
 		for (AnalysisResults::iterator V=analysisResults->begin(),
@@ -532,7 +532,7 @@ private:
 			}
 
 			Value* cond = brInst->getCondition();
-			const Type* int32Ty = Type::getInt32Ty(getGlobalContext());
+			Type* int32Ty = Type::getInt32Ty(getGlobalContext());
 			if (cond->getType() == int32Ty) continue;
 
 			// add cond to set and collect use-paths
@@ -557,6 +557,8 @@ private:
 		// clean up
 		//--------------------------------------------------------------------------
 		{
+			// Insert bitcasts and modify the return instructions
+			// if the function returns a different vector type.
 			for (Function::iterator BB=f_SIMD->begin(), BBE=f_SIMD->end(); BB!=BBE; ++BB) {
 				TerminatorInst* term = BB->getTerminator();
 				if (!isa<ReturnInst>(term)) continue;
@@ -564,22 +566,16 @@ private:
 				assert (ret->getNumOperands() <= 1 && "returns with more than one operand not supported yet!");
 				Value* retVal = ret->getReturnValue();
 
-				const Type* type = f_SIMD->getReturnType();
+				Type* type = f_SIMD->getReturnType();
 				if (type == VectorType::get(Type::getInt64Ty(getGlobalContext()), 2)) {
-					BitCastInst* bc = new BitCastInst(retVal, VectorType::get(Type::getInt64Ty(getGlobalContext()), 2), "", ret);
-					ReturnInst* newRet = ReturnInst::Create(getGlobalContext(), bc, BB);
+					BitCastInst* bc = new BitCastInst(retVal, type, "", ret);
 					addValueInfo(bc, ret);
-					addValueInfo(newRet, ret);
-					removeFromInstructionInfo(ret);
-					ret->eraseFromParent();
+					ret->mutateType(type);
 				}
 				if (type == VectorType::get(Type::getDoubleTy(getGlobalContext()), 2)) {
-					BitCastInst* bc = new BitCastInst(retVal, VectorType::get(Type::getDoubleTy(getGlobalContext()), 2), "", ret);
-					ReturnInst* newRet = ReturnInst::Create(getGlobalContext(), bc, BB);
+					BitCastInst* bc = new BitCastInst(retVal, type, "", ret);
 					addValueInfo(bc, ret);
-					addValueInfo(newRet, ret);
-					removeFromInstructionInfo(ret);
-					ret->eraseFromParent();
+					ret->mutateType(type);
 				}
 			}
 		}
@@ -639,7 +635,7 @@ private:
 
 		DEBUG_PKT( outs() << "creating bitcast to equivalent packet type for value: " << *oldVal << "\n"; );
 
-		const Type* oldType = oldVal->getType();
+		Type* oldType = oldVal->getType();
 
 		if (!isPacketizedType(oldType)) {
 			DEBUG_PKT( outs() << "  is no packet type - ignored!\n"; );
@@ -653,7 +649,7 @@ private:
 			return NULL;
 		}
 
-		const Type* newType = createEquivalentPacketType(oldType);
+		Type* newType = createEquivalentPacketType(oldType);
 		if (!newType) {
 			errs() << "ERROR: Could not create suitable packet type for bitcasting of"
 					"value: " << *oldVal << "!\n";
@@ -665,8 +661,8 @@ private:
 		return bc;
 	}
 
-	const Type*
-	createEquivalentPacketType(const Type* oldType)
+	Type*
+	createEquivalentPacketType(Type* oldType)
 	{
 		assert (oldType);
 		assert (isPacketizedType(oldType));
@@ -682,7 +678,7 @@ private:
 
 			case Type::VectorTyID:
 			{
-				const VectorType* vType = cast<VectorType>(oldType);
+				VectorType* vType = cast<VectorType>(oldType);
 				if (vType == VectorType::get(Type::getInt64Ty(getGlobalContext()), 2) ||
 						vType == VectorType::get(Type::getInt16Ty(getGlobalContext()), 8) ||
 						vType == VectorType::get(Type::getInt8Ty(getGlobalContext()), 16))
@@ -699,32 +695,32 @@ private:
 
 			case Type::ArrayTyID:
 			{
-				const ArrayType* aType = cast<ArrayType>(oldType);
-				const Type* elemType = aType->getElementType();
+				ArrayType* aType = cast<ArrayType>(oldType);
+				Type* elemType = aType->getElementType();
 				if (!elemType) return NULL;
-				const Type* newElemType = createEquivalentPacketType(elemType);
+				Type* newElemType = createEquivalentPacketType(elemType);
 				return ArrayType::get(newElemType, aType->getNumElements());
 			}
 
 			case Type::StructTyID:
 			{
-				const StructType* sType = cast<StructType>(oldType);
+				StructType* sType = cast<StructType>(oldType);
 
-				std::vector<const Type*> elems;
+				std::vector<Type*> elems;
 				for (unsigned i=0; i<sType->getNumElements(); ++i) {
-					const Type* elemType = sType->getElementType(i);
+					Type* elemType = sType->getElementType(i);
 					if (!elemType) return NULL;
-					const Type* newElemType = createEquivalentPacketType(elemType);
+					Type* newElemType = createEquivalentPacketType(elemType);
 					elems.push_back(newElemType);
 				}
 				return StructType::get(getGlobalContext(), elems, sType->isPacked());
 			}
 			case Type::PointerTyID:
 			{
-				const PointerType* pType = cast<PointerType>(oldType);
-				const Type* elemType = pType->getElementType();
+				PointerType* pType = cast<PointerType>(oldType);
+				Type* elemType = pType->getElementType();
 				if (!elemType) return NULL;
-				const Type* newElemType = createEquivalentPacketType(elemType);
+				Type* newElemType = createEquivalentPacketType(elemType);
 				return PointerType::get(newElemType, pType->getAddressSpace());
 			}
 
@@ -737,7 +733,7 @@ private:
 	}
 
 
-	Instruction* createDummy(const Type* type, Value* replacedVal, Instruction* insertBefore) {
+	Instruction* createDummy(Type* type, Value* replacedVal, Instruction* insertBefore) {
 		Constant* c = Constant::getNullValue(type);
 		// we must not insert pointer selects ;)
 		Instruction* dummy = NULL;
@@ -750,7 +746,7 @@ private:
 		addValueInfo(dummy, replacedVal);
 		return dummy;
 	}
-	Instruction* createDummy(const Type* type, Value* replacedVal, BasicBlock* insertAtEnd) {
+	Instruction* createDummy(Type* type, Value* replacedVal, BasicBlock* insertAtEnd) {
 		Constant* c = Constant::getNullValue(type);
 		// we must not insert pointer selects ;)
 		Instruction* dummy = NULL;
@@ -770,7 +766,7 @@ private:
 		for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
 			cVec.push_back(const_int32);
 		}
-		return ConstantVector::get(info.vectorTy_intSIMD, cVec);
+		return ConstantVector::get(ArrayRef<Constant*>(cVec));
 	}
 
 	Constant* createPacketConstant(Constant* oldC) {
@@ -821,16 +817,16 @@ private:
 		switch (oldTypeID) {
 			case Type::FloatTyID :
 			{
-				const Type* simdType = packetizeSIMDType(oldC->getType());
+				Type* simdType = packetizeSIMDType(oldC->getType());
 				assert (isa<VectorType>(simdType));
-				c = ConstantVector::get(cast<VectorType>(simdType), vecvec);
+				c = ConstantVector::get(ArrayRef<Constant*>(vecvec));
 				break;
 			}
 			case Type::IntegerTyID :
 			{
-				const Type* simdType = packetizeSIMDType(oldC->getType());
+				Type* simdType = packetizeSIMDType(oldC->getType());
 				assert (isa<VectorType>(simdType));
-				c = ConstantVector::get(cast<VectorType>(simdType), vecvec);
+				c = ConstantVector::get(ArrayRef<Constant*>(vecvec));
 				break;
 			}
 			case Type::PointerTyID :
@@ -851,10 +847,10 @@ private:
 			case Type::ArrayTyID :
 			{
 				ConstantArray* oldArrC = cast<ConstantArray>(oldC);
-				const ArrayType* arrType = oldArrC->getType();
+				ArrayType* arrType = oldArrC->getType();
 
 				assert (packetizeSIMDType(arrType)->isArrayTy());
-				const ArrayType* newArrType = cast<ArrayType>(packetizeSIMDType(arrType));
+				ArrayType* newArrType = cast<ArrayType>(packetizeSIMDType(arrType));
 				assert (packetizeSIMDType(arrType->getElementType()) == newArrType->getElementType());
 				const unsigned numVals = newArrType->getNumElements();
 				// recursively create packet constants
@@ -865,7 +861,7 @@ private:
 					// if not inside map already, add info
 					if (vals[i] && !analysisResults->getValueInfo(vals[i])) addValueInfo(vals[i], oldC);
 				}
-				c = ConstantArray::get(newArrType, vals, numVals);
+				c = ConstantArray::get(newArrType, ArrayRef<Constant*>(vals, numVals));
 
 				delete [] vals;
 				break;
@@ -900,7 +896,7 @@ private:
 	 * -> no pointers to pointers allowed
 	 * TODO: Use Packetizer::packetizeSIMDType (equivalent impl in llvmTools.hpp, but requires supplying info and other namespace)
 	 **/
-	const Type* packetizeSIMDType(const Type* oldType) {
+	Type* packetizeSIMDType(Type* oldType) {
 		Type::TypeID oldTypeID = oldType->getTypeID();
 		switch (oldTypeID) {
 			//case Type::getVoidTy(getGlobalContext())ID : return Type::getVoidTy(getGlobalContext()); //not allowed
@@ -924,8 +920,8 @@ private:
 			//case Type::VectorTyID: return NULL;  //not allowed!
 			case Type::PointerTyID:
 			{
-				const PointerType* pType = cast<PointerType>(oldType);
-				//const Type* elType = pType->getElementType();
+				PointerType* pType = cast<PointerType>(oldType);
+				//Type* elType = pType->getElementType();
 				//if (elType->isPointerTy()) {
 					//throw std::logic_error("INTERNAL ERROR: packetization can not handle multiple indirection!");
 				//}
@@ -933,13 +929,13 @@ private:
 			}
 			case Type::ArrayTyID:
 			{
-				const ArrayType* aType = cast<ArrayType>(oldType);
+				ArrayType* aType = cast<ArrayType>(oldType);
 				return ArrayType::get(packetizeSIMDType(aType->getElementType()), aType->getNumElements());
 			}
 			case Type::StructTyID:
 			{
-				const StructType* sType = cast<StructType>(oldType);
-				std::vector<const Type*> newParams;
+				StructType* sType = cast<StructType>(oldType);
+				std::vector<Type*> newParams;
 				for (unsigned i=0; i<sType->getNumContainedTypes(); ++i) {
 					newParams.push_back(packetizeSIMDType(sType->getElementType(i)));
 				}
@@ -961,7 +957,7 @@ private:
 	 * -> no scalar datatypes allowed
 	 * -> no pointers to pointers allowed
 	 **/
-	const Type* packetizeSIMDWrapperType(const Type* oldType) {
+	Type* packetizeSIMDWrapperType(Type* oldType) {
 		if (info.totalSIMDIterations == 1) return oldType;
 		Type::TypeID oldTypeID = oldType->getTypeID();
 		switch (oldTypeID) {
@@ -975,13 +971,13 @@ private:
 			}
 			case Type::PointerTyID:
 			{
-				const PointerType* pType = cast<PointerType>(oldType);
-				const Type* elType = pType->getElementType();
+				PointerType* pType = cast<PointerType>(oldType);
+				Type* elType = pType->getElementType();
 				//if (elType->isPointerTy()) {
 					//throw std::logic_error("INTERNAL ERROR: packetization can not handle multiple indirection!");
 				//}
 				if (elType->isVectorTy()) {
-					const Type* newElType = elType == info.vectorTy_floatSIMD ? ArrayType::get(info.vectorTy_floatSIMD, info.totalSIMDIterations)
+					Type* newElType = elType == info.vectorTy_floatSIMD ? ArrayType::get(info.vectorTy_floatSIMD, info.totalSIMDIterations)
 						: elType == info.vectorTy_intSIMD ? ArrayType::get(info.vectorTy_intSIMD, info.totalSIMDIterations) : NULL;
 					assert (newElType && "bad vector type found (should never fire)!");
 					return PointerType::get(packetizeSIMDWrapperType(newElType), pType->getAddressSpace());
@@ -995,8 +991,8 @@ private:
 			}
 			case Type::StructTyID:
 			{
-				const StructType* sType = cast<StructType>(oldType);
-				std::vector<const Type*> newParams;
+				StructType* sType = cast<StructType>(oldType);
+				std::vector<Type*> newParams;
 				for (unsigned i=0; i<sType->getNumContainedTypes(); ++i) {
 					newParams.push_back(packetizeSIMDWrapperType(sType->getElementType(i)));
 				}
@@ -1013,7 +1009,7 @@ private:
 
 	// This function only performs a check if the given type is a valid
 	// packet type, applying the type rules (e.g. SoA layout)
-	bool isPacketizedType(const Type* type) const {
+	bool isPacketizedType(Type* type) const {
 		//first check most common types
 		if (type == info.vectorTy_floatSIMD || type == info.vectorTy_intSIMD) return true;
 
@@ -1030,7 +1026,7 @@ private:
 			case Type::ArrayTyID: return isPacketizedType(cast<ArrayType>(type)->getElementType());
 			case Type::StructTyID:
 			{
-				const StructType* sType = cast<StructType>(type);
+				StructType* sType = cast<StructType>(type);
 				for (unsigned i=0; i<sType->getNumContainedTypes(); ++i) {
 					if (!isPacketizedType(sType->getElementType(i))) return false;
 				}
@@ -1040,7 +1036,7 @@ private:
 		}
 	}
 
-	inline bool registerTypeSizeMatches(const Type* typeA, const Type* typeB) {
+	inline bool registerTypeSizeMatches(Type* typeA, Type* typeB) {
 		if (typeA == typeB) return true;
 
 		const uint64_t sizeA = info.targetData->getTypeSizeInBits(typeA);
@@ -1316,10 +1312,10 @@ private:
 
 		DEBUG_PKT( outs() << "      replicating value: " << *oldVal << "\n"; );
 
-		const Type* oldType = oldVal->getType();
+		Type* oldType = oldVal->getType();
 		assert (oldType != Type::getVoidTy(getGlobalContext()) && "must never call broadcastValue() on values of type void!");
 		assert (oldType != Type::getLabelTy(getGlobalContext()) && "must never call broadcastValue() on values of type label!");
-		const Type* newType = packetizeSIMDType(oldType);
+		Type* newType = packetizeSIMDType(oldType);
 
 		const bool isConsecutive = analysisResults->isConsecutive(oldVal);
 
@@ -1397,16 +1393,16 @@ private:
 			case Type::ArrayTyID:
 			{
 				// create new array of packet-type 'newType' and same size
-				const ArrayType* aType = cast<ArrayType>(oldType);
+				ArrayType* aType = cast<ArrayType>(oldType);
 
 				// broadcast each element of the array
 				Value* result = UndefValue::get(newType); // the new 'element'-array
 				for (unsigned i=0, ie=aType->getNumElements(); i<ie; ++i) {
-					Instruction* scalarElem = ExtractValueInst::Create(oldVal, i, "", insertBefore);
+					Instruction* scalarElem = ExtractValueInst::Create(oldVal, ArrayRef<unsigned>(i), "", insertBefore);
 					addValueInfo(scalarElem, false, true, false, false, false, false, false, false); // INDEX_SAME
 					// recurse in order to broadcast sub-element
 					Value* pktElem = broadcastValue(scalarElem, insertBefore);
-					result = InsertValueInst::Create(result, pktElem, i, "", insertBefore);
+					result = InsertValueInst::Create(result, pktElem, ArrayRef<unsigned>(i), "", insertBefore);
 					addFalseValueInfo(result); // TODO: really varying?
 				}
 				DEBUG_PKT( outs() << "    new array: " << *result << "\n"; );
@@ -1418,16 +1414,16 @@ private:
 			case Type::StructTyID:
 			{
 				// create new struct of packet-type 'newType'
-				const StructType* sType = cast<StructType>(oldType);
+				StructType* sType = cast<StructType>(oldType);
 
 				// broadcast each element of the struct
 				Value* result = UndefValue::get(newType);
 				for (unsigned i=0; i<sType->getNumElements(); ++i) {
-					Value* scalarElem = ExtractValueInst::Create(oldVal, i, "", insertBefore);
+					Value* scalarElem = ExtractValueInst::Create(oldVal, ArrayRef<unsigned>(i), "", insertBefore);
 					addValueInfo(scalarElem, false, true, false, false, false, false, false, false); // INDEX_SAME
 					// recurse in order to broadcast sub-element
 					Value* pktElem = broadcastValue(scalarElem, insertBefore);
-					result = InsertValueInst::Create(result, pktElem, i, "", insertBefore);
+					result = InsertValueInst::Create(result, pktElem, ArrayRef<unsigned>(i), "", insertBefore);
 					addFalseValueInfo(result); // TODO: really varying?
 				}
 				DEBUG_PKT( outs() << "    new struct: " << *result << "\n"; );
@@ -1483,7 +1479,7 @@ private:
 		//--------------------------------------------------------------------------
 		// create new argument-types
 		//--------------------------------------------------------------------------
-		std::vector<const Type*> argTypes;
+		std::vector<Type*> argTypes;
 		DEBUG_PKT( outs() << "  creating argument types...\n"; );
 		unsigned argIndex = 0;
 		for (Function::arg_iterator A = f_SIMD->arg_begin(); A != f_SIMD->arg_end(); ++A, ++argIndex) {
@@ -1503,7 +1499,7 @@ private:
 		//--------------------------------------------------------------------------
 		const bool hasReturnValue = f_SIMD->getReturnType() != Type::getVoidTy(getGlobalContext());
 		const bool hasPacketizedReturnValue = hasReturnValue && isPacketizedType(f_SIMD->getReturnType());
-		const Type* returnType = hasReturnValue ? packetizeSIMDWrapperType(f_SIMD->getReturnType()) : Type::getVoidTy(getGlobalContext());
+		Type* returnType = hasReturnValue ? packetizeSIMDWrapperType(f_SIMD->getReturnType()) : Type::getVoidTy(getGlobalContext());
 
 
 		//--------------------------------------------------------------------------
@@ -1575,8 +1571,7 @@ private:
 
 		//create phi-function for loop-variable (use dummy-forward-reference)
 		Argument* fwdref = new Argument(IntegerType::get(getGlobalContext(), 32));
-		PHINode* int32_i_0_reg2mem_0 = PHINode::Create(IntegerType::get(getGlobalContext(), 32), "i.0.reg2mem.0", loopBB);
-		int32_i_0_reg2mem_0->reserveOperandSpace(2);
+		PHINode* int32_i_0_reg2mem_0 = PHINode::Create(IntegerType::get(getGlobalContext(), 32), 2U, "i.0.reg2mem.0", loopBB);
 		int32_i_0_reg2mem_0->addIncoming(ConstantInt::getNullValue(Type::getInt32Ty(getGlobalContext())), entryBB);
 		int32_i_0_reg2mem_0->addIncoming(fwdref, loopBB);
 
@@ -1596,7 +1591,7 @@ private:
 
 		//if called function has return type void, do not attempt to assign a name
 		const std::string nameTmp = f_SIMD->getReturnType()->isVoidTy() ? "" : "f_SIMD_call";
-		CallInst* f_SIMD_call = CallInst::Create(f_SIMD, packed_params.begin(), packed_params.end(), nameTmp, loopBB);
+		CallInst* f_SIMD_call = CallInst::Create(f_SIMD, ArrayRef<Value*>(packed_params), nameTmp, loopBB);
 		f_SIMD_call->setCallingConv(CallingConv::C);
 		f_SIMD_call->setTailCall(true);
 		//f_SIMD_call->setAttributes(f_SIMD->getAttributes()); //?
@@ -1609,8 +1604,8 @@ private:
 			//std::vector<Value*> indices;
 			//indices.push_back(Constant::getNullValue(Type::getInt32Ty(getGlobalContext())));
 			//indices.push_back(int32_i_0_reg2mem_0);
-			GetElementPtrInst* resultArrayIndex = GetElementPtrInst::Create(result, int32_i_0_reg2mem_0, "", loopBB);
-			//GetElementPtrInst* resultIndex = GetElementPtrInst::Create(result, indices.begin(), indices.end(), "", loopBB);
+			GetElementPtrInst* resultArrayIndex = GetElementPtrInst::Create(result, ArrayRef<Value*>(int32_i_0_reg2mem_0), "", loopBB);
+			//GetElementPtrInst* resultIndex = GetElementPtrInst::Create(result, ArrayRef<Value*>(indices), "", loopBB);
 			//LoadInst* loadI = new LoadInst(resultIndex, "", false, info.alignmentSIMD, loopBB); //volatile=false
 			DEBUG_PKT( outs() << "    f_SIMD_call: " << *f_SIMD_call << "\n"; );
 			DEBUG_PKT( outs() << "    resultArrayIndex: " << *resultArrayIndex << "\n"; );
@@ -1650,17 +1645,17 @@ private:
 	}
 
 	// TODO: use uniform/varying info!?
-	Instruction* generateExtractForWrapper(Value* V, Value* index, const Type* targetType, std::string name, Instruction* allocPos, BasicBlock* insertAtEnd) {
+	Instruction* generateExtractForWrapper(Value* V, Value* index, Type* targetType, std::string name, Instruction* allocPos, BasicBlock* insertAtEnd) {
 		Instruction* insertBefore = createDummy(Type::getInt32Ty(getGlobalContext()), V, insertAtEnd);
 		Instruction* extractInst = generateExtractForWrapper(V, index, targetType, name, allocPos, insertBefore);
 		removeFromInstructionInfo(insertBefore);
 		insertBefore->eraseFromParent();
 		return extractInst;
 	}
-	Instruction* generateExtractForWrapper(Value* V, Value* index, const Type* targetType, std::string name, Instruction* allocPos, Instruction* insertBefore) {
+	Instruction* generateExtractForWrapper(Value* V, Value* index, Type* targetType, std::string name, Instruction* allocPos, Instruction* insertBefore) {
 		DEBUG_PKT( outs() << "  extracting argument of wrapper-call at index " << *index << " of value: " << *V << "\n"; );
 		DEBUG_PKT( outs() << "    target type: " << *targetType << "\n"; );
-		const Type* valType = V->getType();
+		Type* valType = V->getType();
 		const unsigned valTypeID = valType->getTypeID();
 
 		assert (valType == packetizeSIMDWrapperType(targetType) && "bad target type found for extraction of value (for wrapper-call to SIMD function)");
@@ -1686,7 +1681,7 @@ private:
 			}
 			case Type::PointerTyID :
 			{
-				const Type* containedType = valType->getContainedType(0);
+				Type* containedType = valType->getContainedType(0);
 
 				//pointer to struct of arrays of 'primitive' types
 				//e.g. { <4 x i32> *, <4 x float> *, <4 x float> * } *
@@ -1697,7 +1692,7 @@ private:
 					//if we have a pointer to a struct, step through the pointer,
 					//extract the ith element of each contained value
 					//and create a pointer to a struct of the 'lower' struct-type with them
-					const StructType* sType = cast<StructType>(valType->getContainedType(0));
+					StructType* sType = cast<StructType>(valType->getContainedType(0));
 					//allocate struct of 'lowered' type (= type of argument of called function)
 					//AllocaInst* structPtr = new AllocaInst(targetType, info.const_int32_1, info.alignmentSIMD, "", allocPos->getParent()->getParent()->getEntryBlock().getTerminator());//allocPos); //allocate struct for call
 					Instruction* structVal = generateAlignedAlloc(targetType, allocPos);
@@ -1712,7 +1707,7 @@ private:
 						indices.push_back(info.const_int32_0); //step through pointer //TODO: can pull that out of the loop
 						indices.push_back(ConstantInt::get(getGlobalContext(), APInt(32, i))); //ith struct-element
 						if (info.totalSIMDIterations > 1) indices.push_back(index); //loop-index for array-access
-						GetElementPtrInst* gepI = GetElementPtrInst::Create(V, indices.begin(), indices.end(), "", insertBefore);
+						GetElementPtrInst* gepI = GetElementPtrInst::Create(V, ArrayRef<Value*>(indices), "", insertBefore);
 						LoadInst* loadI = new LoadInst(gepI, "", false, info.alignmentSIMD, insertBefore); //volatile=false
 						//DEBUG_NPKT( outs() << "    GEP: " << *gepI << "\n"; );
 						DEBUG_PKT( outs() << "    load: " << *loadI << "\n"; );
@@ -1724,7 +1719,7 @@ private:
 						indices.clear();
 						indices.push_back(info.const_int32_0); //step through pointer
 						indices.push_back(ConstantInt::get(getGlobalContext(), APInt(32, i))); //index of struct-element
-						gepI = GetElementPtrInst::Create(structVal, indices.begin(), indices.end(), "", insertBefore);
+						gepI = GetElementPtrInst::Create(structVal, ArrayRef<Value*>(indices), "", insertBefore);
 						StoreInst* sti = new StoreInst(loadI, gepI, false, info.alignmentSIMD, insertBefore);
 						//DEBUG_NPKT( outs() << "    GEP: " << *gepI << "\n"; );
 						DEBUG_PKT( outs() << "    store: " << *sti << "\n"; );
@@ -1742,7 +1737,7 @@ private:
 						//e.g. <4 x float> *, scalar type = float
 						DEBUG_PKT( outs() << "    generating code for indexing argument of array of packet type...\n"; );
 						//if we have a standard array of values, simply take the indexed array-element
-						GetElementPtrInst* gepI = GetElementPtrInst::Create(V, index, "", insertBefore);
+						GetElementPtrInst* gepI = GetElementPtrInst::Create(V, ArrayRef<Value*>(index), "", insertBefore);
 						LoadInst* loadI = new LoadInst(gepI, name, false, info.alignmentSIMD, insertBefore); //volatile=false
 						DEBUG_PKT( outs() << "    extract instruction: " << *loadI << "\n"; );
 						addFalseValueInfo(gepI); // TODO: really varying?
@@ -1755,7 +1750,7 @@ private:
 						std::vector<Value*> indices;
 						indices.push_back(info.const_int32_0); //step through pointer
 						indices.push_back(index); //loop-index for array-access
-						GetElementPtrInst* gepI = GetElementPtrInst::Create(V, indices.begin(), indices.end(), "", insertBefore);
+						GetElementPtrInst* gepI = GetElementPtrInst::Create(V, ArrayRef<Value*>(indices), "", insertBefore);
 						DEBUG_PKT( outs() << "    extract instruction: " << *gepI << "\n"; );
 						addFalseValueInfo(gepI); // TODO: really varying?
 						return gepI;
@@ -1770,7 +1765,7 @@ private:
 							//e.g. [ info.totalSIMDIterations x <4 x i32> ] *, 'smaller' type = <4 x float>
 							DEBUG_PKT( outs() << "    generating code for indexing argument of pointer to array of primitive type...\n"; );
 							//if we have a standard array of values, simply take the indexed array-element
-							GetElementPtrInst* gepI = GetElementPtrInst::Create(V, index, "", insertBefore);
+							GetElementPtrInst* gepI = GetElementPtrInst::Create(V, ArrayRef<Value*>(index), "", insertBefore);
 							LoadInst* loadI = new LoadInst(gepI, name, false, info.alignmentSIMD, insertBefore); //volatile=false
 							DEBUG_PKT( outs() << "    extract instruction: " << *loadI << "\n"; );
 							addFalseValueInfo(gepI); // TODO: really varying?
@@ -1783,7 +1778,7 @@ private:
 							std::vector<Value*> indices;
 							indices.push_back(info.const_int32_0); //step through pointer
 							indices.push_back(index); //loop-index for array-access
-							GetElementPtrInst* gepI = GetElementPtrInst::Create(V, indices.begin(), indices.end(), "", insertBefore);
+							GetElementPtrInst* gepI = GetElementPtrInst::Create(V, ArrayRef<Value*>(indices), "", insertBefore);
 							//LoadInst* loadI = new LoadInst(gepI, name, false, info.alignmentSIMD, insertBefore); //volatile=false
 							//DEBUG_PKT( outs() << "    extract instruction: " << *loadI << "\n"; );
 							//return loadI;
@@ -1907,31 +1902,31 @@ private:
 	// EXAMPLE: { <4 x float>, [ <4 x float>, <4 x float> ], <4 x int> }
 	//          -> { float, [ float, float ], int }
 	// TODO: move to tools or something...
-	const Type* getScalarFromPacketizedType(const Type* type) {
+	Type* getScalarFromPacketizedType(Type* type) {
 		assert (isPacketizedType(type) && "can not extract element type from non-packetized type!");
 
 		switch(type->getTypeID()) {
 			case Type::VectorTyID:
 			{
-				const VectorType* vType = cast<VectorType>(type);
+				VectorType* vType = cast<VectorType>(type);
 				assert (type == packetizeSIMDType(vType->getScalarType()));
 				return vType->getScalarType();
 			}
 			case Type::ArrayTyID:
 			{
-				const ArrayType* aType = cast<ArrayType>(type);
+				ArrayType* aType = cast<ArrayType>(type);
 				// create array-type with newElementType
-				const Type* newElementType = getScalarFromPacketizedType(aType->getElementType());
+				Type* newElementType = getScalarFromPacketizedType(aType->getElementType());
 				assert (type == packetizeSIMDType(ArrayType::get(newElementType, aType->getNumElements())));
 				return ArrayType::get(newElementType, aType->getNumElements());
 			}
 			case Type::StructTyID:
 			{
-				const StructType* sType = cast<StructType>(type);
+				StructType* sType = cast<StructType>(type);
 				// create struct-type with extracted elements
-				std::vector<const Type*> params;
+				std::vector<Type*> params;
 				for (StructType::subtype_iterator ST=sType->subtype_begin(), STE=sType->subtype_end(); ST!=STE; ++ST) {
-					const Type* subType = getScalarFromPacketizedType(*ST);
+					Type* subType = getScalarFromPacketizedType(*ST);
 					assert (subType && "can not extract element type: struct field is not packetized!");
 					params.push_back(subType);
 				}
@@ -1940,8 +1935,8 @@ private:
 			}
 			case Type::PointerTyID:
 			{
-				const PointerType* pType = cast<PointerType>(type);
-				const Type* subType = getScalarFromPacketizedType(pType->getElementType());
+				PointerType* pType = cast<PointerType>(type);
+				Type* subType = getScalarFromPacketizedType(pType->getElementType());
 				assert (subType && "can not extract element type: struct field is not packetized!");
 				assert (type == packetizeSIMDType(PointerType::get(subType, pType->getAddressSpace())));
 				return PointerType::get(subType, pType->getAddressSpace());
@@ -1971,8 +1966,8 @@ private:
 	}
 	Instruction* generateHorizontalExtract(Value* V, Value* indexVal, const std::string& name, Instruction* allocPos, Instruction* insertBefore) {
 		DEBUG_PKT( outs() << "  extracting horizontal elements at index " << *indexVal << " of value: " << *V << "\n"; );
-		const Type* sourceType = V->getType();
-		const Type* elementType = getScalarFromPacketizedType(sourceType);
+		Type* sourceType = V->getType();
+		Type* elementType = getScalarFromPacketizedType(sourceType);
 		assert (sourceType && elementType);
 		DEBUG_PKT( outs() << "    source type: " << *sourceType << "\n"; );
 		DEBUG_PKT( outs() << "    element type: " << *elementType << "\n"; );
@@ -1991,15 +1986,15 @@ private:
 			case Type::ArrayTyID:
 			{
 				// create new array of type 'elementType' and same size
-				const ArrayType* aType = cast<ArrayType>(sourceType);
+				ArrayType* aType = cast<ArrayType>(sourceType);
 
 				//for each element of the array, get the ith subelement
 				Value* result = UndefValue::get(elementType); // the new 'element'-array
 				for (unsigned j=0, je=aType->getNumElements(); j<je; ++j) {
-					Instruction* pktElem = ExtractValueInst::Create(V, j, name, insertBefore);
+					Instruction* pktElem = ExtractValueInst::Create(V, ArrayRef<unsigned>(j), name, insertBefore);
 					// recurse in order to extract correct sub-element
 					Value* scalarElem = generateHorizontalExtract(pktElem, indexVal, name, allocPos, insertBefore);
-					result = InsertValueInst::Create(result, scalarElem, j, name, insertBefore);
+					result = InsertValueInst::Create(result, scalarElem, ArrayRef<unsigned>(j), name, insertBefore);
 					addFalseValueInfo(pktElem); // TODO: really varying?
 					addFalseValueInfo(result); // TODO: really varying?
 				}
@@ -2011,15 +2006,15 @@ private:
 			case Type::StructTyID:
 			{
 				// create new struct of "sub"-type 'elementType'
-				const StructType* sType = cast<StructType>(sourceType);
+				StructType* sType = cast<StructType>(sourceType);
 
 				//for each element of the struct, get the ith subelement
 				Value* result = UndefValue::get(elementType);
 				for (unsigned j=0; j<sType->getNumElements(); ++j) {
-					Value* pktElem = ExtractValueInst::Create(V, j, name, insertBefore);
+					Value* pktElem = ExtractValueInst::Create(V, ArrayRef<unsigned>(j), name, insertBefore);
 					// recurse in order to extract correct sub-element
 					Value* scalarElem = generateHorizontalExtract(pktElem, indexVal, name, allocPos, insertBefore);
-					result = InsertValueInst::Create(result, scalarElem, j, name, insertBefore);
+					result = InsertValueInst::Create(result, scalarElem, ArrayRef<unsigned>(j), name, insertBefore);
 					addFalseValueInfo(pktElem); // TODO: really varying?
 					addFalseValueInfo(result); // TODO: really varying?
 				}
@@ -2036,7 +2031,7 @@ private:
 				// extract from each element of that value the ith sub-element (=recurse),
 				// store the extracted value into the newly allocated object
 				// and finally return the new pointer (the alloca)
-				const PointerType* pType = cast<PointerType>(pType);
+				PointerType* pType = cast<PointerType>(pType);
 				LoadInst* loadedVal = new LoadInst(V, name, false, info.alignmentSIMD, insertBefore);
 				Value* newVal = generateHorizontalExtract(loadedVal, indexVal, name, allocPos, insertBefore);
 
@@ -2066,13 +2061,13 @@ private:
 	// element of the structure).
 	// NOTE: targetType is allowed to be scalar. In this case, it is
 	//       assumed that splitVals only holds one element which is uniform.
-	Instruction* generateHorizontalMerge(Value** splitVals, const Type* targetType, const std::string& name, Instruction* insertBefore) {
+	Instruction* generateHorizontalMerge(Value** splitVals, Type* targetType, const std::string& name, Instruction* insertBefore) {
 		assert (targetType);
 		DEBUG_PKT( outs() << "  merging values...\n"; );
 		assert (!targetType->isPrimitiveType() && !targetType->isIntegerTy() && "merging into scalar value does not make sense!");
 		//assert (targetType->getNumContainedTypes() >= index && "type of target value does not have "+index+" elements!");
-		//const Type* targetType = targetType->getContainedType(index);
-		const Type* elementType = splitVals[0]->getType();
+		//Type* targetType = targetType->getContainedType(index);
+		Type* elementType = splitVals[0]->getType();
 		DEBUG_PKT( outs() << "    target type: " << *targetType << "\n"; );
 		DEBUG_PKT( outs() << "    element type: " << *elementType << "\n"; );
 		assert ((targetType == elementType || targetType == packetizeSIMDType(elementType)) && "element target type has to be packetized element type or uniform!");
@@ -2114,7 +2109,7 @@ private:
 			{
 				// loop over elements of array and call merge on
 				// 'info.simdWidth' values of split input arrays
-				const ArrayType* aType = cast<ArrayType>(targetType);
+				ArrayType* aType = cast<ArrayType>(targetType);
 				assert (elementType->isArrayTy() && "elements have to be arrays!");
 				//assert (elemType->isArrayTy()); //TODO: activate
 
@@ -2122,13 +2117,13 @@ private:
 					Value** values = new Value*[info.simdWidth]();
 					// extract jth value from each of the input arrays
 					for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
-						values[i] = ExtractValueInst::Create(splitVals[i], j, "", insertBefore);
+						values[i] = ExtractValueInst::Create(splitVals[i], ArrayRef<unsigned>(j), "", insertBefore);
 						addFalseValueInfo(values[i]); // TODO: really varying?
 					}
 					// merge the extracted values
 					Instruction* mergedArrayElem = generateHorizontalMerge(values, aType->getElementType(), "", insertBefore);
 					// insert the merged element into the new array
-					result = InsertValueInst::Create(result, mergedArrayElem, j, "", insertBefore);
+					result = InsertValueInst::Create(result, mergedArrayElem, ArrayRef<unsigned>(j), "", insertBefore);
 					addFalseValueInfo(result); // TODO: really varying?
 					delete [] values;
 				}
@@ -2138,7 +2133,7 @@ private:
 			{
 				// loop over elements of struct and call merge on
 				// 'info.simdWidth' values of split input structs
-				const StructType* sType = cast<StructType>(targetType);
+				StructType* sType = cast<StructType>(targetType);
 				assert (elementType->isStructTy() && "elements have to be structs!");
 				//assert (elemType->isStructTy()); //TODO: activate
 
@@ -2146,13 +2141,13 @@ private:
 					Value** values = new Value*[info.simdWidth]();
 					// extract jth value from each of the input structs
 					for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
-						values[i] = ExtractValueInst::Create(splitVals[i], j, "", insertBefore);
+						values[i] = ExtractValueInst::Create(splitVals[i], ArrayRef<unsigned>(j), "", insertBefore);
 						addFalseValueInfo(values[i]); // TODO: really varying?
 					}
 					// merge the extracted values
 					Instruction* mergedStructElem = generateHorizontalMerge(values, sType->getElementType(j), "", insertBefore);
 					// insert the merged element into the new struct
-					result = InsertValueInst::Create(result, mergedStructElem, j, "", insertBefore);
+					result = InsertValueInst::Create(result, mergedStructElem, ArrayRef<unsigned>(j), "", insertBefore);
 					addFalseValueInfo(result); // TODO: really varying?
 					delete [] values;
 				}
@@ -2161,7 +2156,7 @@ private:
 			case Type::PointerTyID:
 			{
 
-				const PointerType* pType = cast<PointerType>(targetType);
+				PointerType* pType = cast<PointerType>(targetType);
 				assert (elementType->isPointerTy() && "elements have to be pointers!");
 				//assert (elemType->isPointerTy()); //TODO: activate
 
@@ -2210,7 +2205,7 @@ private:
 	//       layout, meaning that e.g. all low-level elements of a compound
 	//       value's first member are layed out sequentially before those
 	//       of the second member and so on.
-	Instruction* generateMerge(Value** splitVals, const Type* targetType, const std::string& name, Instruction* insertBefore) {
+	Instruction* generateMerge(Value** splitVals, Type* targetType, const std::string& name, Instruction* insertBefore) {
 		assert (false && "not implemented!");
 		throw std::logic_error("INTERNAL ERROR: NOT IMPLEMENTED!");
 	}
@@ -2227,7 +2222,7 @@ private:
 
 		for (std::vector<Value*>::iterator A=oldCallArgs.begin(); A!=oldCallArgs.end(); ++A, ++simdOp) {
 			Value* argVal = *A; //the value where we have to store back
-			const Type* argType = argVal->getType();
+			Type* argType = argVal->getType();
 			if (!argType->isPointerTy()) continue;
 			if (isa<Constant>(argVal)) continue;
 			DEBUG_PKT( outs() << "  argument has to be stored back: " << *argVal << "\n"; );
@@ -2235,7 +2230,7 @@ private:
 			Value* simdOpVal = cast<Value>(simdOp);
 
 			assert (simdOpVal->getType()->isPointerTy() && "supplied value to f_SIMD has to be a pointer!");
-			const Type* contType = argType->getContainedType(0);
+			Type* contType = argType->getContainedType(0);
 			if (!isPacketizedType(contType)) continue; //do not need to store back non-packetized arguments!
 
 			DEBUG_PKT( outs() << "    corresponding value: " << *simdOpVal << "\n"; );
@@ -2249,7 +2244,7 @@ private:
 					std::vector<Value*> indices;
 					indices.push_back(info.const_int32_0); //step through pointer
 					indices.push_back(index); //index of simd iteration
-					GetElementPtrInst* argArrayIndex = GetElementPtrInst::Create(argVal, indices.begin(), indices.end(), "", insertBefore);
+					GetElementPtrInst* argArrayIndex = GetElementPtrInst::Create(argVal, ArrayRef<Value*>(indices), "", insertBefore);
 					//get value what to store out of pointer which was supplied to f_SIMD
 					LoadInst* packetVal = new LoadInst(simdOpVal, "", false, info.alignmentSIMD, insertBefore);
 					addFalseValueInfo(argArrayIndex); // TODO: really varying?
@@ -2269,7 +2264,7 @@ private:
 				}
 				case Type::StructTyID :
 				{
-					const StructType* sType = cast<StructType>(contType);
+					StructType* sType = cast<StructType>(contType);
 					//store back all values of the struct
 					for (unsigned i=0; i<sType->getNumElements(); ++i) {
 						//get index where to store
@@ -2277,7 +2272,7 @@ private:
 						indices.push_back(info.const_int32_0); //step through pointer
 						indices.push_back(ConstantInt::get(getGlobalContext(), APInt(32, i))); //index of struct element
 						indices.push_back(index); //index of simd iteration
-						GetElementPtrInst* argArrayIndex = GetElementPtrInst::Create(argVal, indices.begin(), indices.end(), "", insertBefore);
+						GetElementPtrInst* argArrayIndex = GetElementPtrInst::Create(argVal, ArrayRef<Value*>(indices), "", insertBefore);
 						DEBUG_PKT( outs() << "    argArrayIndex: " << *argArrayIndex << "\n"; );
 						addFalseValueInfo(argArrayIndex); // TODO: really varying?
 						//get struct which was supplied to f_SIMD out of pointer
@@ -2287,7 +2282,7 @@ private:
 						indices.clear();
 						indices.push_back(info.const_int32_0); //step through pointer
 						indices.push_back(ConstantInt::get(getGlobalContext(), APInt(32, i))); //index of simd iteration
-						GetElementPtrInst* storeStructIndex = GetElementPtrInst::Create(simdOpVal, indices.begin(), indices.end(), "", insertBefore);
+						GetElementPtrInst* storeStructIndex = GetElementPtrInst::Create(simdOpVal, ArrayRef<Value*>(indices), "", insertBefore);
 						DEBUG_PKT( outs() << "    storeStructIndex: " << *storeStructIndex << "\n"; );
 						addFalseValueInfo(storeStructIndex); // TODO: really varying?
 						//load value of this index (= value to store back to wrapper-arg)
@@ -2318,13 +2313,13 @@ private:
 		Function* f_arr = insertAtEnd->getParent(); //calling function (is guaranteed to be the wrapper)
 		Function::arg_iterator wrapperArg = f_arr->arg_begin(); //corresponding argument of wrapper
 		for (Function::arg_iterator A=f_SIMD->arg_begin(); A!=f_SIMD->arg_end(); ++A, ++wrapperArg, ++simdOp) {
-			const Type* argType = A->getType();
+			Type* argType = A->getType();
 			if (!argType->isPointerTy()) continue;
 			DEBUG_PKT( outs() << "  argument has to be stored back: " << *A << "\n"; );
 			Value* simdOpVal = cast<Value>(simdOp);
 
 			assert (simdOpVal->getType()->isPointerTy() && "supplied value to f_SIMD has to be a pointer!");
-			const Type* contType = argType->getContainedType(0);
+			Type* contType = argType->getContainedType(0);
 			if (!isPacketizedType(contType)) continue; //do not need to store back non-packetized arguments!
 
 			DEBUG_PKT( outs() << "    corresponding value: " << *simdOpVal << "\n"; );
@@ -2338,7 +2333,7 @@ private:
 					std::vector<Value*> indices;
 					indices.push_back(info.const_int32_0); //step through pointer
 					indices.push_back(index); //index of simd iteration
-					GetElementPtrInst* argArrayIndex = GetElementPtrInst::Create(wrapperArg, indices.begin(), indices.end(), "", insertAtEnd);
+					GetElementPtrInst* argArrayIndex = GetElementPtrInst::Create(wrapperArg, ArrayRef<Value*>(indices), "", insertAtEnd);
 					//get value what to store out of pointer which was supplied to f_SIMD
 					LoadInst* packetVal = new LoadInst(simdOpVal, "", false, info.alignmentSIMD, insertAtEnd);
 					addFalseValueInfo(argArrayIndex); // TODO: really varying?
@@ -2357,7 +2352,7 @@ private:
 				}
 				case Type::StructTyID :
 				{
-					const StructType* sType = cast<StructType>(contType);
+					StructType* sType = cast<StructType>(contType);
 					//store back all values of the struct
 					for (unsigned i=0; i<sType->getNumElements(); ++i) {
 						//get index where to store
@@ -2365,7 +2360,7 @@ private:
 						indices.push_back(info.const_int32_0); //step through pointer
 						indices.push_back(ConstantInt::get(getGlobalContext(), APInt(32, i))); //index of struct element
 						indices.push_back(index); //index of simd iteration
-						GetElementPtrInst* argArrayIndex = GetElementPtrInst::Create(wrapperArg, indices.begin(), indices.end(), "", insertAtEnd);
+						GetElementPtrInst* argArrayIndex = GetElementPtrInst::Create(wrapperArg, ArrayRef<Value*>(indices), "", insertAtEnd);
 						DEBUG_PKT( outs() << "    argArrayIndex: " << *argArrayIndex << "\n"; );
 						addFalseValueInfo(argArrayIndex); // TODO: really varying?
 						//get struct which was supplied to f_SIMD out of pointer
@@ -2375,7 +2370,7 @@ private:
 						indices.clear();
 						indices.push_back(info.const_int32_0); //step through pointer
 						indices.push_back(ConstantInt::get(getGlobalContext(), APInt(32, i))); //index of simd iteration
-						GetElementPtrInst* storeStructIndex = GetElementPtrInst::Create(simdOpVal, indices.begin(), indices.end(), "", insertAtEnd);
+						GetElementPtrInst* storeStructIndex = GetElementPtrInst::Create(simdOpVal, ArrayRef<Value*>(indices), "", insertAtEnd);
 						DEBUG_PKT( outs() << "    storeStructIndex: " << *storeStructIndex << "\n"; );
 						addFalseValueInfo(storeStructIndex); // TODO: really varying?
 						//load value of this index (= value to store back to wrapper-arg)
@@ -2397,7 +2392,7 @@ private:
 		}
 	}
 
-	Instruction* generateAlignedAlloc(const Type* targetType, Instruction* insertBefore) {
+	Instruction* generateAlignedAlloc(Type* targetType, Instruction* insertBefore) {
 		//always generate allocs in entry block of function
 		insertBefore = insertBefore->getParent()->getParent()->getEntryBlock().getTerminator();
 
@@ -2426,10 +2421,11 @@ private:
 	// These cases handle everything on their own.
 	bool packetizeInstruction(Instruction* oldI, SplitInfoMapType& splitInfoMap) {
 
+		DEBUG_PKT( outs() << "\npacketizing instruction: "
+				<< *oldI << " (type: " << *oldI->getType() << ")\n"; );
+
 		assert (!isPacketizedType(oldI->getType()) &&
 			"must not request packetization of already packetized instruction!");
-
-		DEBUG_PKT( outs() << "\npacketizing instruction: " << *oldI << "\n"; );
 
 		// The instruction is not allowed to be marked for full splitting or
 		// replication (in these cases the scalar value must not be altered).
@@ -2493,7 +2489,7 @@ private:
 		// NOTE: Load/store are responsible for creating their own dummies.
 		// NOTE: The dummy-vector is also used by the customly handled instructions.
 		std::vector<std::pair<Instruction*, Value*> > dummies;
-		const Type* oldType = oldI->getType();
+		Type* oldType = oldI->getType();
 
 		// Replace operands by vector dummies if not of vector type already due
 		// to finished vectorization.
@@ -2510,7 +2506,7 @@ private:
 				Instruction* dummyI = createDummy(packetizeSIMDType(opV->getType()), opV, oldI);
 				dummies.push_back(std::make_pair(dummyI, opV));
 
-				opV->uncheckedReplaceAllUsesWith(dummyI);
+				Packetizer::uncheckedReplaceAllUsesWith(opV, dummyI);
 			}
 		}
 
@@ -2627,7 +2623,7 @@ private:
 				addValueInfo(bcInst1, oldI);
 				addValueInfo(bcInst2, oldI);
 				addValueInfo(andInst, oldI);
-				const Type* newType = packetizeSIMDType(oldType);
+				Type* newType = packetizeSIMDType(oldType);
 				if (newType == info.vectorTy_floatSIMD) {
 					newI = new BitCastInst(andInst, info.vectorTy_floatSIMD, "", oldI);
 					addValueInfo(newI, oldI);
@@ -2643,7 +2639,7 @@ private:
 				addValueInfo(bcInst1, oldI);
 				addValueInfo(bcInst2, oldI);
 				addValueInfo(orInst, oldI);
-				const Type* newType = packetizeSIMDType(oldType);
+				Type* newType = packetizeSIMDType(oldType);
 				if (newType == info.vectorTy_floatSIMD) {
 					newI = new BitCastInst(orInst, info.vectorTy_floatSIMD, "", oldI);
 					addValueInfo(newI, oldI);
@@ -2659,7 +2655,7 @@ private:
 				addValueInfo(bcInst1, oldI);
 				addValueInfo(bcInst2, oldI);
 				addValueInfo(xorInst, oldI);
-				const Type* newType = packetizeSIMDType(oldType);
+				Type* newType = packetizeSIMDType(oldType);
 				if (newType == info.vectorTy_floatSIMD) {
 					newI = new BitCastInst(xorInst, info.vectorTy_floatSIMD, "", oldI);
 					addValueInfo(newI, oldI);
@@ -2673,7 +2669,7 @@ private:
 			{
 				AllocaInst* oldAlloca = cast<AllocaInst>(oldI);
 				// TODO: does simply taking the contained type work in all cases?
-				const Type* newType = packetizeSIMDType(oldType);
+				Type* newType = packetizeSIMDType(oldType);
 				newI = new AllocaInst(newType->getContainedType(0), oldAlloca->getArraySize(), info.alignmentSIMD, name, oldI);
 				addValueInfo(newI, oldI);
 				break;
@@ -2710,7 +2706,7 @@ private:
 				// If the target type still fits into a SIMD register after packetization,
 				// go ahead. Otherwise, ZExt to largest possible type and issue warning.
 				if (oldType->getPrimitiveSizeInBits() <= 32U) {
-					const Type* newType = packetizeSIMDType(oldType);
+					Type* newType = packetizeSIMDType(oldType);
 					if (isa<TruncInst>(oldI))
 						newI = new TruncInst(oldI->getOperand(0), newType, name, oldI);
 					else if (isa<SExtInst>(oldI))
@@ -2742,7 +2738,7 @@ private:
 							<< " might lose precision!\n";
 				}
 
-				const Type* newType = oldType->isFloatTy() ?
+				Type* newType = oldType->isFloatTy() ?
 					info.vectorTy_floatSIMD : info.vectorTy_intSIMD;
 
 				// We replace the sext/fpext/etc. by its operand, so we have to
@@ -2772,49 +2768,49 @@ private:
 			}
 			case Instruction::FPToUI:
 			{
-				const Type* newType = packetizeSIMDType(oldType);
+				Type* newType = packetizeSIMDType(oldType);
 			 	newI = new FPToUIInst(oldI->getOperand(0), newType, name, oldI);
 				addValueInfo(newI, oldI);
 				break;
 			}
 			case Instruction::FPToSI:
 			{
-				const Type* newType = packetizeSIMDType(oldType);
+				Type* newType = packetizeSIMDType(oldType);
 			 	newI = new FPToSIInst(oldI->getOperand(0), newType, name, oldI);
 				addValueInfo(newI, oldI);
 				break;
 			}
 			case Instruction::UIToFP:
 			{
-				const Type* newType = packetizeSIMDType(oldType);
+				Type* newType = packetizeSIMDType(oldType);
 			 	newI = new UIToFPInst(oldI->getOperand(0), newType, name, oldI);
 				addValueInfo(newI, oldI);
 				break;
 			}
 			case Instruction::SIToFP:
 			{
-				const Type* newType = packetizeSIMDType(oldType);
+				Type* newType = packetizeSIMDType(oldType);
 			 	newI = new SIToFPInst(oldI->getOperand(0), newType, name, oldI);
 				addValueInfo(newI, oldI);
 				break;
 			}
 			case Instruction::IntToPtr:
 			{
-				const Type* newType = packetizeSIMDType(oldType);
+				Type* newType = packetizeSIMDType(oldType);
 			 	newI = new IntToPtrInst(oldI->getOperand(0), newType, name, oldI);
 				addValueInfo(newI, oldI);
 				break;
 			}
 			case Instruction::PtrToInt:
 			{
-				const Type* newType = packetizeSIMDType(oldType);
+				Type* newType = packetizeSIMDType(oldType);
 			 	newI = new PtrToIntInst(oldI->getOperand(0), newType, name, oldI);
 				addValueInfo(newI, oldI);
 				break;
 			}
 			case Instruction::BitCast:
 			{
-				const Type* newType = packetizeSIMDType(oldType);
+				Type* newType = packetizeSIMDType(oldType);
 			 	newI = new BitCastInst(oldI->getOperand(0), newType, name, oldI);
 				addValueInfo(newI, oldI);
 				break;
@@ -2861,7 +2857,7 @@ private:
 				newI = fcmp4;
 #else
 				//cast back to packetized old type
-				const Type* newType = packetizeSIMDType(oldType);
+				Type* newType = packetizeSIMDType(oldType);
 				newI = new BitCastInst(fcmp4, newType, "icmp_res", oldI);
 				addValueInfo(newI, oldI);
 #endif
@@ -2874,8 +2870,8 @@ private:
 #ifndef PACKETIZER_USE_SCALAR_MASKS
 				//cast back to packetized old type
 				// TODO: activate this again when we got rid of the SSE intrinsics. #10
-				//const Type* newType = packetizeSIMDType(oldType);
-				const Type* newType = info.vectorTy_floatSIMD;
+				//Type* newType = packetizeSIMDType(oldType);
+				Type* newType = info.vectorTy_floatSIMD;
 				newI = new BitCastInst(newI, newType, "icmp_res", oldI);
 				addValueInfo(newI, oldI);
 #endif
@@ -2886,7 +2882,7 @@ private:
 			{
 				PHINode* oldPhi = cast<PHINode>(oldI);
 
-				const Type* newType = packetizeSIMDType(oldType);
+				Type* newType = packetizeSIMDType(oldType);
 				if (newType != info.vectorTy_floatSIMD &&
 						newType != info.vectorTy_intSIMD &&
 						(isa<PointerType>(newType) && newType->getContainedType(0)->isPrimitiveType() && newType != info.getPointerVectorType(cast<PointerType>(newType)))
@@ -2905,7 +2901,7 @@ private:
 					if (isPacketizedType(incV->getType())) continue;
 
 					// use type of operand for dummy to be able to create correct bitcasts after creation of new phi
-					const Type* newIncVType = packetizeSIMDType(incV->getType());
+					Type* newIncVType = packetizeSIMDType(incV->getType());
 
 					// Replace all incoming values that are not of correct type by dummies.
 					// Store the dummy-instruction pairs to be able to undo this after creation of new phi.
@@ -2913,7 +2909,7 @@ private:
 					if (isa<Instruction>(incV)) {
 						Instruction* incI = cast<Instruction>(incV);
 						Instruction* dummyV = createDummy(newIncVType, incI, incI);
-						incI->uncheckedReplaceAllUsesWith(dummyV);
+						Packetizer::uncheckedReplaceAllUsesWith(incI, dummyV);
 						replacedValues.push_back(std::make_pair(dummyV, incI));
 					} else if (isa<UndefValue>(incV)) {
 						oldPhi->replaceUsesOfWith(incV, UndefValue::get(newIncVType));
@@ -2925,7 +2921,7 @@ private:
 				}
 
 				//now create new phi
-				PHINode* newPhi = PHINode::Create(newType, oldPhi->getNameStr(), oldPhi);
+				PHINode* newPhi = PHINode::Create(newType, oldPhi->getNumIncomingValues(), oldPhi->getNameStr(), oldPhi);
 				addValueInfo(newPhi, oldI);
 
 				for (unsigned i=0; i<oldPhi->getNumIncomingValues(); ++i) {
@@ -2950,7 +2946,7 @@ private:
 				for (unsigned i=0; i<replacedValues.size(); ++i) {
 					std::pair<Instruction*, Value*> viPair = replacedValues[i];
 					removeFromInstructionInfo(viPair.first);
-					viPair.first->uncheckedReplaceAllUsesWith(viPair.second);
+					Packetizer::uncheckedReplaceAllUsesWith(viPair.first, viPair.second);
 					viPair.first->eraseFromParent();
 				}
 
@@ -3002,14 +2998,14 @@ private:
 			case Instruction::ExtractValue:
 			{
 				ExtractValueInst* ex = cast<ExtractValueInst>(oldI);
-				newI = ExtractValueInst::Create(ex->getAggregateOperand(), ex->idx_begin(), ex->idx_end(), name, oldI);
+				newI = ExtractValueInst::Create(ex->getAggregateOperand(), ArrayRef<unsigned>(ex->idx_begin(), ex->idx_end()), name, oldI);
 				addValueInfo(newI, oldI);
 				break;
 			}
 			case Instruction::InsertValue:
 			{
 				InsertValueInst* in = cast<InsertValueInst>(oldI);
-				newI = InsertValueInst::Create(in->getAggregateOperand(), in->getInsertedValueOperand(), in->idx_begin(), in->idx_end(), name, oldI);
+				newI = InsertValueInst::Create(in->getAggregateOperand(), in->getInsertedValueOperand(), ArrayRef<unsigned>(in->idx_begin(), in->idx_end()), name, oldI);
 				addValueInfo(newI, oldI);
 				break;
 			}
@@ -3024,7 +3020,7 @@ private:
 		// If we inserted any dummies, be sure to remove them again.
 		for (unsigned i=0; i<dummies.size(); ++i) {
 			removeFromInstructionInfo(dummies[i].first);
-			dummies[i].first->uncheckedReplaceAllUsesWith(dummies[i].second);
+			Packetizer::uncheckedReplaceAllUsesWith(dummies[i].first, dummies[i].second);
 			dummies[i].first->eraseFromParent();
 		}
 
@@ -3076,7 +3072,7 @@ private:
 
 		// Remove old instruction and replace its uses.
 		removeFromInstructionInfo(oldI);
-		oldI->uncheckedReplaceAllUsesWith(newI);
+		Packetizer::uncheckedReplaceAllUsesWith(oldI, newI);
 		oldI->eraseFromParent();
 
 		return true;
@@ -3399,7 +3395,7 @@ private:
 		pointer = createPointerCast(pointer, oldStore);
 
 		// create vectorized dummy-value
-		const Type* oldValueType = value->getType();
+		Type* oldValueType = value->getType();
 		Instruction* dummy = isPacketizedType(oldValueType) ? NULL :
 			createDummy(packetizeSIMDType(oldValueType), value, oldStore);
 
@@ -3412,7 +3408,7 @@ private:
 
 		if (dummy) {
 			removeFromInstructionInfo(dummy);
-			dummy->uncheckedReplaceAllUsesWith(value);
+			Packetizer::uncheckedReplaceAllUsesWith(dummy, value);
 			dummy->eraseFromParent();
 		}
 
@@ -3437,12 +3433,12 @@ private:
 
 		// create vectorized dummy-pointer
 		Value* pointer = oldGEP->getPointerOperand();
-		const Type* oldPointerType = pointer->getType();
+		Type* oldPointerType = pointer->getType();
 		const bool requiresPacketPointer =
 			!analysisResults->isUniform(pointer);
 		const bool pointerIsPacketized = isPacketizedType(oldPointerType);
 		assert (!pointerIsPacketized || requiresPacketPointer);
-		const Type* vecPointerType = pointerIsPacketized ?
+		Type* vecPointerType = pointerIsPacketized ?
 			oldPointerType : packetizeSIMDType(oldPointerType);
 
 		Instruction* dummy = requiresPacketPointer ?
@@ -3461,8 +3457,7 @@ private:
 		// Create new GEP either with vectorized or with scalar pointer
 		// depending on vectorization analysis.
 		Instruction* newGEP = GetElementPtrInst::Create(dummy ? dummy : pointer,
-														indices.begin(),
-														indices.end(),
+														ArrayRef<Value*>(indices),
 														"",
 														oldGEP);
 		addValueInfo(newGEP, oldGEP);
@@ -3494,7 +3489,7 @@ private:
 		Value* condition = oldSelect->getCondition();
 		Value* trueValue = oldSelect->getTrueValue();
 		Value* falseValue = oldSelect->getFalseValue();
-		const Type* newType = packetizeSIMDType(oldSelect->getType());
+		Type* newType = packetizeSIMDType(oldSelect->getType());
 
 		// values to be split should be caught before calling this function
 		assert (!analysisResults->requiresSplitFull(oldSelect));
@@ -3572,7 +3567,7 @@ private:
 			addValueInfo(sel, oldSelect);
 			for (unsigned i=0; i<3; ++i) {
 				if (dummies[i]) {
-					dummies[i]->uncheckedReplaceAllUsesWith(origs[i]);
+					Packetizer::uncheckedReplaceAllUsesWith(dummies[i], origs[i]);
 					removeFromInstructionInfo(dummies[i]);
 					dummies[i]->eraseFromParent();
 				}
@@ -3614,7 +3609,7 @@ private:
 			}
 			for (unsigned i=0; i<3; ++i) {
 				if (dummies[i]) {
-					dummies[i]->uncheckedReplaceAllUsesWith(origs[i]);
+					Packetizer::uncheckedReplaceAllUsesWith(dummies[i], origs[i]);
 					removeFromInstructionInfo(dummies[i]);
 					dummies[i]->eraseFromParent();
 				}
@@ -3643,7 +3638,7 @@ private:
 			}
 			for (unsigned i=0; i<3; ++i) {
 				if (dummies[i]) {
-					dummies[i]->uncheckedReplaceAllUsesWith(origs[i]);
+					Packetizer::uncheckedReplaceAllUsesWith(dummies[i], origs[i]);
 					removeFromInstructionInfo(dummies[i]);
 					dummies[i]->eraseFromParent();
 				}
@@ -3665,7 +3660,7 @@ private:
 			addValueInfo(sel, oldSelect);
 			for (unsigned i=0; i<3; ++i) {
 				if (dummies[i]) {
-					dummies[i]->uncheckedReplaceAllUsesWith(origs[i]);
+					Packetizer::uncheckedReplaceAllUsesWith(dummies[i], origs[i]);
 					removeFromInstructionInfo(dummies[i]);
 					dummies[i]->eraseFromParent();
 				}
@@ -3689,7 +3684,7 @@ private:
 		if (!trueValue->getType()->isVectorTy()) {
 			DEBUG_PKT( outs() << "\npacketizing select of complex value type...\n"; );
 			assert (isa<CompositeType>(newType));
-			//const CompositeType* compType = cast<CompositeType>(trueValue->getType());
+			//CompositeType* compType = cast<CompositeType>(trueValue->getType());
 			// loop over each element of the type and generate select
 			Value** selects = new Value*[info.simdWidth]();
 
@@ -3747,7 +3742,7 @@ private:
 
 			for (unsigned i=0; i<3; ++i) {
 				if (dummies[i]) {
-					dummies[i]->uncheckedReplaceAllUsesWith(origs[i]);
+					Packetizer::uncheckedReplaceAllUsesWith(dummies[i], origs[i]);
 					removeFromInstructionInfo(dummies[i]);
 					dummies[i]->eraseFromParent();
 				}
@@ -3837,7 +3832,7 @@ private:
 
 		for (unsigned i=0; i<3; ++i) {
 			if (dummies[i]) {
-				dummies[i]->uncheckedReplaceAllUsesWith(origs[i]);
+				Packetizer::uncheckedReplaceAllUsesWith(dummies[i], origs[i]);
 				removeFromInstructionInfo(dummies[i]);
 				dummies[i]->eraseFromParent();
 			}
@@ -3963,14 +3958,14 @@ private:
 		for (int argIndex=0; argIndex < numVecArgs; ++argIndex, ++vecA) {
 			DEBUG_PKT( outs() << "  arg-index:  " << argIndex << "\n"; );
 			DEBUG_PKT( outs() << "  target:  " << *vecA << "\n"; );
-			const Type* paramType = vecA->getType();
+			Type* paramType = vecA->getType();
 
 			// if this is the mask parameter index, add the mask to the arguments
 			if (argIndex == natFnMaskIndex) {
 
 				DEBUG_PKT( outs() << "    adding mask-argument: " << *mask << "\n"; );
 				Value* maskRef = mask;
-				const Type* maskRefType = maskRef->getType();
+				Type* maskRefType = maskRef->getType();
 
 				if (maskRefType != paramType) {
 					// Type of mask differs from mask parameter of function.
@@ -4016,7 +4011,7 @@ private:
 
 			assert (isa<Value>(oldArg));
 			Value* argRef = cast<Value>(oldArg);
-			const Type* argRefType = argRef->getType();
+			Type* argRefType = argRef->getType();
 
 			// if types of parameter and value match, simly add the old argument
 			if (argRefType == paramType) {
@@ -4037,7 +4032,7 @@ private:
 					!isPacketizedType(argRefType)) {
 				Instruction* dummyI = createDummy(packetizeSIMDType(argRefType), argRef, oldCall);
 				dummies.push_back(std::make_pair(dummyI, argRef));
-				argRef->uncheckedReplaceAllUsesWith(dummyI);
+				Packetizer::uncheckedReplaceAllUsesWith(argRef, dummyI);
 				argRef = dummyI;
 			}
 
@@ -4087,7 +4082,7 @@ private:
 		);
 
 		std::string fixedName = vecF->getReturnType()->isVoidTy() ? "" : fname;
-		CallInst* newCall = CallInst::Create(vecF, args.begin(), args.end(), fixedName, oldCall);
+		CallInst* newCall = CallInst::Create(vecF, ArrayRef<Value*>(args), fixedName, oldCall);
 		newCall->setCallingConv(oldCall->getCallingConv());
 		//set attributes
 		for (unsigned i=0; i<attrs.size(); ++i) {
@@ -4100,7 +4095,7 @@ private:
 		//if we inserted any dummies, be sure to remove them again :P
 		for (unsigned i=0; i<dummies.size(); ++i) {
 			removeFromInstructionInfo(dummies[i].first);
-			dummies[i].first->uncheckedReplaceAllUsesWith(dummies[i].second);
+			Packetizer::uncheckedReplaceAllUsesWith(dummies[i].first, dummies[i].second);
 			dummies[i].first->eraseFromParent();
 		}
 
@@ -4714,7 +4709,7 @@ private:
 
 	//creates a call to an externally declared intrinsic f with parameters 'params'
 	CallInst* createExternalIntrinsicCall(Function* f, std::vector<Value*> params, std::string name, Instruction* insertBefore) {
-		CallInst* callInst = CallInst::Create(f, params.begin(), params.end(), name, insertBefore);
+		CallInst* callInst = CallInst::Create(f, ArrayRef<Value*>(params), name, insertBefore);
 		callInst->setCallingConv(CallingConv::C);
 		callInst->setTailCall(true); AttrListPtr ret_PAL;
 		{
@@ -4976,11 +4971,11 @@ private:
 
 					// If the the split value has uses, create a phi for it.
 					if (!splitValI->use_empty()) {
-						const Type* scalarType = splitValI->getType();
+						Type* scalarType = splitValI->getType();
 						assert (!isPacketizedType(scalarType) && "type of split value must be scalar!");
 
 						assert (!valI->getParent()->empty());
-						PHINode* phi = PHINode::Create(scalarType, "", valI->getParent()->getFirstNonPHI());
+						PHINode* phi = PHINode::Create(scalarType, 2U, "", valI->getParent()->getFirstNonPHI());
 						addFalseValueInfo(phi);
 
 						splitValI->replaceAllUsesWith(phi); // before adding the use of the phi ;)
@@ -5020,11 +5015,11 @@ private:
 
 				// If the the split value has uses, create a phi for it.
 				if (!splitValI->use_empty()) {
-					const Type* scalarType = splitValI->getType();
+					Type* scalarType = splitValI->getType();
 					assert (!isPacketizedType(scalarType) && "type of split value must be scalar!");
 
 					assert (!ifBlocks[i+1]->empty());
-					PHINode* phi = PHINode::Create(scalarType, "", ifBlocks[i+1]->getFirstNonPHI());
+					PHINode* phi = PHINode::Create(scalarType, 2U, "", ifBlocks[i+1]->getFirstNonPHI());
 					addFalseValueInfo(phi);
 
 					splitValI->replaceAllUsesWith(phi); // before adding the use of the phi ;)
@@ -5110,7 +5105,7 @@ private:
 	bool splitValue(SplitInfo& splitInfo, SplitInfoMapType& splitInfoMap) {
 
 		Value* oldValue = splitInfo.oldValue;
-		const Type* scalarType = oldValue->getType();
+		Type* scalarType = oldValue->getType();
 
 		DEBUG_PKT( outs() << "\nSplitting value ("
 				<< (splitInfo.requiresReplication ? "REPLICATE" :
@@ -5218,8 +5213,7 @@ private:
 							ConstantInt::get(getGlobalContext(), APInt(32, i)));
 					GetElementPtrInst* gep =
 							GetElementPtrInst::Create(pointer,
-													  indices.begin(),
-													  indices.end(),
+													  ArrayRef<Value*>(indices),
 													  "",
 													  insertBefore);
 					addFalseValueInfo(gep);
@@ -5321,8 +5315,8 @@ private:
 				// is packetized or not (depends on the operand also being part
 				// of the split set (then it is scalar) or not (then it is
 				// already packetized).
-				const Type* valueType = value->getType();
-				const Type* scalarValueType = isPacketizedType(valueType) ?
+				Type* valueType = value->getType();
+				Type* scalarValueType = isPacketizedType(valueType) ?
 					getScalarFromPacketizedType(valueType) : valueType;
 
 				assert ((isPacketizedType(valueType) ||
@@ -5393,8 +5387,8 @@ private:
 					// test whether the type at hand is packetized or not
 					// (depends on the operand also being part of the split set
 					// (then it is scalar) or not (then it is already packetized).
-					const Type* valueType = indexVal->getType();
-					const Type* scalarValueType = isPacketizedType(valueType) ?
+					Type* valueType = indexVal->getType();
+					Type* scalarValueType = isPacketizedType(valueType) ?
 						getScalarFromPacketizedType(valueType) : valueType;
 
 					assert ((isPacketizedType(valueType) ||
@@ -5418,8 +5412,8 @@ private:
 				const bool isPointerToPacket = !analysisResults->isUniform(pointer);
 
 				//if (isPointerToPacket) {
-				//	const Type* pointerType = pointer->getType();
-				//	const Type* pktPointerType = isPacketizedType(pointerType) ?
+				//	Type* pointerType = pointer->getType();
+				//	Type* pktPointerType = isPacketizedType(pointerType) ?
 				//		pointerType : packetizeSIMDType(pointerType);
 				//	Instruction* dummyP = createDummy(pktPointerType,
 				//									 pointer,
@@ -5436,7 +5430,7 @@ private:
 					}
 
 					//create GEP with scalar values
-					geps[i] = GetElementPtrInst::Create(pointer, indexDummies.begin(), indexDummies.end(), "", oldGEP);
+					geps[i] = GetElementPtrInst::Create(pointer, ArrayRef<Value*>(indexDummies), "", oldGEP);
 					splitInfo.splitValues.push_back(geps[i]);
 					addFalseValueInfo(geps[i]);
 
@@ -5480,6 +5474,7 @@ private:
 				Value** splitInsts = new Value*[info.simdWidth]();
 				for (unsigned i=0, e=info.simdWidth; i!=e; ++i) {
 					PHINode* newPhi = PHINode::Create(scalarType,
+													  2U,
 													  "",
 													  oldPhi);
 
@@ -5498,7 +5493,7 @@ private:
 
 				// If this is no pointer phi, create a merged result value.
 				if (!scalarType->isPointerTy()) {
-					const Type* packetType = isPacketizedType(scalarType) ?
+					Type* packetType = isPacketizedType(scalarType) ?
 						scalarType : packetizeSIMDType(scalarType);
 					Instruction* mergedRes =
 							generateHorizontalMerge(splitInsts,
@@ -5597,7 +5592,7 @@ private:
 				for (unsigned j=0, je=callee->getFunctionType()->getNumParams();
 						j<je; ++j)
 				{
-					const Type* paramType = callee->getFunctionType()->getParamType(j);
+					Type* paramType = callee->getFunctionType()->getParamType(j);
 					Value* A = oldCall->getArgOperand(j);
 					oldCallArgs.push_back(A);
 
@@ -5615,7 +5610,7 @@ private:
 				Value** splitInsts = new Value*[info.simdWidth]();
 				for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
 					//call function with scalar values
-					CallInst* newCall = CallInst::Create(callee, args.begin(), args.end(), "", oldCall);
+					CallInst* newCall = CallInst::Create(callee, ArrayRef<Value*>(args), "", oldCall);
 					newCall->setAttributes(oldCall->getAttributes());
 					newCall->setCallingConv(oldCall->getCallingConv());
 					splitInfo.splitValues.push_back(newCall);
@@ -6095,10 +6090,10 @@ private:
 	inline Value* createPointerCast(Value* pointer, Instruction* insertBefore) {
 		assert (pointer);
 
-		const Type* oldType = pointer->getType();
+		Type* oldType = pointer->getType();
 		if (isPacketizedType(oldType)) return pointer;
 
-		const Type* newType = packetizeSIMDType(oldType);
+		Type* newType = packetizeSIMDType(oldType);
 
 		BitCastInst* pktPtrCast = new BitCastInst(pointer,
 												  newType,
@@ -6183,11 +6178,11 @@ private:
 		addFalseValueInfo(firstIdx); // TODO: really varying?
 
 		removeFromInstructionInfo(dummy);
-		dummy->uncheckedReplaceAllUsesWith(pointerIdx);
+		Packetizer::uncheckedReplaceAllUsesWith(dummy, pointerIdx);
 		dummy->eraseFromParent();
 
 		// create new GEP with first index
-		Value* newPointer = GetElementPtrInst::Create(baseAddr, firstIdx, "", insertBefore);
+		Value* newPointer = GetElementPtrInst::Create(baseAddr, ArrayRef<Value*>(firstIdx), "", insertBefore);
 		addFalseValueInfo(newPointer);
 
 		Value* isConsec = createDynamicConsecutivenessCheck(pointerIdx, insertBefore);
@@ -6203,7 +6198,7 @@ private:
 		if (StoreInst* tmpStore = dyn_cast<StoreInst>(oldInst)) {
 			Value* val = tmpStore->getValueOperand();
 			assert (isa<PointerType>(pointer->getType()));
-			const PointerType* pType = cast<PointerType>(pointer->getType());
+			PointerType* pType = cast<PointerType>(pointer->getType());
 			dummyP = createDummy(PointerType::get(val->getType(), pType->getAddressSpace()), pointer, oldInst);
 			tmpStore->replaceUsesOfWith(pointer, dummyP);
 		}
@@ -6233,7 +6228,7 @@ private:
 			addValueInfo(newLoad, clonedLoad);
 
 			// create phi in merge block
-			PHINode* phi = PHINode::Create(newLoad->getType(), "", endBB->getFirstNonPHI());
+			PHINode* phi = PHINode::Create(newLoad->getType(), 2U, "", endBB->getFirstNonPHI());
 
 			// add new phi to value info map, mark as SPLIT_RESULT
 			addValueInfo(phi, oldInst);
@@ -6253,11 +6248,11 @@ private:
 			// replace all uses of oldInst by the phi. oldInst then only has one
 			// use remaining (the phi), which is later replaced by the merged
 			// result value of the split-path.
-			oldInst->uncheckedReplaceAllUsesWith(phi);
+			Packetizer::uncheckedReplaceAllUsesWith(oldInst, phi);
 
 			// Now we can replace & remove the dummy
 			removeFromInstructionInfo(dummy2);
-			dummy2->uncheckedReplaceAllUsesWith(oldInst);
+			Packetizer::uncheckedReplaceAllUsesWith(dummy2, oldInst);
 			dummy2->eraseFromParent();
 
 		} else if (StoreInst* clonedStore = dyn_cast<StoreInst>(oldInstClone)) {
@@ -6268,7 +6263,7 @@ private:
 			newPointer = createPointerCast(newPointer, clonedStore);
 
 			// create vectorized dummy-value
-			const Type* oldValueType = value->getType();
+			Type* oldValueType = value->getType();
 			Instruction* dummy = isPacketizedType(oldValueType) ? NULL :
 				createDummy(packetizeSIMDType(oldValueType), value, clonedStore);
 
@@ -6281,7 +6276,7 @@ private:
 
 			if (dummy) {
 				removeFromInstructionInfo(dummy);
-				dummy->uncheckedReplaceAllUsesWith(value);
+				Packetizer::uncheckedReplaceAllUsesWith(dummy, value);
 				dummy->eraseFromParent();
 			}
 		}
@@ -6372,14 +6367,14 @@ private:
 
 		assert (!info.use_avx && "NOT IMPLEMENTED ON AVX!");
 
-		const VectorType* vectorTy_longSIMD = VectorType::get(Type::getInt64Ty(getGlobalContext()), 2);
+		VectorType* vectorTy_longSIMD = VectorType::get(Type::getInt64Ty(getGlobalContext()), 2);
 		Instruction* dummy = createDummy(vectorTy_longSIMD, value, insertBefore);
 
 		Value* bc = new BitCastInst(dummy, vectorTy_longSIMD, "", insertBefore); // PSLLDQ requires <2 x i64>
 		addFalseValueInfo(bc);
 
 		removeFromInstructionInfo(dummy);
-		dummy->uncheckedReplaceAllUsesWith(value);
+		Packetizer::uncheckedReplaceAllUsesWith(dummy, value);
 		dummy->eraseFromParent();
 
 		ConstantInt* int32Const32 = ConstantInt::get(getGlobalContext(), APInt(32, 32)); // PSLLDQ takes bytes, but LLVM intrinsic wants bits
@@ -6444,7 +6439,7 @@ private:
 			cVec.push_back(int64ConstNeg1);
 		}
 		params.clear();
-		params.push_back(ConstantVector::get(vectorTy_longSIMD, cVec));
+		params.push_back(ConstantVector::get(ArrayRef<Constant*>(cVec)));
 		params.push_back(int32Const32);
 		CallInst* shift2 = createExternalIntrinsicCall(shiftFn, params, "", insertBefore);
 		addFalseValueInfo(shift2);

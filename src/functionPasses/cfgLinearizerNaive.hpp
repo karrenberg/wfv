@@ -700,7 +700,7 @@ private:
 				falseValBB = pred1IsFalseValBB ? pred1BB : pred0BB;
 			}
 
-			PHINode* phi = PHINode::Create(sel->getType(), sel->getName(), block->getFirstNonPHI());
+			PHINode* phi = PHINode::Create(sel->getType(), 2U, sel->getName(), block->getFirstNonPHI());
 			phi->addIncoming(trueVal, trueValBB);
 			phi->addIncoming(falseVal, falseValBB);
 

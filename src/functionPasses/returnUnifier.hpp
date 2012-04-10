@@ -89,7 +89,7 @@ public:
 
 		//start unification
 
-		const Type* returnType = f.getReturnType();
+		Type* returnType = f.getReturnType();
 
 		//construct exit-block with phi with 'returns.size()' incoming edges and one return
 		BasicBlock* exitBlock = BasicBlock::Create(getGlobalContext(), "exit", &f, f.begin());
@@ -118,7 +118,7 @@ public:
 			//if returnType is non-void, we need a phi-function to compute the result
 
 			//add a "final" return-instruction that returns the result of the phi
-			PHINode* result = PHINode::Create(returnType, "result", exitBlock);
+			PHINode* result = PHINode::Create(returnType, returns.size(), "result", exitBlock);
 			ReturnInst::Create(getGlobalContext(), result, exitBlock);
 
 			//create edges from all return-values to exit-Block

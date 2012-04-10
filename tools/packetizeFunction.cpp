@@ -28,6 +28,8 @@
 
 int main(int argc, char** argv) {
 
+	atexit(LLVMWrapper::shutdown);
+
 	bool verbose = false;
 	bool use_sse41 = true;
 	bool use_avx = false;

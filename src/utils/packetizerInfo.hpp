@@ -96,9 +96,9 @@ public:
 	const bool verbose;
 
 	//packetized datatypes
-	const VectorType* vectorTy_floatSIMD;
-	const VectorType* vectorTy_intSIMD;
-	const VectorType* vectorTy_boolSIMD;
+	VectorType* vectorTy_floatSIMD;
+	VectorType* vectorTy_intSIMD;
+	VectorType* vectorTy_boolSIMD;
 
 	//llvm constants
 	Constant* const_vec_SIMD_int32_neg1;
@@ -130,7 +130,7 @@ private:
 		for (unsigned i=0; i<simdWidth; ++i) {
 			cVec.push_back(const_int32);
 		}
-		return ConstantVector::get(vectorTy_intSIMD, cVec);
+		return ConstantVector::get(ArrayRef<Constant*>(cVec));
 	}
 
 	inline Constant* createPacketConstantFloat(const float c) const {
@@ -139,7 +139,7 @@ private:
 		for (unsigned i=0; i<simdWidth; ++i) {
 			fVec.push_back(const_f32);
 		}
-		return ConstantVector::get(vectorTy_floatSIMD, fVec);
+		return ConstantVector::get(ArrayRef<Constant*>(fVec));
 	}
 
 };

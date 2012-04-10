@@ -31,7 +31,7 @@
 #include "llvm/Instructions.h"
 #include "llvm/LLVMContext.h"
 #include "llvm/PassManager.h"
-#include "llvm/Support/StandardPasses.h"
+#include "llvm/LinkAllPasses.h"
 #include "llvm/Transforms/Utils/Cloning.h" //InlineFunction
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Target/TargetData.h"
@@ -43,13 +43,27 @@ using namespace llvm;
 
 namespace Packetizer {
 
+
+// Mutate type of original value and
+// replace its uses by the new value.
+void
+uncheckedReplaceAllUsesWith(Value* value, Value* with)
+{
+	Type* oldType = value->getType();
+	Type* newType = with->getType();
+	value->mutateType(newType);
+	value->replaceAllUsesWith(with);
+	value->mutateType(oldType);
+	assert (value->use_empty());
+}
+
 /**
  * method for SIMD width packetization
  * -> only 32bit-float, integers <= 32bit, pointers, arrays and structs allowed
  * -> no scalar datatypes allowed
  * -> no pointers to pointers allowed
  **/
-const Type* packetizeSIMDType(const Type* oldType, const PacketizerInfo& info) {
+Type* packetizeSIMDType(Type* oldType, const PacketizerInfo& info) {
 	Type::TypeID oldTypeID = oldType->getTypeID();
 	switch (oldTypeID) {
 		//case Type::getVoidTy(getGlobalContext())ID : return Type::getVoidTy(getGlobalContext()); //not allowed
@@ -73,8 +87,8 @@ const Type* packetizeSIMDType(const Type* oldType, const PacketizerInfo& info) {
 		//case Type::VectorTyID: return NULL;  //not allowed!
 		case Type::PointerTyID:
 		{
-			const PointerType* pType = cast<PointerType>(oldType);
-			//const Type* elType = pType->getElementType();
+			PointerType* pType = cast<PointerType>(oldType);
+			//Type* elType = pType->getElementType();
 			//if (elType->isPointerTy()) {
 				//throw std::logic_error("INTERNAL ERROR: packetization can not handle multiple indirection!");
 			//}
@@ -82,13 +96,13 @@ const Type* packetizeSIMDType(const Type* oldType, const PacketizerInfo& info) {
 		}
 		case Type::ArrayTyID:
 		{
-			const ArrayType* aType = cast<ArrayType>(oldType);
+			ArrayType* aType = cast<ArrayType>(oldType);
 			return ArrayType::get(packetizeSIMDType(aType->getElementType(), info), aType->getNumElements());
 		}
 		case Type::StructTyID:
 		{
-			const StructType* sType = cast<StructType>(oldType);
-			std::vector<const Type*> newParams;
+			StructType* sType = cast<StructType>(oldType);
+			std::vector<Type*> newParams;
 			for (unsigned i=0; i<sType->getNumContainedTypes(); ++i) {
 				newParams.push_back(packetizeSIMDType(sType->getElementType(i), info));
 			}
@@ -110,7 +124,7 @@ const Type* packetizeSIMDType(const Type* oldType, const PacketizerInfo& info) {
  * -> no scalar datatypes allowed
  * -> no pointers to pointers allowed
  **/
-const Type* packetizeSIMDWrapperType(const Type* oldType, const PacketizerInfo& info) {
+Type* packetizeSIMDWrapperType(Type* oldType, const PacketizerInfo& info) {
 	if (info.totalSIMDIterations == 1) return oldType;
 	Type::TypeID oldTypeID = oldType->getTypeID();
 	switch (oldTypeID) {
@@ -124,13 +138,13 @@ const Type* packetizeSIMDWrapperType(const Type* oldType, const PacketizerInfo& 
 		}
 		case Type::PointerTyID:
 		{
-			const PointerType* pType = cast<PointerType>(oldType);
-			const Type* elType = pType->getElementType();
+			PointerType* pType = cast<PointerType>(oldType);
+			Type* elType = pType->getElementType();
 			//if (elType->isPointerTy()) {
 				//throw std::logic_error("INTERNAL ERROR: packetization can not handle multiple indirection!");
 			//}
 			if (elType->isVectorTy()) {
-				const Type* newElType = elType == info.vectorTy_floatSIMD ? ArrayType::get(info.vectorTy_floatSIMD, info.totalSIMDIterations)
+				Type* newElType = elType == info.vectorTy_floatSIMD ? ArrayType::get(info.vectorTy_floatSIMD, info.totalSIMDIterations)
 					: elType == info.vectorTy_intSIMD ? ArrayType::get(info.vectorTy_intSIMD, info.totalSIMDIterations) : NULL;
 				assert (newElType && "bad vector type found (should never fire)!");
 				return PointerType::get(packetizeSIMDWrapperType(newElType, info), pType->getAddressSpace());
@@ -144,8 +158,8 @@ const Type* packetizeSIMDWrapperType(const Type* oldType, const PacketizerInfo& 
 		}
 		case Type::StructTyID:
 		{
-			const StructType* sType = cast<StructType>(oldType);
-			std::vector<const Type*> newParams;
+			StructType* sType = cast<StructType>(oldType);
+			std::vector<Type*> newParams;
 			for (unsigned i=0; i<sType->getNumContainedTypes(); ++i) {
 				newParams.push_back(packetizeSIMDWrapperType(sType->getElementType(i), info));
 			}
@@ -162,7 +176,7 @@ const Type* packetizeSIMDWrapperType(const Type* oldType, const PacketizerInfo& 
 
 Constant* getMax32BitConstant(Constant* c) {
 	assert (c);
-	const Type* type = c->getType();
+	Type* type = c->getType();
 
 	if (type->getPrimitiveSizeInBits() <= 32U) {
 		// TODO: Support arbitrary types < 32bit. #11
@@ -215,7 +229,7 @@ Constant* getMax32BitConstant(Constant* c) {
 	return newC;
 }
 
-Instruction* createDummy(const Type* type, Instruction* insertBefore) {
+Instruction* createDummy(Type* type, Instruction* insertBefore) {
 	Constant* c = Constant::getNullValue(type);
 	if (type->isPointerTy()) {
 		// we must not insert pointer selects ;)
@@ -232,8 +246,8 @@ Instruction* createDummy(const Type* type, Instruction* insertBefore) {
 // This includes void, arrays and structs but excludes pointers!
 // TODO: Actually, arrays and structs are either also disallowed or
 //       they need different handling because pointers inside might be okay.
-bool isPacketizableInstructionType(const Type* type) {
-	const Type::TypeID typeID = type->getTypeID();
+bool isPacketizableInstructionType(Type* type) {
+	Type::TypeID typeID = type->getTypeID();
 	switch (typeID) {
 		case Type::VoidTyID : return true;
 		case Type::FloatTyID : return true;
@@ -243,7 +257,7 @@ bool isPacketizableInstructionType(const Type* type) {
 		case Type::ArrayTyID : return isPacketizableInstructionType(cast<ArrayType>(type)->getElementType());
 		case Type::StructTyID :
 		{
-			const StructType* sType = cast<StructType>(type);
+			StructType* sType = cast<StructType>(type);
 			for (unsigned i=0; i<sType->getNumContainedTypes(); ++i) {
 				if (!isPacketizableInstructionType(sType->getElementType(i))) return false;
 			}
@@ -351,6 +365,7 @@ inline void inlineFunctionCalls(Function* f) {
     }
 }
 
+#if 0
 // adopted from: llvm-2.9/tools/opt
 void optimizeModule(Module* mod) {
 	assert (mod);
@@ -409,6 +424,7 @@ void optimizeModule(Module* mod) {
 	FPasses->run(*mod);
 	Passes.run(*mod);
 }
+#endif
 
 /// adopted from: llvm-2.9/include/llvm/Support/StandardPasses.h
 void optimizeFunctionNew(Function* f, const bool disableLICM=false, const bool disableLoopRotate=false) {
@@ -593,7 +609,7 @@ CallInst* insertPrintf(const std::string& message, Value* value, const bool endL
 	if (!func_printf) {
 		PointerType* PointerTy_6 = PointerType::get(IntegerType::get(mod->getContext(), 8), 0);
 
-		std::vector<const Type*>FuncTy_10_args;
+		std::vector<Type*>FuncTy_10_args;
 		FuncTy_10_args.push_back(PointerTy_6);
 		FunctionType* FuncTy_10 = FunctionType::get(
 				/*Result=*/IntegerType::get(mod->getContext(), 32),
@@ -664,7 +680,7 @@ CallInst* insertPrintf(const std::string& message, Value* value, const bool endL
 	ConstantInt* const_int64_18 = ConstantInt::get(mod->getContext(), APInt(64, StringRef("0"), 10));
 	const_ptr_17_indices.push_back(const_int64_18);
 	const_ptr_17_indices.push_back(const_int64_18);
-	Constant* const_ptr_17 = ConstantExpr::getGetElementPtr(gvar_array__str, &const_ptr_17_indices[0], const_ptr_17_indices.size());
+	Constant* const_ptr_17 = ConstantExpr::getGetElementPtr(gvar_array__str, ArrayRef<Constant*>(const_ptr_17_indices));
 
 	// Global Variable Definitions
 	gvar_array__str->setInitializer(const_array_11);
@@ -680,7 +696,7 @@ CallInst* insertPrintf(const std::string& message, Value* value, const bool endL
 	} else {
 		int32_51_params.push_back(value);
 	}
-	CallInst* int32_51 = CallInst::Create(func_printf, int32_51_params.begin(), int32_51_params.end(), "", insertBefore);
+	CallInst* int32_51 = CallInst::Create(func_printf, ArrayRef<Value*>(int32_51_params), "", insertBefore);
 	return int32_51;
 }
 

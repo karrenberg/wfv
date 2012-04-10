@@ -2475,7 +2475,7 @@ private:
 	inline bool instructionIsMergeable(const Instruction* inst) const {
 		assert (inst);
 
-		const Type* type = inst->getType();
+		Type* type = inst->getType();
 
 		// Pointers can not be merged to a vector.
 		if (type->isPointerTy()) return false;

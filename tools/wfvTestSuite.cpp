@@ -17,6 +17,8 @@
 
 int main(int argc, char** argv) {
 
+	atexit(LLVMWrapper::shutdown);
+
 	// print copyright information
 	std::cout << "\n\
 ********************************************************************************\n\
@@ -157,95 +159,95 @@ int main(int argc, char** argv) {
 		//
 
 		// arithmetic only
-		packetizer.addFunction("test_simple_scalar", "test_simple_generated");
+		packetizer.addFunction("test_001_simple_scalar", "test_001_simple_generated");
 		// simple control flow
-		packetizer.addFunction("test_if01_scalar", "test_if01_generated");
-		packetizer.addFunction("test_if02_scalar", "test_if02_generated");
-		packetizer.addFunction("test_if03_scalar", "test_if03_generated");
-		packetizer.addFunction("test_if04_scalar", "test_if04_generated");
-		packetizer.addFunction("test_if05_scalar", "test_if05_generated");
-		packetizer.addFunction("test_if06_scalar", "test_if06_generated");
-		packetizer.addFunction("test_if07_scalar", "test_if07_generated");
-		packetizer.addFunction("test_if08_scalar", "test_if08_generated");
-		packetizer.addFunction("test_if09_scalar", "test_if09_generated");
-		packetizer.addFunction("test_if10_scalar", "test_if10_generated");
-		packetizer.addFunction("test_if11_scalar", "test_if11_generated");
-		packetizer.addFunction("test_if12_scalar", "test_if12_generated");
+		packetizer.addFunction("test_002_if01_scalar", "test_002_if01_generated");
+		packetizer.addFunction("test_003_if02_scalar", "test_003_if02_generated");
+		packetizer.addFunction("test_004_if03_scalar", "test_004_if03_generated");
+		packetizer.addFunction("test_005_if04_scalar", "test_005_if04_generated");
+		packetizer.addFunction("test_006_if05_scalar", "test_006_if05_generated");
+		packetizer.addFunction("test_007_if06_scalar", "test_007_if06_generated");
+		packetizer.addFunction("test_008_if07_scalar", "test_008_if07_generated");
+		packetizer.addFunction("test_009_if08_scalar", "test_009_if08_generated");
+		packetizer.addFunction("test_010_if09_scalar", "test_010_if09_generated");
+		packetizer.addFunction("test_011_if10_scalar", "test_011_if10_generated");
+		packetizer.addFunction("test_012_if11_scalar", "test_012_if11_generated");
+		packetizer.addFunction("test_013_if12_scalar", "test_013_if12_generated");
 		// simple loops
-		packetizer.addFunction("test_loop01_scalar", "test_loop01_generated");
-		packetizer.addFunction("test_loop02_scalar", "test_loop02_generated");
-		packetizer.addFunction("test_loop03_scalar", "test_loop03_generated");
-		packetizer.addFunction("test_loop04_scalar", "test_loop04_generated");
-		packetizer.addFunction("test_loop05_scalar", "test_loop05_generated");
-		packetizer.addFunction("test_loop06_scalar", "test_loop06_generated");
+		packetizer.addFunction("test_014_loop01_scalar", "test_014_loop01_generated");
+		packetizer.addFunction("test_015_loop02_scalar", "test_015_loop02_generated");
+		packetizer.addFunction("test_016_loop03_scalar", "test_016_loop03_generated");
+		packetizer.addFunction("test_017_loop04_scalar", "test_017_loop04_generated");
+		packetizer.addFunction("test_018_loop05_scalar", "test_018_loop05_generated");
+		packetizer.addFunction("test_019_loop06_scalar", "test_019_loop06_generated");
 		// more complex loops
-		packetizer.addFunction("test_loopc01_scalar", "test_loopc01_generated");
-		packetizer.addFunction("test_loopc02_scalar", "test_loopc02_generated");
-		packetizer.addFunction("test_loopc03_scalar", "test_loopc03_generated");
-		packetizer.addFunction("test_loopc04_scalar", "test_loopc04_generated");
-		packetizer.addFunction("test_loopc05_scalar", "test_loopc05_generated");
-		packetizer.addFunction("test_loopc06_scalar", "test_loopc06_generated");
-		packetizer.addFunction("test_loopc07_scalar", "test_loopc07_generated");
-		packetizer.addFunction("test_loopc08_scalar", "test_loopc08_generated");
-		packetizer.addFunction("test_loopc09_scalar", "test_loopc09_generated");
+		packetizer.addFunction("test_020_loopc01_scalar", "test_020_loopc01_generated");
+		packetizer.addFunction("test_021_loopc02_scalar", "test_021_loopc02_generated");
+		packetizer.addFunction("test_022_loopc03_scalar", "test_022_loopc03_generated");
+		packetizer.addFunction("test_023_loopc04_scalar", "test_023_loopc04_generated");
+		packetizer.addFunction("test_024_loopc05_scalar", "test_024_loopc05_generated");
+		packetizer.addFunction("test_025_loopc06_scalar", "test_025_loopc06_generated");
+		packetizer.addFunction("test_026_loopc07_scalar", "test_026_loopc07_generated");
+		packetizer.addFunction("test_027_loopc08_scalar", "test_027_loopc08_generated");
+		packetizer.addFunction("test_028_loopc09_scalar", "test_028_loopc09_generated");
 		// loops with multiple exits
-		packetizer.addFunction("test_loopmx01_scalar", "test_loopmx01_generated");
-		packetizer.addFunction("test_loopmx02_scalar", "test_loopmx02_generated");
-		packetizer.addFunction("test_loopmx03_scalar", "test_loopmx03_generated");
-		packetizer.addFunction("test_loopmx04_scalar", "test_loopmx04_generated");
-		packetizer.addFunction("test_loopmx05_scalar", "test_loopmx05_generated");
-		packetizer.addFunction("test_loopmx06_scalar", "test_loopmx06_generated");
-		packetizer.addFunction("test_loopmx07_scalar", "test_loopmx07_generated");
-		packetizer.addFunction("test_loopmx08_scalar", "test_loopmx08_generated");
-		packetizer.addFunction("test_loopmx09_scalar", "test_loopmx09_generated");
-		packetizer.addFunction("test_loopmx10_scalar", "test_loopmx10_generated");
-		packetizer.addFunction("test_loopmx11_scalar", "test_loopmx11_generated");
-		packetizer.addFunction("test_loopmx12_scalar", "test_loopmx12_generated");
-		packetizer.addFunction("test_loopmx13_scalar", "test_loopmx13_generated");
+		packetizer.addFunction("test_029_loopmx01_scalar", "test_029_loopmx01_generated");
+		packetizer.addFunction("test_030_loopmx02_scalar", "test_030_loopmx02_generated");
+		packetizer.addFunction("test_031_loopmx03_scalar", "test_031_loopmx03_generated");
+		packetizer.addFunction("test_032_loopmx04_scalar", "test_032_loopmx04_generated");
+		packetizer.addFunction("test_033_loopmx05_scalar", "test_033_loopmx05_generated");
+		packetizer.addFunction("test_034_loopmx06_scalar", "test_034_loopmx06_generated");
+		packetizer.addFunction("test_035_loopmx07_scalar", "test_035_loopmx07_generated");
+		packetizer.addFunction("test_036_loopmx08_scalar", "test_036_loopmx08_generated");
+		packetizer.addFunction("test_037_loopmx09_scalar", "test_037_loopmx09_generated");
+		packetizer.addFunction("test_038_loopmx10_scalar", "test_038_loopmx10_generated");
+		packetizer.addFunction("test_039_loopmx11_scalar", "test_039_loopmx11_generated");
+		packetizer.addFunction("test_040_loopmx12_scalar", "test_040_loopmx12_generated");
+		packetizer.addFunction("test_041_loopmx13_scalar", "test_041_loopmx13_generated");
 		// nested loops
-		packetizer.addFunction("test_loopns01_scalar", "test_loopns01_generated");
-		packetizer.addFunction("test_loopns02_scalar", "test_loopns02_generated");
-		packetizer.addFunction("test_loopns03_scalar", "test_loopns03_generated");
-		packetizer.addFunction("test_loopns04_scalar", "test_loopns04_generated");
-		packetizer.addFunction("test_loopns05_scalar", "test_loopns05_generated");
-		packetizer.addFunction("test_loopns06_scalar", "test_loopns06_generated");
-		packetizer.addFunction("test_loopns07_scalar", "test_loopns07_generated");
-		packetizer.addFunction("test_loopns08_scalar", "test_loopns08_generated");
-		packetizer.addFunction("test_loopns09_scalar", "test_loopns09_generated");
-		packetizer.addFunction("test_loopns10_scalar", "test_loopns10_generated");
-		packetizer.addFunction("test_loopns11_scalar", "test_loopns11_generated");
-		packetizer.addFunction("test_loopns12_scalar", "test_loopns12_generated");
-		packetizer.addFunction("test_loopns13_scalar", "test_loopns13_generated");
-		packetizer.addFunction("test_loopns14_scalar", "test_loopns14_generated");
-		packetizer.addFunction("test_loopns15_scalar", "test_loopns15_generated");
+		packetizer.addFunction("test_042_loopns01_scalar", "test_042_loopns01_generated");
+		packetizer.addFunction("test_043_loopns02_scalar", "test_043_loopns02_generated");
+		packetizer.addFunction("test_044_loopns03_scalar", "test_044_loopns03_generated");
+		packetizer.addFunction("test_045_loopns04_scalar", "test_045_loopns04_generated");
+		packetizer.addFunction("test_046_loopns05_scalar", "test_046_loopns05_generated");
+		packetizer.addFunction("test_047_loopns06_scalar", "test_047_loopns06_generated");
+		packetizer.addFunction("test_048_loopns07_scalar", "test_048_loopns07_generated");
+		packetizer.addFunction("test_049_loopns08_scalar", "test_049_loopns08_generated");
+		packetizer.addFunction("test_050_loopns09_scalar", "test_050_loopns09_generated");
+		packetizer.addFunction("test_051_loopns10_scalar", "test_051_loopns10_generated");
+		packetizer.addFunction("test_052_loopns11_scalar", "test_052_loopns11_generated");
+		packetizer.addFunction("test_053_loopns12_scalar", "test_053_loopns12_generated");
+		packetizer.addFunction("test_054_loopns13_scalar", "test_054_loopns13_generated");
+		packetizer.addFunction("test_055_loopns14_scalar", "test_055_loopns14_generated");
+		packetizer.addFunction("test_056_loopns15_scalar", "test_056_loopns15_generated");
 		// nested loops with multiple exits
-		packetizer.addFunction("test_loopnsmx01_scalar", "test_loopnsmx01_generated");
-		packetizer.addFunction("test_loopnsmx02_scalar", "test_loopnsmx02_generated");
-		packetizer.addFunction("test_loopnsmx03_scalar", "test_loopnsmx03_generated");
-		packetizer.addFunction("test_loopnsmx04_scalar", "test_loopnsmx04_generated");
-		packetizer.addFunction("test_loopnsmx05_scalar", "test_loopnsmx05_generated");
-		packetizer.addFunction("test_loopnsmx06_scalar", "test_loopnsmx06_generated");
-		packetizer.addFunction("test_loopnsmx07_scalar", "test_loopnsmx07_generated");
-		packetizer.addFunction("test_loopnsmx08_scalar", "test_loopnsmx08_generated");
-		packetizer.addFunction("test_loopnsmx09_scalar", "test_loopnsmx09_generated");
-		packetizer.addFunction("test_loopnsmx10_scalar", "test_loopnsmx10_generated");
-		packetizer.addFunction("test_loopnsmx11_scalar", "test_loopnsmx11_generated");
-		packetizer.addFunction("test_loopnsmx12_scalar", "test_loopnsmx12_generated");
-		packetizer.addFunction("test_loopnsmx13_scalar", "test_loopnsmx13_generated");
-		packetizer.addFunction("test_loopnsmx14_scalar", "test_loopnsmx14_generated");
-		packetizer.addFunction("test_loopnsmx15_scalar", "test_loopnsmx15_generated");
+		packetizer.addFunction("test_057_loopnsmx01_scalar", "test_057_loopnsmx01_generated");
+		packetizer.addFunction("test_058_loopnsmx02_scalar", "test_058_loopnsmx02_generated");
+		packetizer.addFunction("test_059_loopnsmx03_scalar", "test_059_loopnsmx03_generated");
+		packetizer.addFunction("test_060_loopnsmx04_scalar", "test_060_loopnsmx04_generated");
+		packetizer.addFunction("test_061_loopnsmx05_scalar", "test_061_loopnsmx05_generated");
+		packetizer.addFunction("test_062_loopnsmx06_scalar", "test_062_loopnsmx06_generated");
+		packetizer.addFunction("test_063_loopnsmx07_scalar", "test_063_loopnsmx07_generated");
+		packetizer.addFunction("test_064_loopnsmx08_scalar", "test_064_loopnsmx08_generated");
+		packetizer.addFunction("test_065_loopnsmx09_scalar", "test_065_loopnsmx09_generated");
+		packetizer.addFunction("test_066_loopnsmx10_scalar", "test_066_loopnsmx10_generated");
+		packetizer.addFunction("test_067_loopnsmx11_scalar", "test_067_loopnsmx11_generated");
+		packetizer.addFunction("test_068_loopnsmx12_scalar", "test_068_loopnsmx12_generated");
+		packetizer.addFunction("test_069_loopnsmx13_scalar", "test_069_loopnsmx13_generated");
+		packetizer.addFunction("test_070_loopnsmx14_scalar", "test_070_loopnsmx14_generated");
+		packetizer.addFunction("test_071_loopnsmx15_scalar", "test_071_loopnsmx15_generated");
 
 		// function calls
-		packetizer.addFunction("test_call01_scalar", "test_call01_generated");
-		packetizer.addFunction("test_call02_scalar", "test_call02_generated");
-		packetizer.addFunction("test_call03_scalar", "test_call03_generated");
-		packetizer.addFunction("test_call04_scalar", "test_call04_generated");
-		packetizer.addFunction("test_call05_scalar", "test_call05_generated");
-		packetizer.addFunction("test_call06_scalar", "test_call06_generated");
-		packetizer.addFunction("test_call07_scalar", "test_call07_generated");
-		packetizer.addFunction("test_call08_scalar", "test_call08_generated");
-		packetizer.addFunction("test_call09_scalar", "test_call09_generated");
-		packetizer.addFunction("test_call10_scalar", "test_call10_generated");
+		packetizer.addFunction("test_072_call01_scalar", "test_072_call01_generated");
+		packetizer.addFunction("test_073_call02_scalar", "test_073_call02_generated");
+		packetizer.addFunction("test_074_call03_scalar", "test_074_call03_generated");
+		packetizer.addFunction("test_075_call04_scalar", "test_075_call04_generated");
+		packetizer.addFunction("test_076_call05_scalar", "test_076_call05_generated");
+		packetizer.addFunction("test_077_call06_scalar", "test_077_call06_generated");
+		packetizer.addFunction("test_078_call07_scalar", "test_078_call07_generated");
+		packetizer.addFunction("test_079_call08_scalar", "test_079_call08_generated");
+		packetizer.addFunction("test_080_call09_scalar", "test_080_call09_generated");
+		packetizer.addFunction("test_081_call10_scalar", "test_081_call10_generated");
 		// add "native" functions for call9/call10
 		llvm::Function* noinlinecall2_4fn = LLVMWrapper::getFunction("noinlinecall2_4", module);
 		llvm::Function* noinlinecall3_4fn = LLVMWrapper::getFunction("noinlinecall3_4", module);
@@ -255,15 +257,15 @@ int main(int argc, char** argv) {
 		else std::cout << "WARNING: native function 'noinlinecall3_4' not found!\n";
 
 		// misc tests
-		packetizer.addFunction("test_misc_scalar", "test_misc_generated");
-		packetizer.addFunction("test_ocl_mandelbrot_scalar", "test_ocl_mandelbrot_generated");
-		packetizer.addFunction("test_noise_scalar", "test_noise_generated");
-		packetizer.addFunction("test_ocl_aobench_scalar", "test_ocl_aobench_generated");
+		packetizer.addFunction("test_082_misc_scalar", "test_082_misc_generated");
+		packetizer.addFunction("test_083_ocl_mandelbrot_scalar", "test_083_ocl_mandelbrot_generated");
+		packetizer.addFunction("test_084_noise_scalar", "test_084_noise_generated");
+		packetizer.addFunction("test_085_ocl_aobench_scalar", "test_085_ocl_aobench_generated");
 
 		// tests for irreducible control flow
-		packetizer.addFunction("test_irreducible1_scalar", "test_irreducible1_generated");
-		packetizer.addFunction("test_irreducible2_scalar", "test_irreducible2_generated");
-		packetizer.addFunction("test_irreducible3_scalar", "test_irreducible3_generated");
+		packetizer.addFunction("test_086_irreducible1_scalar", "test_086_irreducible1_generated");
+		packetizer.addFunction("test_087_irreducible2_scalar", "test_087_irreducible2_generated");
+		packetizer.addFunction("test_088_irreducible3_scalar", "test_088_irreducible3_generated");
 
 	} else if (testSuiteIdx == 2) {
 
@@ -500,10 +502,6 @@ int main(int argc, char** argv) {
 	///////////////////////////////////////////////////////////////////////////
 
 	LLVMWrapper::executeMain(mainPtr, argc, argv);
-
-	std::cout << "shutting down... ";
-	delete engine;
-	std::cout << "done.\n";
 
 	return 0;
 }

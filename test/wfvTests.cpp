@@ -93,131 +93,117 @@ bool resultMatches(const float a, const float b) {
 // declarations of empty prototypes of packetized functions
 //----------------------------------------------------------------------------//
 //arithmetic only
-extern "C" VEC test_simple_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_001_simple_generated(VEC a, VEC b) ALIGN;
 //simple control flow
-extern "C" VEC test_if01_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_if02_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_if03_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_if04_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_if05_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_if06_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_if07_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_if08_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_if09_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_if10_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_if11_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_if12_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_002_if01_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_003_if02_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_004_if03_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_005_if04_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_006_if05_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_007_if06_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_008_if07_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_009_if08_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_010_if09_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_011_if10_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_012_if11_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_013_if12_generated(VEC a, VEC b) ALIGN;
 //simple loops
-extern "C" VEC test_loop01_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loop02_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loop03_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loop04_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loop05_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loop06_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_014_loop01_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_015_loop02_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_016_loop03_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_017_loop04_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_018_loop05_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_019_loop06_generated(VEC a, VEC b) ALIGN;
 //more complex loops
-extern "C" VEC test_loopc01_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopc02_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopc03_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopc04_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopc05_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopc06_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopc07_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopc08_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopc09_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_020_loopc01_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_021_loopc02_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_022_loopc03_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_023_loopc04_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_024_loopc05_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_025_loopc06_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_026_loopc07_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_027_loopc08_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_028_loopc09_generated(VEC a, VEC b) ALIGN;
 //loops with multiple exits
-extern "C" VEC test_loopmx01_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopmx02_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopmx03_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopmx04_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopmx05_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopmx06_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopmx07_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopmx08_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopmx09_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopmx10_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopmx11_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopmx12_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopmx13_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_029_loopmx01_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_030_loopmx02_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_031_loopmx03_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_032_loopmx04_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_033_loopmx05_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_034_loopmx06_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_035_loopmx07_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_036_loopmx08_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_037_loopmx09_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_038_loopmx10_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_039_loopmx11_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_040_loopmx12_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_041_loopmx13_generated(VEC a, VEC b) ALIGN;
 //nested loops
-extern "C" VEC test_loopns01_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopns02_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopns03_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopns04_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopns05_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopns06_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopns07_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopns08_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopns09_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopns10_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopns11_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopns12_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopns13_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopns14_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopns15_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_042_loopns01_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_043_loopns02_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_044_loopns03_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_045_loopns04_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_046_loopns05_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_047_loopns06_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_048_loopns07_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_049_loopns08_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_050_loopns09_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_051_loopns10_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_052_loopns11_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_053_loopns12_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_054_loopns13_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_055_loopns14_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_056_loopns15_generated(VEC a, VEC b) ALIGN;
 //nested loops with multiple exits
-extern "C" VEC test_loopnsmx01_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopnsmx02_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopnsmx03_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopnsmx04_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopnsmx05_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopnsmx06_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopnsmx07_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopnsmx08_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopnsmx09_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopnsmx10_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopnsmx11_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopnsmx12_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopnsmx13_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopnsmx14_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_loopnsmx15_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_057_loopnsmx01_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_058_loopnsmx02_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_059_loopnsmx03_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_060_loopnsmx04_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_061_loopnsmx05_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_062_loopnsmx06_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_063_loopnsmx07_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_064_loopnsmx08_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_065_loopnsmx09_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_066_loopnsmx10_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_067_loopnsmx11_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_068_loopnsmx12_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_069_loopnsmx13_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_070_loopnsmx14_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_071_loopnsmx15_generated(VEC a, VEC b) ALIGN;
 
 //function calls
-extern "C" VEC test_call01_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_call02_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_call03_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_call04_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_call05_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_call06_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_call07_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_call08_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_call09_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_call10_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_072_call01_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_073_call02_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_074_call03_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_075_call04_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_076_call05_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_077_call06_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_078_call07_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_079_call08_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_080_call09_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_081_call10_generated(VEC a, VEC b) ALIGN;
 
 // misc
-extern "C" VEC test_misc_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_ocl_mandelbrot_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_noise_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_ocl_aobench_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_082_misc_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_083_ocl_mandelbrot_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_084_noise_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_085_ocl_aobench_generated(VEC a, VEC b) ALIGN;
 
-//shader tests
-extern "C" VEC test_shader_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_brick_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_checker_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_dented_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_glass_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_granite_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_parquet_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_phong_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_screen_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_starball_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_whitted_generated(VEC a, VEC b) ALIGN;
-extern "C" VEC test_wood_generated(VEC a, VEC b) ALIGN;
-
-extern "C" VEC test_irreducible1_generated(VEC a, VEC b) ALIGN; 
-extern "C" VEC test_irreducible2_generated(VEC a, VEC b) ALIGN; 
-extern "C" VEC test_irreducible3_generated(VEC a, VEC b) ALIGN; 
+extern "C" VEC test_086_irreducible1_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_087_irreducible2_generated(VEC a, VEC b) ALIGN;
+extern "C" VEC test_088_irreducible3_generated(VEC a, VEC b) ALIGN;
 
 //----------------------------------------------------------------------------//
 // implementations of corresponding scalar source functions
 //----------------------------------------------------------------------------//
 //arithmetic only
-extern "C" float test_simple_scalar(float a, float b) {
+extern "C" float test_001_simple_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     return x / y;
 }
 //simple control flow
-extern "C" float test_if01_scalar(float a, float b) {
+extern "C" float test_002_if01_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z;
@@ -227,7 +213,7 @@ extern "C" float test_if01_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_if02_scalar(float a, float b) {
+extern "C" float test_003_if02_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = a*a;
@@ -238,7 +224,7 @@ extern "C" float test_if02_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_if03_scalar(float a, float b) {
+extern "C" float test_004_if03_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z;
@@ -254,7 +240,7 @@ extern "C" float test_if03_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_if04_scalar(float a, float b) {
+extern "C" float test_005_if04_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z;
@@ -273,7 +259,7 @@ extern "C" float test_if04_scalar(float a, float b) {
 
     return z * r;
 }
-extern "C" float test_if05_scalar(float a, float b) {
+extern "C" float test_006_if05_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z;
@@ -295,7 +281,7 @@ extern "C" float test_if05_scalar(float a, float b) {
 
     return z * r;
 }
-extern "C" float test_if06_scalar(float a, float b) {
+extern "C" float test_007_if06_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z;
@@ -318,7 +304,7 @@ extern "C" float test_if06_scalar(float a, float b) {
 
     return z * r;
 }
-extern "C" float test_if07_scalar(float a, float b) {
+extern "C" float test_008_if07_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -335,7 +321,7 @@ extern "C" float test_if07_scalar(float a, float b) {
 
     return z * r;
 }
-extern "C" float test_if08_scalar(float a, float b) {
+extern "C" float test_009_if08_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -352,7 +338,7 @@ extern "C" float test_if08_scalar(float a, float b) {
 
     return z * r;
 }
-extern "C" float test_if09_scalar(float a, float b) {
+extern "C" float test_010_if09_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z;
@@ -372,7 +358,7 @@ extern "C" float test_if09_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_if10_scalar(float a, float b) {
+extern "C" float test_011_if10_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -400,7 +386,7 @@ extern "C" float test_if10_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_if11_scalar(float a, float b) {
+extern "C" float test_012_if11_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -419,7 +405,7 @@ extern "C" float test_if11_scalar(float a, float b) {
 // Some non-standard control-flow where a VARYING block
 // does not post-dominate the common dominator of all
 // incoming paths (mask generation regression test).
-extern "C" float test_if12_scalar(float a, float b) {
+extern "C" float test_013_if12_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
 
@@ -442,7 +428,7 @@ X:		x /= 3.f;
 }
 
 //simple loops
-extern "C" float test_loop01_scalar(float a, float b) {
+extern "C" float test_014_loop01_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -453,7 +439,7 @@ extern "C" float test_loop01_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_loop02_scalar(float a, float b) {
+extern "C" float test_015_loop02_scalar(float a, float b) {
     int i = 0;
     float sum = a*b;
 
@@ -473,7 +459,7 @@ extern "C" float test_loop02_scalar(float a, float b) {
 //
 //    return sum;
 }
-extern "C" float test_loop03_scalar(float a, float b) {
+extern "C" float test_016_loop03_scalar(float a, float b) {
     int i = 0;
     float sum = a*b;
 
@@ -484,7 +470,7 @@ extern "C" float test_loop03_scalar(float a, float b) {
 
     return sum;
 }
-extern "C" float test_loop04_scalar(float a, float b) {
+extern "C" float test_017_loop04_scalar(float a, float b) {
     int i = 0;
     float sum = a*b;
 
@@ -493,7 +479,7 @@ extern "C" float test_loop04_scalar(float a, float b) {
     } while (sum += i,i < 42);
     return sum;
 }
-extern "C" float test_loop05_scalar(float a, float b) {
+extern "C" float test_018_loop05_scalar(float a, float b) {
     int i = 0;
     float sum = a*b;
 
@@ -503,7 +489,7 @@ extern "C" float test_loop05_scalar(float a, float b) {
 
     return sum;
 }
-extern "C" float test_loop06_scalar(float a, float b) {
+extern "C" float test_019_loop06_scalar(float a, float b) {
     int i = 0;
     float sum = a*b+42;
 
@@ -512,7 +498,7 @@ extern "C" float test_loop06_scalar(float a, float b) {
     return sum;
 }
 //more complex loops
-extern "C" float test_loopc01_scalar(float a, float b) {
+extern "C" float test_020_loopc01_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -527,7 +513,7 @@ extern "C" float test_loopc01_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_loopc02_scalar(float a, float b) {
+extern "C" float test_021_loopc02_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = a;
@@ -542,7 +528,7 @@ extern "C" float test_loopc02_scalar(float a, float b) {
 
     return z-b;
 }
-extern "C" float test_loopc03_scalar(float a, float b) {
+extern "C" float test_022_loopc03_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -557,7 +543,7 @@ extern "C" float test_loopc03_scalar(float a, float b) {
 
     return z-b;
 }
-extern "C" float test_loopc04_scalar(float a, float b) {
+extern "C" float test_023_loopc04_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -572,7 +558,7 @@ extern "C" float test_loopc04_scalar(float a, float b) {
 
     return z-b;
 }
-extern "C" float test_loopc05_scalar(float a, float b) {
+extern "C" float test_024_loopc05_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -586,7 +572,7 @@ extern "C" float test_loopc05_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_loopc06_scalar(float a, float b) {
+extern "C" float test_025_loopc06_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -600,7 +586,7 @@ extern "C" float test_loopc06_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_loopc07_scalar(float a, float b) {
+extern "C" float test_026_loopc07_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -612,7 +598,7 @@ extern "C" float test_loopc07_scalar(float a, float b) {
 
     return z*r;
 }
-extern "C" float test_loopc08_scalar(float a, float b) {
+extern "C" float test_027_loopc08_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -632,7 +618,7 @@ extern "C" float test_loopc08_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_loopc09_scalar(float a, float b) {
+extern "C" float test_028_loopc09_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -658,7 +644,7 @@ extern "C" float test_loopc09_scalar(float a, float b) {
     return z*r;
 }
 //loops with multiple exits
-extern "C" float test_loopmx01_scalar(float a, float b) {
+extern "C" float test_029_loopmx01_scalar(float a, float b) {
     int i = 0;
     float sum = a*b;
 
@@ -670,7 +656,7 @@ extern "C" float test_loopmx01_scalar(float a, float b) {
 
     return sum;
 }
-extern "C" float test_loopmx02_scalar(float a, float b) {
+extern "C" float test_030_loopmx02_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -684,7 +670,7 @@ extern "C" float test_loopmx02_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_loopmx03_scalar(float a, float b) {
+extern "C" float test_031_loopmx03_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -699,7 +685,7 @@ extern "C" float test_loopmx03_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_loopmx04_scalar(float a, float b) {
+extern "C" float test_032_loopmx04_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -715,7 +701,7 @@ extern "C" float test_loopmx04_scalar(float a, float b) {
 
     return z-b;
 }
-extern "C" float test_loopmx05_scalar(float a, float b) {
+extern "C" float test_033_loopmx05_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -731,7 +717,7 @@ extern "C" float test_loopmx05_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_loopmx06_scalar(float a, float b) {
+extern "C" float test_034_loopmx06_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -753,7 +739,7 @@ extern "C" float test_loopmx06_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_loopmx07_scalar(float a, float b) {
+extern "C" float test_035_loopmx07_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -777,7 +763,7 @@ extern "C" float test_loopmx07_scalar(float a, float b) {
 }
 // has a "FULLY_UNIFORM" block between loop and if
 // NOTE: sometimes activating this test makes loopnsmx08 fail (UNIFORM_ANALYSIS=0)
-extern "C" float test_loopmx08_scalar(float a, float b) {
+extern "C" float test_036_loopmx08_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -806,7 +792,7 @@ extern "C" float test_loopmx08_scalar(float a, float b) {
 
     return z * r;
 }
-extern "C" float test_loopmx09_scalar(float a, float b) {
+extern "C" float test_037_loopmx09_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -825,7 +811,7 @@ extern "C" float test_loopmx09_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_loopmx10_scalar(float a, float b) {
+extern "C" float test_038_loopmx10_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -848,7 +834,7 @@ extern "C" float test_loopmx10_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_loopmx11_scalar(float a, float b) {
+extern "C" float test_039_loopmx11_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -869,7 +855,7 @@ extern "C" float test_loopmx11_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_loopmx12_scalar(float a, float b) {
+extern "C" float test_040_loopmx12_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -896,7 +882,7 @@ extern "C" float test_loopmx12_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_loopmx13_scalar(float a, float b) {
+extern "C" float test_041_loopmx13_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -922,7 +908,7 @@ extern "C" float test_loopmx13_scalar(float a, float b) {
     return z;
 }
 //nested loops
-extern "C" float test_loopns01_scalar(float a, float b) {
+extern "C" float test_042_loopns01_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -938,7 +924,7 @@ extern "C" float test_loopns01_scalar(float a, float b) {
 }
 // FULLY_UNIFORM outer loop, UNIFORM inner loops,
 // VARYING if-statements, UNIFORM if inside innermost loop (i == j)
-extern "C" float test_loopns02_scalar(float a, float b) {
+extern "C" float test_043_loopns02_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -973,7 +959,7 @@ extern "C" float test_loopns02_scalar(float a, float b) {
     return z;
 }
 // VARYING inner loop, FULLY_UNIFORM outer loop
-extern "C" float test_loopns03_scalar(float a, float b) {
+extern "C" float test_044_loopns03_scalar(float a, float b) {
     float x = a + b;
     float y = x;
     float z = y;
@@ -989,7 +975,7 @@ extern "C" float test_loopns03_scalar(float a, float b) {
     return z;
 }
 // UNIFORM inner loop, VARYING outer loop
-extern "C" float test_loopns04_scalar(float a, float b) {
+extern "C" float test_045_loopns04_scalar(float a, float b) {
     float x = a + b;
     float y = x;
     float z = y;
@@ -1005,7 +991,7 @@ extern "C" float test_loopns04_scalar(float a, float b) {
     return z;
 }
 // VARYING innermost loop, UNIFORM inner loop, VARYING outer loop
-extern "C" float test_loopns05_scalar(float a, float b) {
+extern "C" float test_046_loopns05_scalar(float a, float b) {
     float x = a + b;
     float y = x;
     float z = y;
@@ -1023,7 +1009,7 @@ extern "C" float test_loopns05_scalar(float a, float b) {
     return z;
 }
 // UNIFORM innermost loop, VARYING outer loops
-extern "C" float test_loopns06_scalar(float a, float b) {
+extern "C" float test_047_loopns06_scalar(float a, float b) {
     float x = a + b;
     float y = x;
     float z = y;
@@ -1042,7 +1028,7 @@ extern "C" float test_loopns06_scalar(float a, float b) {
 }
 // UNIFORM and VARYING inner loops, VARYING outer loop, several nesting levels
 // The input values are capped to prevent loops calculating too long
-extern "C" float test_loopns07_scalar(float a, float b) {
+extern "C" float test_048_loopns07_scalar(float a, float b) {
 	a = a > 20.f ? 20.f : a;
 	b = b > 20.f ? 20.f : b;
     float x = a + b;
@@ -1072,7 +1058,7 @@ extern "C" float test_loopns07_scalar(float a, float b) {
 // for different instances and thus cannot be kept UNIFORM.
 // somehow, the weird innermost loop prevents it from calculating forever for
 // large input values.
-extern "C" float test_loopns08_scalar(float a, float b) {
+extern "C" float test_049_loopns08_scalar(float a, float b) {
     float x = a + b;
     float y = x;
     float z = y;
@@ -1096,11 +1082,11 @@ extern "C" float test_loopns08_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_loopns09_scalar(float a, float b) {
+extern "C" float test_050_loopns09_scalar(float a, float b) {
     float x = a + b;
     float y = x;
     float z = y;
-    
+
     for (int i=0; i<a; ++i) {
         for (int j=0; j<b; ++j) {
             z += x;
@@ -1111,7 +1097,7 @@ extern "C" float test_loopns09_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_loopns10_scalar(float a, float b) {
+extern "C" float test_051_loopns10_scalar(float a, float b) {
     float x = a + b;
     float y = x;
     float z = y;
@@ -1126,7 +1112,7 @@ extern "C" float test_loopns10_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_loopns11_scalar(float a, float b) {
+extern "C" float test_052_loopns11_scalar(float a, float b) {
     float x = a + b;
     float y = x;
     float z = y;
@@ -1137,12 +1123,12 @@ extern "C" float test_loopns11_scalar(float a, float b) {
             z += a;
         }
     }
-    
+
     z = z-y;
 
     return z;
 }
-extern "C" float test_loopns12_scalar(float a, float b) {
+extern "C" float test_053_loopns12_scalar(float a, float b) {
     float x = a + b;
     float y = x;
     float z = y;
@@ -1158,7 +1144,7 @@ extern "C" float test_loopns12_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_loopns13_scalar(float a, float b) {
+extern "C" float test_054_loopns13_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -1179,7 +1165,7 @@ extern "C" float test_loopns13_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_loopns14_scalar(float a, float b) {
+extern "C" float test_055_loopns14_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -1204,7 +1190,7 @@ extern "C" float test_loopns14_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_loopns15_scalar(float a, float b) {
+extern "C" float test_056_loopns15_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -1239,7 +1225,7 @@ extern "C" float test_loopns15_scalar(float a, float b) {
 //nested loops with multiple exits
 
 // FULLY_UNIFORM loops
-extern "C" float test_loopnsmx01_scalar(float a, float b) {
+extern "C" float test_057_loopnsmx01_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -1258,7 +1244,7 @@ extern "C" float test_loopnsmx01_scalar(float a, float b) {
     return z;
 }
 // UNIFORM outer loop becomes VARYING due to return
-extern "C" float test_loopnsmx02_scalar(float a, float b) {
+extern "C" float test_058_loopnsmx02_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -1276,7 +1262,7 @@ extern "C" float test_loopnsmx02_scalar(float a, float b) {
     return z;
 }
 // VARYING outer loop, UNIFORM inner loop becomes VARYING due to return
-extern "C" float test_loopnsmx03_scalar(float a, float b) {
+extern "C" float test_059_loopnsmx03_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -1294,7 +1280,7 @@ extern "C" float test_loopnsmx03_scalar(float a, float b) {
     return z;
 }
 // TODO: test something :)
-extern "C" float test_loopnsmx04_scalar(float a, float b) {
+extern "C" float test_060_loopnsmx04_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -1304,7 +1290,7 @@ extern "C" float test_loopnsmx04_scalar(float a, float b) {
     return z;
 }
 // TODO: test something :)
-extern "C" float test_loopnsmx05_scalar(float a, float b) {
+extern "C" float test_061_loopnsmx05_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -1313,7 +1299,7 @@ extern "C" float test_loopnsmx05_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_loopnsmx06_scalar(float a, float b) {
+extern "C" float test_062_loopnsmx06_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -1325,12 +1311,12 @@ extern "C" float test_loopnsmx06_scalar(float a, float b) {
             if (z < 0.f) return z;
         }
     }
-    
+
     z = z-y;
 
     return z;
 }
-extern "C" float test_loopnsmx07_scalar(float a, float b) {
+extern "C" float test_063_loopnsmx07_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -1342,7 +1328,7 @@ extern "C" float test_loopnsmx07_scalar(float a, float b) {
             if (z < 0.f) return z;
         }
     }
-    
+
     for (int i=0; i<a; ++i) {
         z++;
         for (int j=0; j<b; ++j) {
@@ -1350,12 +1336,12 @@ extern "C" float test_loopnsmx07_scalar(float a, float b) {
             if (z < 0.f) return z;
         }
     }
-    
+
     z = z-y;
 
     return z;
 }
-extern "C" float test_loopnsmx08_scalar(float a, float b) {
+extern "C" float test_064_loopnsmx08_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -1373,7 +1359,7 @@ extern "C" float test_loopnsmx08_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_loopnsmx09_scalar(float a, float b) {
+extern "C" float test_065_loopnsmx09_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -1400,7 +1386,7 @@ extern "C" float test_loopnsmx09_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_loopnsmx10_scalar(float a, float b) {
+extern "C" float test_066_loopnsmx10_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -1434,7 +1420,7 @@ extern "C" float test_loopnsmx10_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_loopnsmx11_scalar(float a, float b) {
+extern "C" float test_067_loopnsmx11_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -1470,7 +1456,7 @@ extern "C" float test_loopnsmx11_scalar(float a, float b) {
 
     return z*r;
 }
-extern "C" float test_loopnsmx12_scalar(float a, float b) {
+extern "C" float test_068_loopnsmx12_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -1494,7 +1480,7 @@ X:  z = z-y;
 
     return z;
 }
-extern "C" float test_loopnsmx13_scalar(float a, float b) {
+extern "C" float test_069_loopnsmx13_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -1520,7 +1506,7 @@ X:  z = z-y;
 }
 // no idea if this is guaranteed to always terminate, but it seems so ^^
 // also no idea if all paths actually can be executed ^^
-extern "C" float test_loopnsmx14_scalar(float a, float b) {
+extern "C" float test_070_loopnsmx14_scalar(float a, float b) {
 	float z, r, x = a + b;
     float y=z=r= x * x - b;
     for (float i=3.2f; i<a && z <= b*y; i=i+2) {
@@ -1550,7 +1536,7 @@ Y:          z = a+x;
 Z: z -= r;
     return z;
 }
-extern "C" float test_loopnsmx15_scalar(float a, float b) {
+extern "C" float test_071_loopnsmx15_scalar(float a, float b) {
 	float z, r, x = a + b;
     float y =z=r= x * x - b;
     for (float i=3.2f; i<a && z <= b*y; i=i+2) {
@@ -1582,21 +1568,21 @@ Z: z -= r;
 }
 
 //function calls
-extern "C" float test_call01_scalar(float a, float b) {
+extern "C" float test_072_call01_scalar(float a, float b) {
     return cosf(a*b);
 }
-extern "C" float test_call02_scalar(float a, float b) {
+extern "C" float test_073_call02_scalar(float a, float b) {
     return floorf(a/b);
 }
-extern "C" float test_call03_scalar(float a, float b) {
+extern "C" float test_074_call03_scalar(float a, float b) {
     return a > b ? logf(a-b) : 1.f;
 }
-extern "C" float test_call04_scalar(float a, float b) {
+extern "C" float test_075_call04_scalar(float a, float b) {
     return a > b ? logf(a-b) : sinf(b*a);
 }
-extern "C" float test_call05_scalar(float a, float b) {
+extern "C" float test_076_call05_scalar(float a, float b) {
     float z;
-	
+
 	if (a > b) {
         z = floorf(a);
         z += cosf(b);
@@ -1608,25 +1594,25 @@ extern "C" float test_call05_scalar(float a, float b) {
 
     return z;
 }
-extern "C" float test_call06_scalar(float a, float b) {
+extern "C" float test_077_call06_scalar(float a, float b) {
 	// call to function without packetized native equivalent
 	// (requires splitting)
     return powf(a, b);
 }
-extern "C" float test_call07_scalar(float a, float b) {
+extern "C" float test_078_call07_scalar(float a, float b) {
 	// call to function without packetized native equivalent
 	// (requires splitting with if-cascade (non-true-mask)
     return a < b ? a : powf(a, b);
 }
 extern "C" __attribute__((noinline)) float noinlinecall(float x) { return x*x; }
-extern "C" float test_call08_scalar(float a, float b) {
+extern "C" float test_079_call08_scalar(float a, float b) {
 	// call to function without packetized native equivalent
 	// (requires splitting with if-cascade (non-true-mask)
     return a < b ? a : noinlinecall(a+b);
 }
 extern "C" __attribute__((noinline)) float noinlinecall2(float x) { return x*x; }
 extern "C" __attribute__((noinline)) VEC noinlinecall2_4(VEC x) { return _mm_mul_ps(x,x); }
-extern "C" float test_call09_scalar(float a, float b) {
+extern "C" float test_080_call09_scalar(float a, float b) {
     return a < b ? a : noinlinecall2(a+b);
 }
 extern "C" __attribute__((noinline)) float noinlinecall3(float x) { return x*x; }
@@ -1634,14 +1620,14 @@ extern "C" __attribute__((noinline)) VEC noinlinecall3_4(VEC x, VEC mask) {
 	if (_mm_movemask_ps(mask)) return _mm_mul_ps(x,x);
 	else return _mm_sub_ps(x, _mm_set_ps1(1.f));
 }
-extern "C" float test_call10_scalar(float a, float b) {
+extern "C" float test_081_call10_scalar(float a, float b) {
     return a < b ? a : noinlinecall3(a+b);
 }
 
 // uniformly calculated induction variable is used after
 // varying loop -> has to be varying as well, broadcasting
 // behind loop will not yield correct results!
-extern "C" float test_misc_scalar(float a, float b) {
+extern "C" float test_082_misc_scalar(float a, float b) {
     unsigned iter=0;
     for(iter=0; (iter < a); ++iter)
     {
@@ -1649,12 +1635,12 @@ extern "C" float test_misc_scalar(float a, float b) {
 	return a - iter;
 }
 
-extern "C" float test_ocl_mandelbrot_scalar(float a, float b) {
+extern "C" float test_083_ocl_mandelbrot_scalar(float a, float b) {
 	return a * b;
 }
 
 // "binary operator types must match" error
-extern "C" float test_ocl_mandelbrotX_scalar(float a, float b) {
+extern "C" float test_083_ocl_mandelbrotX_scalar(float a, float b) {
 	const float tid = (float)a;
 	const float width = (float)b;
 	const float scale = 1.f;
@@ -1686,7 +1672,7 @@ extern "C" float test_ocl_mandelbrotX_scalar(float a, float b) {
     return (float)(255*iter/maxIterations);
 }
 //array access
-extern "C" float test_noise_scalar(float x, float y) {
+extern "C" float test_084_noise_scalar(float x, float y) {
     float z = x*y;
     static int p[] = { 151,160,137,91,90,15,
         131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,
@@ -2021,7 +2007,7 @@ extern "C" float computeAO(struct Intersection* isect, float* sd)
 	return occlusion;
 }
 
-extern "C" float test_ocl_aobench_scalar(float x, float y) {
+extern "C" float test_085_ocl_aobench_scalar(float x, float y) {
 
 	unsigned nIndex = (int)x;
 
@@ -2031,7 +2017,7 @@ extern "C" float test_ocl_aobench_scalar(float x, float y) {
 	i.nX = i.pX = 0;
 	i.nY = i.pY = 0;
 	i.nZ = i.pZ = 0;
-	
+
 	const float px = ((float)(int)(nIndex) - 512) / 512.0f;
 	const float py = ((float)(int)(nIndex) - 512) / 512.0f;
 	const float ls = px*px + py*py + 1.0f;
@@ -2047,7 +2033,7 @@ extern "C" float test_ocl_aobench_scalar(float x, float y) {
 	r.dirY = dirY;
 	r.dirZ = dirZ;
 	int seed = (int)(fmodf((dirX+512.0f) * (dirY+512.0f) * 4525434.0f, 65536.0f));
-	
+
 	int rcol = 0;
 	Intersect(&r, &i);
 	if (i.hit != 0)
@@ -2056,13 +2042,13 @@ extern "C" float test_ocl_aobench_scalar(float x, float y) {
 		rcol = (int)(computeAO(&i, &s) * 255);
 		seed = s;
 	}
-	
+
 	return (float)(rcol | (rcol<<8) | (rcol<<16) | (255<<24));
 }
 
 #if 0
 // INCOMPLETE
-extern "C" float test_histogram_scalar(float x, float y) {
+extern "C" float test_000_histogram_scalar(float x, float y) {
 	const const unsigned* data;
 	unsigned* sharedArray;
 	unsigned* binResult;
@@ -2106,7 +2092,7 @@ extern "C" float test_histogram_scalar(float x, float y) {
 
 #ifdef RUN_IRREDUCIBLE_TESTS
 //irreducible control-flow tests
-extern "C" float test_irreducible1_scalar(float a, float b) {
+extern "C" float test_086_irreducible1_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -2121,7 +2107,7 @@ G:      ++z;
 
     return z-b;
 }
-extern "C" float test_irreducible2_scalar(float a, float b) {
+extern "C" float test_087_irreducible2_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -2139,7 +2125,7 @@ G:	    z -= 2.f;
 
     return z-b;
 }
-extern "C" float test_irreducible3_scalar(float a, float b) {
+extern "C" float test_088_irreducible3_scalar(float a, float b) {
     float x = a + b;
     float y = x * x - b;
     float z = y;
@@ -2178,109 +2164,109 @@ typedef VEC (*vecFnType)(VEC, VEC) ALIGN REALIGN;
 void addTestCases(std::vector<std::pair<const char*, std::pair<scalarFnType, vecFnType> > >& testCases) {
 #if 0
 #endif
-	ADD_TEST(simple);
+	ADD_TEST(001_simple);
 
-	ADD_TEST(if01);
-	ADD_TEST(if02);
-	ADD_TEST(if03);
-	ADD_TEST(if04);
-	ADD_TEST(if05);
-	ADD_TEST(if06);
-	ADD_TEST(if07);
-	ADD_TEST(if08);
-	ADD_TEST(if09);
-	ADD_TEST(if10);
-	ADD_TEST(if11);
-	ADD_TEST(if12);
+	ADD_TEST(002_if01);
+	ADD_TEST(003_if02);
+	ADD_TEST(004_if03);
+	ADD_TEST(005_if04);
+	ADD_TEST(006_if05);
+	ADD_TEST(007_if06);
+	ADD_TEST(008_if07);
+	ADD_TEST(009_if08);
+	ADD_TEST(010_if09);
+	ADD_TEST(011_if10);
+	ADD_TEST(012_if11);
+	ADD_TEST(013_if12);
 
-	ADD_TEST(loop01);
-	ADD_TEST(loop02);
-	ADD_TEST(loop03);
-	ADD_TEST(loop04);
-	ADD_TEST(loop05);
-	ADD_TEST(loop06);
+	ADD_TEST(014_loop01);
+	ADD_TEST(015_loop02);
+	ADD_TEST(016_loop03);
+	ADD_TEST(017_loop04);
+	ADD_TEST(018_loop05);
+	ADD_TEST(019_loop06);
 
-	ADD_TEST(loopc01);
-	ADD_TEST(loopc02);
-	ADD_TEST(loopc03);
-	ADD_TEST(loopc04);
-	ADD_TEST(loopc05);
-	ADD_TEST(loopc06);
-	ADD_TEST(loopc07);
-	ADD_TEST(loopc08);
-	ADD_TEST(loopc09);
+	ADD_TEST(020_loopc01);
+	ADD_TEST(021_loopc02);
+	ADD_TEST(022_loopc03);
+	ADD_TEST(023_loopc04);
+	ADD_TEST(024_loopc05);
+	ADD_TEST(025_loopc06);
+	ADD_TEST(026_loopc07);
+	ADD_TEST(027_loopc08);
+	ADD_TEST(028_loopc09);
 
-	ADD_TEST(loopmx01);
-	ADD_TEST(loopmx02);
-	ADD_TEST(loopmx03);
-	ADD_TEST(loopmx04);
-	ADD_TEST(loopmx05);
-	ADD_TEST(loopmx06);
-	ADD_TEST(loopmx07);
-	ADD_TEST(loopmx08);
-	ADD_TEST(loopmx09);
-	ADD_TEST(loopmx10);
-	ADD_TEST(loopmx11);
-	ADD_TEST(loopmx12);
-	ADD_TEST(loopmx13);
+	ADD_TEST(029_loopmx01);
+	ADD_TEST(030_loopmx02);
+	ADD_TEST(031_loopmx03);
+	ADD_TEST(032_loopmx04);
+	ADD_TEST(033_loopmx05);
+	ADD_TEST(034_loopmx06);
+	ADD_TEST(035_loopmx07);
+	ADD_TEST(036_loopmx08);
+	ADD_TEST(037_loopmx09);
+	ADD_TEST(038_loopmx10);
+	ADD_TEST(039_loopmx11);
+	ADD_TEST(040_loopmx12);
+	ADD_TEST(041_loopmx13);
 
-	ADD_TEST(loopns01);
-	ADD_TEST(loopns02);
-	ADD_TEST(loopns03);
-	ADD_TEST(loopns04);
-	ADD_TEST(loopns05);
-	ADD_TEST(loopns06);
-	ADD_TEST(loopns07);
-	ADD_TEST(loopns08);
-	ADD_TEST(loopns09);
-	ADD_TEST(loopns10);
-	ADD_TEST(loopns11);
-	ADD_TEST(loopns12);
-	ADD_TEST(loopns13);
-	ADD_TEST(loopns14);
-	ADD_TEST(loopns15);
+	ADD_TEST(042_loopns01);
+	ADD_TEST(043_loopns02);
+	ADD_TEST(044_loopns03);
+	ADD_TEST(045_loopns04);
+	ADD_TEST(046_loopns05);
+	ADD_TEST(047_loopns06);
+	ADD_TEST(048_loopns07);
+	ADD_TEST(049_loopns08);
+	ADD_TEST(050_loopns09);
+	ADD_TEST(051_loopns10);
+	ADD_TEST(052_loopns11);
+	ADD_TEST(053_loopns12);
+	ADD_TEST(054_loopns13);
+	ADD_TEST(055_loopns14);
+	ADD_TEST(056_loopns15);
 
-	ADD_TEST(loopnsmx01);
-	ADD_TEST(loopnsmx02);
-	ADD_TEST(loopnsmx03);
-	ADD_TEST(loopnsmx04);
-	ADD_TEST(loopnsmx05);
-	ADD_TEST(loopnsmx06);
-	ADD_TEST(loopnsmx07);
-	ADD_TEST(loopnsmx08);
-	ADD_TEST(loopnsmx09);
-	ADD_TEST(loopnsmx10);
-	ADD_TEST(loopnsmx11);
-	ADD_TEST(loopnsmx12);
-	ADD_TEST(loopnsmx13);
-	ADD_TEST(loopnsmx14);
+	ADD_TEST(057_loopnsmx01);
+	ADD_TEST(058_loopnsmx02);
+	ADD_TEST(059_loopnsmx03);
+	ADD_TEST(060_loopnsmx04);
+	ADD_TEST(061_loopnsmx05);
+	ADD_TEST(062_loopnsmx06);
+	ADD_TEST(063_loopnsmx07);
+	ADD_TEST(064_loopnsmx08);
+	ADD_TEST(065_loopnsmx09);
+	ADD_TEST(066_loopnsmx10);
+	ADD_TEST(067_loopnsmx11);
+	ADD_TEST(068_loopnsmx12);
+	ADD_TEST(069_loopnsmx13);
+	ADD_TEST(070_loopnsmx14);
 	// somehow, the last few input values for this one always fail,
 	// no matter which ones they are.
-	//ADD_TEST(loopnsmx15);
+	//ADD_TEST(071_loopnsmx15);
 
-	ADD_TEST(call01);
-	ADD_TEST(call02);
-	ADD_TEST(call03);
-	ADD_TEST(call04);
-	ADD_TEST(call05);
-	ADD_TEST(call06);
-	ADD_TEST(call07);
-	ADD_TEST(call08);
-	ADD_TEST(call09);
-	ADD_TEST(call10);
+	ADD_TEST(072_call01);
+	ADD_TEST(073_call02);
+	ADD_TEST(074_call03);
+	ADD_TEST(075_call04);
+	ADD_TEST(076_call05);
+	ADD_TEST(077_call06);
+	ADD_TEST(078_call07);
+	ADD_TEST(079_call08);
+	ADD_TEST(080_call09);
+	ADD_TEST(081_call10);
 
-	ADD_TEST(misc);
-	ADD_TEST(ocl_mandelbrot);
-	ADD_TEST(noise);
-	ADD_TEST(ocl_aobench);
+	ADD_TEST(082_misc);
+	ADD_TEST(083_ocl_mandelbrot);
+	ADD_TEST(084_noise);
+	ADD_TEST(085_ocl_aobench);
 #if 0
 #endif
 
 
 #ifdef RUN_IRREDUCIBLE_TESTS
-	ADD_TEST(irreducible1);
-	ADD_TEST(irreducible2);
-	ADD_TEST(irreducible3);
+	ADD_TEST(086_irreducible1);
+	ADD_TEST(087_irreducible2);
+	ADD_TEST(088_irreducible3);
 #endif
 }
 
@@ -2412,14 +2398,14 @@ int main(int argc, char** argv) {
     //------------------------------------------------------------------------//
 	typedef std::pair<const char*, std::pair<const char*, std::vector<float>* > > ScalarResult;
     ScalarResult* scalarResults = new ScalarResult[maxResultNr]();
-    
+
     //------------------------------------------------------------------------//
     // create timer and data structures that hold execution times
     //------------------------------------------------------------------------//
     //Packetizer::Timer timer;
     std::vector<double> executionTimesScalar;
     std::vector<double> executionTimesPacketized;
-    
+
     //------------------------------------------------------------------------//
     // compute results of scalar and generated functions
     //------------------------------------------------------------------------//
@@ -2437,7 +2423,7 @@ int main(int argc, char** argv) {
 
                 // get function pointers of current test case
 				std::pair<const char*, std::pair<scalarFnType, vecFnType> > testCase = testCases[TC];
-                
+
                 // get input values
                 const float input0i = scalarInputs0[i];
                 const float input1i = scalarInputs1[i];
@@ -2464,7 +2450,7 @@ int main(int argc, char** argv) {
                 const float resS3 = testCase.second.first(input3i, input3j);
                 //timer.stopTimer();
                 //executionTimesScalar.push_back(timer.getTime());
-                
+
                 // store result of scalar function
                 resS->push_back(resS0);
                 resS->push_back(resS1);
@@ -2517,7 +2503,7 @@ int main(int argc, char** argv) {
             printf("]\n");
         }
     }
-    
+
 #if 0 // executionTimesScalar is empty
     //TODO: print average statistics per test case
     printf("execution times:\n\n");
@@ -2545,7 +2531,7 @@ int main(int argc, char** argv) {
             printf("  min speedup: %.2f\n", testCaseMinSpeedup);
             printf("  max speedup: %.2f\n", testCaseMaxSpeedup);
             printf("  average speedup: %.2f\n\n", testCaseAverageSpeedup);
-    
+
             //set statistics to first run of current test case
             testCaseAccumulatedSpeedup = speedup;
             testCaseMinSpeedup = speedup;
@@ -2557,7 +2543,7 @@ int main(int argc, char** argv) {
             if (speedup > testCaseMaxSpeedup) testCaseMaxSpeedup = speedup;
             ++inputPermutationNr;
         }
-        
+
 		const bool printAllTimes = false;
         if (printAllTimes) {
             printf("%s (scalar) = %f\n", testCaseName, executionTimeScalar);
@@ -2566,7 +2552,7 @@ int main(int argc, char** argv) {
             else printf(" (slowdown: %.2f)\n\n", 1.0/speedup);
         }
     }
-            
+
     const double averageSpeedup = accumulatedSpeedup / (double)testsRun;
     printf("\nOverall statistics:\n");
     printf("  min speedup: %.2f\n", minSpeedup);
@@ -2588,7 +2574,7 @@ int main(int argc, char** argv) {
 		const float pktRes1 = get((*results)[i], 1);
 		const float pktRes2 = get((*results)[i], 2);
 		const float pktRes3 = get((*results)[i], 3);
-		
+
 		const bool success =
 			resultMatches(scalarRes0, pktRes0) &&
 			resultMatches(scalarRes1, pktRes1) &&

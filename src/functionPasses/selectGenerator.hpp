@@ -603,7 +603,7 @@ private:
 		for (LoopLiveValueAnalysis::LiveValueSetType::const_iterator it=
 				liveValues.begin(); it!=liveValues.end(); ++it)
 		{
-			PHINode* phi = PHINode::Create((*it)->getType(), "result.phi", pos);
+			PHINode* phi = PHINode::Create((*it)->getType(), 2U, "result.phi", pos);
 			loopResults->addResultPhi(*it, phi);
 
 			// We mark the phi as UNIFORM before completion:

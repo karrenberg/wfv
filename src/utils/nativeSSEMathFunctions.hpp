@@ -179,7 +179,7 @@ private:
       PointerType* PointerTy_6 = PointerType::get(vectorTy_float_SIMD, 0);
       PointerType* PointerTy_11 = PointerType::get(VectorTy_10, 0);
 
-      std::vector<const Type*>FuncTy_5_args;
+      std::vector<Type*>FuncTy_5_args;
       FuncTy_5_args.push_back(vectorTy_float_SIMD);
       FunctionType* FuncTy_5 = FunctionType::get(
         /*Result=*/vectorTy_float_SIMD,
@@ -376,126 +376,126 @@ private:
       const_array_18_elems.push_back(const_int32_19);
       const_array_18_elems.push_back(const_int32_19);
       const_array_18_elems.push_back(const_int32_19);
-      Constant* const_array_18 = ConstantArray::get(ArrayTy_0, const_array_18_elems);
+      Constant* const_array_18 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_18_elems));
       std::vector<Constant*> const_array_20_elems;
       ConstantInt* const_int32_21 = ConstantInt::get(context, APInt(32,  "-2147483648", 10));
       const_array_20_elems.push_back(const_int32_21);
       const_array_20_elems.push_back(const_int32_21);
       const_array_20_elems.push_back(const_int32_21);
       const_array_20_elems.push_back(const_int32_21);
-      Constant* const_array_20 = ConstantArray::get(ArrayTy_0, const_array_20_elems);
+      Constant* const_array_20 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_20_elems));
       std::vector<Constant*> const_array_22_elems;
       ConstantFP* const_float_23 = ConstantFP::get(context, APFloat(BitsToFloat(0x3FA2F983U) /* 1.273239e+00 */));
       const_array_22_elems.push_back(const_float_23);
       const_array_22_elems.push_back(const_float_23);
       const_array_22_elems.push_back(const_float_23);
       const_array_22_elems.push_back(const_float_23);
-      Constant* const_array_22 = ConstantArray::get(ArrayTy_2, const_array_22_elems);
+      Constant* const_array_22 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_22_elems));
       std::vector<Constant*> const_array_24_elems;
       ConstantInt* const_int32_25 = ConstantInt::get(context, APInt(32,  "1", 10));
       const_array_24_elems.push_back(const_int32_25);
       const_array_24_elems.push_back(const_int32_25);
       const_array_24_elems.push_back(const_int32_25);
       const_array_24_elems.push_back(const_int32_25);
-      Constant* const_array_24 = ConstantArray::get(ArrayTy_0, const_array_24_elems);
+      Constant* const_array_24 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_24_elems));
       std::vector<Constant*> const_array_26_elems;
       ConstantInt* const_int32_27 = ConstantInt::get(context, APInt(32,  "-2", 10));
       const_array_26_elems.push_back(const_int32_27);
       const_array_26_elems.push_back(const_int32_27);
       const_array_26_elems.push_back(const_int32_27);
       const_array_26_elems.push_back(const_int32_27);
-      Constant* const_array_26 = ConstantArray::get(ArrayTy_0, const_array_26_elems);
+      Constant* const_array_26 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_26_elems));
       std::vector<Constant*> const_array_28_elems;
       ConstantInt* const_int32_29 = ConstantInt::get(context, APInt(32,  "4", 10));
       const_array_28_elems.push_back(const_int32_29);
       const_array_28_elems.push_back(const_int32_29);
       const_array_28_elems.push_back(const_int32_29);
       const_array_28_elems.push_back(const_int32_29);
-      Constant* const_array_28 = ConstantArray::get(ArrayTy_0, const_array_28_elems);
+      Constant* const_array_28 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_28_elems));
       std::vector<Constant*> const_array_30_elems;
       ConstantInt* const_int32_31 = ConstantInt::get(context, APInt(32,  "2", 10));
       const_array_30_elems.push_back(const_int32_31);
       const_array_30_elems.push_back(const_int32_31);
       const_array_30_elems.push_back(const_int32_31);
       const_array_30_elems.push_back(const_int32_31);
-      Constant* const_array_30 = ConstantArray::get(ArrayTy_0, const_array_30_elems);
+      Constant* const_array_30 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_30_elems));
       std::vector<Constant*> const_array_32_elems;
       ConstantFP* const_float_33 = ConstantFP::get(context, APFloat(BitsToFloat(0xBF490000U) /* -7.851562e-01 */));
       const_array_32_elems.push_back(const_float_33);
       const_array_32_elems.push_back(const_float_33);
       const_array_32_elems.push_back(const_float_33);
       const_array_32_elems.push_back(const_float_33);
-      Constant* const_array_32 = ConstantArray::get(ArrayTy_2, const_array_32_elems);
+      Constant* const_array_32 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_32_elems));
       std::vector<Constant*> const_array_34_elems;
       ConstantFP* const_float_35 = ConstantFP::get(context, APFloat(BitsToFloat(0xB97DA000U) /* -2.418756e-04 */));
       const_array_34_elems.push_back(const_float_35);
       const_array_34_elems.push_back(const_float_35);
       const_array_34_elems.push_back(const_float_35);
       const_array_34_elems.push_back(const_float_35);
-      Constant* const_array_34 = ConstantArray::get(ArrayTy_2, const_array_34_elems);
+      Constant* const_array_34 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_34_elems));
       std::vector<Constant*> const_array_36_elems;
       ConstantFP* const_float_37 = ConstantFP::get(context, APFloat(-3.774895e-08f));
       const_array_36_elems.push_back(const_float_37);
       const_array_36_elems.push_back(const_float_37);
       const_array_36_elems.push_back(const_float_37);
       const_array_36_elems.push_back(const_float_37);
-      Constant* const_array_36 = ConstantArray::get(ArrayTy_2, const_array_36_elems);
+      Constant* const_array_36 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_36_elems));
       std::vector<Constant*> const_array_38_elems;
       ConstantFP* const_float_39 = ConstantFP::get(context, APFloat(BitsToFloat(0x37CCF5CEU) /* 2.443316e-05 */));
       const_array_38_elems.push_back(const_float_39);
       const_array_38_elems.push_back(const_float_39);
       const_array_38_elems.push_back(const_float_39);
       const_array_38_elems.push_back(const_float_39);
-      Constant* const_array_38 = ConstantArray::get(ArrayTy_2, const_array_38_elems);
+      Constant* const_array_38 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_38_elems));
       std::vector<Constant*> const_array_40_elems;
       ConstantFP* const_float_41 = ConstantFP::get(context, APFloat(BitsToFloat(0xBAB6061AU) /* -1.388732e-03 */));
       const_array_40_elems.push_back(const_float_41);
       const_array_40_elems.push_back(const_float_41);
       const_array_40_elems.push_back(const_float_41);
       const_array_40_elems.push_back(const_float_41);
-      Constant* const_array_40 = ConstantArray::get(ArrayTy_2, const_array_40_elems);
+      Constant* const_array_40 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_40_elems));
       std::vector<Constant*> const_array_42_elems;
       ConstantFP* const_float_43 = ConstantFP::get(context, APFloat(BitsToFloat(0x3D2AAAA5U) /* 4.166665e-02 */));
       const_array_42_elems.push_back(const_float_43);
       const_array_42_elems.push_back(const_float_43);
       const_array_42_elems.push_back(const_float_43);
       const_array_42_elems.push_back(const_float_43);
-      Constant* const_array_42 = ConstantArray::get(ArrayTy_2, const_array_42_elems);
+      Constant* const_array_42 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_42_elems));
       std::vector<Constant*> const_array_44_elems;
       ConstantFP* const_float_45 = ConstantFP::get(context, APFloat(5.000000e-01f));
       const_array_44_elems.push_back(const_float_45);
       const_array_44_elems.push_back(const_float_45);
       const_array_44_elems.push_back(const_float_45);
       const_array_44_elems.push_back(const_float_45);
-      Constant* const_array_44 = ConstantArray::get(ArrayTy_2, const_array_44_elems);
+      Constant* const_array_44 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_44_elems));
       std::vector<Constant*> const_array_46_elems;
       ConstantFP* const_float_47 = ConstantFP::get(context, APFloat(1.000000e+00f));
       const_array_46_elems.push_back(const_float_47);
       const_array_46_elems.push_back(const_float_47);
       const_array_46_elems.push_back(const_float_47);
       const_array_46_elems.push_back(const_float_47);
-      Constant* const_array_46 = ConstantArray::get(ArrayTy_2, const_array_46_elems);
+      Constant* const_array_46 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_46_elems));
       std::vector<Constant*> const_array_48_elems;
       ConstantFP* const_float_49 = ConstantFP::get(context, APFloat(BitsToFloat(0xB94CA1F9U) /* -1.951530e-04 */));
       const_array_48_elems.push_back(const_float_49);
       const_array_48_elems.push_back(const_float_49);
       const_array_48_elems.push_back(const_float_49);
       const_array_48_elems.push_back(const_float_49);
-      Constant* const_array_48 = ConstantArray::get(ArrayTy_2, const_array_48_elems);
+      Constant* const_array_48 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_48_elems));
       std::vector<Constant*> const_array_50_elems;
       ConstantFP* const_float_51 = ConstantFP::get(context, APFloat(8.332161e-03f));
       const_array_50_elems.push_back(const_float_51);
       const_array_50_elems.push_back(const_float_51);
       const_array_50_elems.push_back(const_float_51);
       const_array_50_elems.push_back(const_float_51);
-      Constant* const_array_50 = ConstantArray::get(ArrayTy_2, const_array_50_elems);
+      Constant* const_array_50 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_50_elems));
       std::vector<Constant*> const_array_52_elems;
       ConstantFP* const_float_53 = ConstantFP::get(context, APFloat(BitsToFloat(0xBE2AAAA3U) /* -1.666666e-01 */));
       const_array_52_elems.push_back(const_float_53);
       const_array_52_elems.push_back(const_float_53);
       const_array_52_elems.push_back(const_float_53);
       const_array_52_elems.push_back(const_float_53);
-      Constant* const_array_52 = ConstantArray::get(ArrayTy_2, const_array_52_elems);
+      Constant* const_array_52 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_52_elems));
       Constant* const_ptr_54 = ConstantExpr::getCast(Instruction::BitCast, gvar_array__ZL17_ps_inv_sign_mask, PointerTy_6);
       Constant* const_ptr_55 = ConstantExpr::getCast(Instruction::BitCast, gvar_array__ZL13_ps_sign_mask, PointerTy_6);
       Constant* const_ptr_56 = ConstantExpr::getCast(Instruction::BitCast, gvar_array__ZL15_ps_cephes_FOPI, PointerTy_6);
@@ -522,7 +522,7 @@ private:
       const_packed_74_elems.push_back(const_int32_75);
       const_packed_74_elems.push_back(const_int32_75);
       const_packed_74_elems.push_back(const_int32_75);
-      Constant* const_packed_74 = ConstantVector::get(vectorTy_int_SIMD, const_packed_74_elems);
+      Constant* const_packed_74 = ConstantVector::get(ArrayRef<Constant*>(const_packed_74_elems));
 
       // Global Variable Definitions
       gvar_array__ZL17_ps_inv_sign_mask->setInitializer(const_array_18);
@@ -565,7 +565,7 @@ private:
         BinaryOperator* packed_tmp2_i45 = BinaryOperator::Create(Instruction::And, packed_tmp_i47, packed_tmp1_i44, "tmp2.i45", label_entry);
         LoadInst* packed_78 = new LoadInst(const_ptr_56, "", false, label_entry);
         BinaryOperator* packed_tmp_i42 = BinaryOperator::Create(Instruction::FMul, packed_tmp3_i50, packed_78, "tmp.i42", label_entry);
-        CallInst* packed_79 = CallInst::Create(generateCvttps2dq(mod), packed_tmp_i42, "", label_entry);
+        CallInst* packed_79 = CallInst::Create(generateCvttps2dq(mod), ArrayRef<Value*>(packed_tmp_i42), "", label_entry);
         packed_79->setCallingConv(CallingConv::C);
         packed_79->setTailCall(true);AttrListPtr packed_79_PAL;
         {
@@ -584,7 +584,7 @@ private:
         LoadInst* packed_83 = new LoadInst(const_ptr_58, "", false, label_entry);
         BinaryOperator* packed_tmp_i40 = BinaryOperator::Create(Instruction::And, packed_82, packed_83, "tmp.i40", label_entry);
         CastInst* packed_84 = new BitCastInst(packed_tmp_i40, vectorTy_int_SIMD, "", label_entry);
-        CallInst* packed_85 = CallInst::Create(generateCvtdq2ps(mod), packed_84, "", label_entry);
+        CallInst* packed_85 = CallInst::Create(generateCvtdq2ps(mod), ArrayRef<Value*>(packed_84), "", label_entry);
         packed_85->setCallingConv(CallingConv::C);
         packed_85->setTailCall(true);AttrListPtr packed_85_PAL;
         {
@@ -603,7 +603,7 @@ private:
         std::vector<Value*> packed_88_params;
         packed_88_params.push_back(packed_87);
         packed_88_params.push_back(const_int32_60);
-        CallInst* packed_88 = CallInst::Create(generatePsllid(mod), packed_88_params.begin(), packed_88_params.end(), "", label_entry);
+        CallInst* packed_88 = CallInst::Create(generatePsllid(mod), ArrayRef<Value*>(packed_88_params), "", label_entry);
         packed_88->setCallingConv(CallingConv::C);
         packed_88->setTailCall(true);AttrListPtr packed_88_PAL;
         {
@@ -622,7 +622,7 @@ private:
         std::vector<Value*> packed_91_params;
         packed_91_params.push_back(packed_90);
         packed_91_params.push_back(const_packed_62);
-        CallInst* packed_91 = CallInst::Create(generatePcmpeq(mod), packed_91_params.begin(), packed_91_params.end(), "", label_entry);
+        CallInst* packed_91 = CallInst::Create(generatePcmpeq(mod), ArrayRef<Value*>(packed_91_params), "", label_entry);
         packed_91->setCallingConv(CallingConv::C);
         packed_91->setTailCall(true);AttrListPtr packed_91_PAL;
         {
@@ -720,7 +720,7 @@ private:
 
       ArrayType* ArrayTy_2 = ArrayType::get(Type::getFloatTy(context), 4);
 
-      std::vector<const Type*>FuncTy_5_args;
+      std::vector<Type*>FuncTy_5_args;
       FuncTy_5_args.push_back(vectorTy_float_SIMD);
       FunctionType* FuncTy_5 = FunctionType::get(
         /*Result=*/vectorTy_float_SIMD,
@@ -914,119 +914,119 @@ private:
       const_array_18_elems.push_back(const_int32_19);
       const_array_18_elems.push_back(const_int32_19);
       const_array_18_elems.push_back(const_int32_19);
-      Constant* const_array_18 = ConstantArray::get(ArrayTy_0, const_array_18_elems);
+      Constant* const_array_18 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_18_elems));
       std::vector<Constant*> const_array_20_elems;
       ConstantFP* const_float_21 = ConstantFP::get(context, APFloat(BitsToFloat(0x3FA2F983U) /* 1.273239e+00 */));
       const_array_20_elems.push_back(const_float_21);
       const_array_20_elems.push_back(const_float_21);
       const_array_20_elems.push_back(const_float_21);
       const_array_20_elems.push_back(const_float_21);
-      Constant* const_array_20 = ConstantArray::get(ArrayTy_2, const_array_20_elems);
+      Constant* const_array_20 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_20_elems));
       std::vector<Constant*> const_array_22_elems;
       ConstantInt* const_int32_23 = ConstantInt::get(context, APInt(32,  "1", 10));
       const_array_22_elems.push_back(const_int32_23);
       const_array_22_elems.push_back(const_int32_23);
       const_array_22_elems.push_back(const_int32_23);
       const_array_22_elems.push_back(const_int32_23);
-      Constant* const_array_22 = ConstantArray::get(ArrayTy_0, const_array_22_elems);
+      Constant* const_array_22 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_22_elems));
       std::vector<Constant*> const_array_24_elems;
       ConstantInt* const_int32_25 = ConstantInt::get(context, APInt(32,  "-2", 10));
       const_array_24_elems.push_back(const_int32_25);
       const_array_24_elems.push_back(const_int32_25);
       const_array_24_elems.push_back(const_int32_25);
       const_array_24_elems.push_back(const_int32_25);
-      Constant* const_array_24 = ConstantArray::get(ArrayTy_0, const_array_24_elems);
+      Constant* const_array_24 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_24_elems));
       std::vector<Constant*> const_array_26_elems;
       ConstantInt* const_int32_27 = ConstantInt::get(context, APInt(32,  "2", 10));
       const_array_26_elems.push_back(const_int32_27);
       const_array_26_elems.push_back(const_int32_27);
       const_array_26_elems.push_back(const_int32_27);
       const_array_26_elems.push_back(const_int32_27);
-      Constant* const_array_26 = ConstantArray::get(ArrayTy_0, const_array_26_elems);
+      Constant* const_array_26 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_26_elems));
       std::vector<Constant*> const_array_28_elems;
       ConstantInt* const_int32_29 = ConstantInt::get(context, APInt(32,  "4", 10));
       const_array_28_elems.push_back(const_int32_29);
       const_array_28_elems.push_back(const_int32_29);
       const_array_28_elems.push_back(const_int32_29);
       const_array_28_elems.push_back(const_int32_29);
-      Constant* const_array_28 = ConstantArray::get(ArrayTy_0, const_array_28_elems);
+      Constant* const_array_28 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_28_elems));
       std::vector<Constant*> const_array_30_elems;
       ConstantFP* const_float_31 = ConstantFP::get(context, APFloat(BitsToFloat(0xBF490000U) /* -7.851562e-01 */));
       const_array_30_elems.push_back(const_float_31);
       const_array_30_elems.push_back(const_float_31);
       const_array_30_elems.push_back(const_float_31);
       const_array_30_elems.push_back(const_float_31);
-      Constant* const_array_30 = ConstantArray::get(ArrayTy_2, const_array_30_elems);
+      Constant* const_array_30 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_30_elems));
       std::vector<Constant*> const_array_32_elems;
       ConstantFP* const_float_33 = ConstantFP::get(context, APFloat(BitsToFloat(0xB97DA000U) /* -2.418756e-04 */));
       const_array_32_elems.push_back(const_float_33);
       const_array_32_elems.push_back(const_float_33);
       const_array_32_elems.push_back(const_float_33);
       const_array_32_elems.push_back(const_float_33);
-      Constant* const_array_32 = ConstantArray::get(ArrayTy_2, const_array_32_elems);
+      Constant* const_array_32 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_32_elems));
       std::vector<Constant*> const_array_34_elems;
       ConstantFP* const_float_35 = ConstantFP::get(context, APFloat(-3.774895e-08f));
       const_array_34_elems.push_back(const_float_35);
       const_array_34_elems.push_back(const_float_35);
       const_array_34_elems.push_back(const_float_35);
       const_array_34_elems.push_back(const_float_35);
-      Constant* const_array_34 = ConstantArray::get(ArrayTy_2, const_array_34_elems);
+      Constant* const_array_34 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_34_elems));
       std::vector<Constant*> const_array_36_elems;
       ConstantFP* const_float_37 = ConstantFP::get(context, APFloat(BitsToFloat(0x37CCF5CEU) /* 2.443316e-05 */));
       const_array_36_elems.push_back(const_float_37);
       const_array_36_elems.push_back(const_float_37);
       const_array_36_elems.push_back(const_float_37);
       const_array_36_elems.push_back(const_float_37);
-      Constant* const_array_36 = ConstantArray::get(ArrayTy_2, const_array_36_elems);
+      Constant* const_array_36 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_36_elems));
       std::vector<Constant*> const_array_38_elems;
       ConstantFP* const_float_39 = ConstantFP::get(context, APFloat(BitsToFloat(0xBAB6061AU) /* -1.388732e-03 */));
       const_array_38_elems.push_back(const_float_39);
       const_array_38_elems.push_back(const_float_39);
       const_array_38_elems.push_back(const_float_39);
       const_array_38_elems.push_back(const_float_39);
-      Constant* const_array_38 = ConstantArray::get(ArrayTy_2, const_array_38_elems);
+      Constant* const_array_38 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_38_elems));
       std::vector<Constant*> const_array_40_elems;
       ConstantFP* const_float_41 = ConstantFP::get(context, APFloat(BitsToFloat(0x3D2AAAA5U) /* 4.166665e-02 */));
       const_array_40_elems.push_back(const_float_41);
       const_array_40_elems.push_back(const_float_41);
       const_array_40_elems.push_back(const_float_41);
       const_array_40_elems.push_back(const_float_41);
-      Constant* const_array_40 = ConstantArray::get(ArrayTy_2, const_array_40_elems);
+      Constant* const_array_40 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_40_elems));
       std::vector<Constant*> const_array_42_elems;
       ConstantFP* const_float_43 = ConstantFP::get(context, APFloat(5.000000e-01f));
       const_array_42_elems.push_back(const_float_43);
       const_array_42_elems.push_back(const_float_43);
       const_array_42_elems.push_back(const_float_43);
       const_array_42_elems.push_back(const_float_43);
-      Constant* const_array_42 = ConstantArray::get(ArrayTy_2, const_array_42_elems);
+      Constant* const_array_42 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_42_elems));
       std::vector<Constant*> const_array_44_elems;
       ConstantFP* const_float_45 = ConstantFP::get(context, APFloat(1.000000e+00f));
       const_array_44_elems.push_back(const_float_45);
       const_array_44_elems.push_back(const_float_45);
       const_array_44_elems.push_back(const_float_45);
       const_array_44_elems.push_back(const_float_45);
-      Constant* const_array_44 = ConstantArray::get(ArrayTy_2, const_array_44_elems);
+      Constant* const_array_44 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_44_elems));
       std::vector<Constant*> const_array_46_elems;
       ConstantFP* const_float_47 = ConstantFP::get(context, APFloat(BitsToFloat(0xB94CA1F9U) /* -1.951530e-04 */));
       const_array_46_elems.push_back(const_float_47);
       const_array_46_elems.push_back(const_float_47);
       const_array_46_elems.push_back(const_float_47);
       const_array_46_elems.push_back(const_float_47);
-      Constant* const_array_46 = ConstantArray::get(ArrayTy_2, const_array_46_elems);
+      Constant* const_array_46 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_46_elems));
       std::vector<Constant*> const_array_48_elems;
       ConstantFP* const_float_49 = ConstantFP::get(context, APFloat(8.332161e-03f));
       const_array_48_elems.push_back(const_float_49);
       const_array_48_elems.push_back(const_float_49);
       const_array_48_elems.push_back(const_float_49);
       const_array_48_elems.push_back(const_float_49);
-      Constant* const_array_48 = ConstantArray::get(ArrayTy_2, const_array_48_elems);
+      Constant* const_array_48 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_48_elems));
       std::vector<Constant*> const_array_50_elems;
       ConstantFP* const_float_51 = ConstantFP::get(context, APFloat(BitsToFloat(0xBE2AAAA3U) /* -1.666666e-01 */));
       const_array_50_elems.push_back(const_float_51);
       const_array_50_elems.push_back(const_float_51);
       const_array_50_elems.push_back(const_float_51);
       const_array_50_elems.push_back(const_float_51);
-      Constant* const_array_50 = ConstantArray::get(ArrayTy_2, const_array_50_elems);
+      Constant* const_array_50 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_50_elems));
       Constant* const_ptr_52 = ConstantExpr::getCast(Instruction::BitCast, gvar_array__ZL17_ps_inv_sign_mask, PointerTy_6);
       Constant* const_ptr_53 = ConstantExpr::getCast(Instruction::BitCast, gvar_array__ZL15_ps_cephes_FOPI, PointerTy_6);
       Constant* const_ptr_54 = ConstantExpr::getCast(Instruction::BitCast, gvar_array__ZL7_pi32_1, PointerTy_11);
@@ -1037,7 +1037,7 @@ private:
       ConstantInt* const_int64_59 = ConstantInt::get(context, APInt(64,  "-1", 10));
       const_packed_58_elems.push_back(const_int64_59);
       const_packed_58_elems.push_back(const_int64_59);
-      Constant* const_packed_58 = ConstantVector::get(VectorTy_10, const_packed_58_elems);
+      Constant* const_packed_58 = ConstantVector::get(ArrayRef<Constant*>(const_packed_58_elems));
       ConstantInt* const_int32_60 = ConstantInt::get(context, APInt(32,  "29", 10));
       ConstantAggregateZero* const_packed_61 = ConstantAggregateZero::get(vectorTy_int_SIMD); //llvm 2.5
       Constant* const_ptr_62 = ConstantExpr::getCast(Instruction::BitCast, gvar_array__ZL20_ps_minus_cephes_DP1, PointerTy_6);
@@ -1057,7 +1057,7 @@ private:
       const_packed_73_elems.push_back(const_int32_74);
       const_packed_73_elems.push_back(const_int32_74);
       const_packed_73_elems.push_back(const_int32_74);
-      Constant* const_packed_73 = ConstantVector::get(vectorTy_int_SIMD, const_packed_73_elems);
+      Constant* const_packed_73 = ConstantVector::get(ArrayRef<Constant*>(const_packed_73_elems));
 
       // Global Variable Definitions
       gvar_array__ZL17_ps_inv_sign_mask->setInitializer(const_array_18);
@@ -1097,7 +1097,7 @@ private:
         LoadInst* packed_76 = new LoadInst(const_ptr_53, "", false, label_entry);
         BinaryOperator* packed_tmp_i40 = BinaryOperator::Create(Instruction::FMul, packed_tmp3_i44, packed_76, "tmp.i40", label_entry);
 
-        CallInst* packed_77 = CallInst::Create(generateCvttps2dq(mod), packed_tmp_i40, "", label_entry);
+        CallInst* packed_77 = CallInst::Create(generateCvttps2dq(mod), ArrayRef<Value*>(packed_tmp_i40), "", label_entry);
         packed_77->setCallingConv(CallingConv::C);
         packed_77->setTailCall(true);AttrListPtr packed_77_PAL;
         {
@@ -1117,7 +1117,7 @@ private:
         LoadInst* packed_81 = new LoadInst(const_ptr_55, "", false, label_entry);
         BinaryOperator* packed_tmp_i38 = BinaryOperator::Create(Instruction::And, packed_80, packed_81, "tmp.i38", label_entry);
         CastInst* packed_82 = new BitCastInst(packed_tmp_i38, vectorTy_int_SIMD, "", label_entry);
-        CallInst* packed_83 = CallInst::Create(generateCvtdq2ps(mod), packed_82, "", label_entry);
+        CallInst* packed_83 = CallInst::Create(generateCvtdq2ps(mod), ArrayRef<Value*>(packed_82), "", label_entry);
         packed_83->setCallingConv(CallingConv::C);
         packed_83->setTailCall(true);AttrListPtr packed_83_PAL;
         {
@@ -1141,7 +1141,7 @@ private:
         std::vector<Value*> packed_89_params;
         packed_89_params.push_back(packed_88);
         packed_89_params.push_back(const_int32_60);
-        CallInst* packed_89 = CallInst::Create(generatePsllid(mod), packed_89_params.begin(), packed_89_params.end(), "", label_entry);
+        CallInst* packed_89 = CallInst::Create(generatePsllid(mod), ArrayRef<Value*>(packed_89_params), "", label_entry);
         packed_89->setCallingConv(CallingConv::C);
         packed_89->setTailCall(true);AttrListPtr packed_89_PAL;
         {
@@ -1159,7 +1159,7 @@ private:
         std::vector<Value*> packed_91_params;
         packed_91_params.push_back(packed_90);
         packed_91_params.push_back(const_packed_61);
-        CallInst* packed_91 = CallInst::Create(generatePcmpeq(mod), packed_91_params.begin(), packed_91_params.end(), "", label_entry);
+        CallInst* packed_91 = CallInst::Create(generatePcmpeq(mod), ArrayRef<Value*>(packed_91_params), "", label_entry);
         packed_91->setCallingConv(CallingConv::C);
         packed_91->setTailCall(true);AttrListPtr packed_91_PAL;
         {
@@ -1257,7 +1257,7 @@ private:
 
       ArrayType* ArrayTy_2 = ArrayType::get(Type::getFloatTy(context), 4);
 
-      std::vector<const Type*>FuncTy_4_args;
+      std::vector<Type*>FuncTy_4_args;
 
       FuncTy_4_args.push_back(vectorTy_float_SIMD);
       PointerType* PointerTy_6 = PointerType::get(vectorTy_float_SIMD, 0);
@@ -1468,126 +1468,126 @@ private:
       const_array_18_elems.push_back(const_int32_19);
       const_array_18_elems.push_back(const_int32_19);
       const_array_18_elems.push_back(const_int32_19);
-      Constant* const_array_18 = ConstantArray::get(ArrayTy_0, const_array_18_elems);
+      Constant* const_array_18 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_18_elems));
       std::vector<Constant*> const_array_20_elems;
       ConstantInt* const_int32_21 = ConstantInt::get(context, APInt(32,  "-2147483648", 10));
       const_array_20_elems.push_back(const_int32_21);
       const_array_20_elems.push_back(const_int32_21);
       const_array_20_elems.push_back(const_int32_21);
       const_array_20_elems.push_back(const_int32_21);
-      Constant* const_array_20 = ConstantArray::get(ArrayTy_0, const_array_20_elems);
+      Constant* const_array_20 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_20_elems));
       std::vector<Constant*> const_array_22_elems;
       ConstantFP* const_float_23 = ConstantFP::get(context, APFloat(BitsToFloat(0x3FA2F983U) /* 1.273239e+00 */));
       const_array_22_elems.push_back(const_float_23);
       const_array_22_elems.push_back(const_float_23);
       const_array_22_elems.push_back(const_float_23);
       const_array_22_elems.push_back(const_float_23);
-      Constant* const_array_22 = ConstantArray::get(ArrayTy_2, const_array_22_elems);
+      Constant* const_array_22 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_22_elems));
       std::vector<Constant*> const_array_24_elems;
       ConstantInt* const_int32_25 = ConstantInt::get(context, APInt(32,  "1", 10));
       const_array_24_elems.push_back(const_int32_25);
       const_array_24_elems.push_back(const_int32_25);
       const_array_24_elems.push_back(const_int32_25);
       const_array_24_elems.push_back(const_int32_25);
-      Constant* const_array_24 = ConstantArray::get(ArrayTy_0, const_array_24_elems);
+      Constant* const_array_24 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_24_elems));
       std::vector<Constant*> const_array_26_elems;
       ConstantInt* const_int32_27 = ConstantInt::get(context, APInt(32,  "-2", 10));
       const_array_26_elems.push_back(const_int32_27);
       const_array_26_elems.push_back(const_int32_27);
       const_array_26_elems.push_back(const_int32_27);
       const_array_26_elems.push_back(const_int32_27);
-      Constant* const_array_26 = ConstantArray::get(ArrayTy_0, const_array_26_elems);
+      Constant* const_array_26 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_26_elems));
       std::vector<Constant*> const_array_28_elems;
       ConstantInt* const_int32_29 = ConstantInt::get(context, APInt(32,  "4", 10));
       const_array_28_elems.push_back(const_int32_29);
       const_array_28_elems.push_back(const_int32_29);
       const_array_28_elems.push_back(const_int32_29);
       const_array_28_elems.push_back(const_int32_29);
-      Constant* const_array_28 = ConstantArray::get(ArrayTy_0, const_array_28_elems);
+      Constant* const_array_28 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_28_elems));
       std::vector<Constant*> const_array_30_elems;
       ConstantInt* const_int32_31 = ConstantInt::get(context, APInt(32,  "2", 10));
       const_array_30_elems.push_back(const_int32_31);
       const_array_30_elems.push_back(const_int32_31);
       const_array_30_elems.push_back(const_int32_31);
       const_array_30_elems.push_back(const_int32_31);
-      Constant* const_array_30 = ConstantArray::get(ArrayTy_0, const_array_30_elems);
+      Constant* const_array_30 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_30_elems));
       std::vector<Constant*> const_array_32_elems;
       ConstantFP* const_float_33 = ConstantFP::get(context, APFloat(BitsToFloat(0xBF490000U) /* -7.851562e-01 */));
       const_array_32_elems.push_back(const_float_33);
       const_array_32_elems.push_back(const_float_33);
       const_array_32_elems.push_back(const_float_33);
       const_array_32_elems.push_back(const_float_33);
-      Constant* const_array_32 = ConstantArray::get(ArrayTy_2, const_array_32_elems);
+      Constant* const_array_32 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_32_elems));
       std::vector<Constant*> const_array_34_elems;
       ConstantFP* const_float_35 = ConstantFP::get(context, APFloat(BitsToFloat(0xB97DA000U) /* -2.418756e-04 */));
       const_array_34_elems.push_back(const_float_35);
       const_array_34_elems.push_back(const_float_35);
       const_array_34_elems.push_back(const_float_35);
       const_array_34_elems.push_back(const_float_35);
-      Constant* const_array_34 = ConstantArray::get(ArrayTy_2, const_array_34_elems);
+      Constant* const_array_34 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_34_elems));
       std::vector<Constant*> const_array_36_elems;
       ConstantFP* const_float_37 = ConstantFP::get(context, APFloat(-3.774895e-08f));
       const_array_36_elems.push_back(const_float_37);
       const_array_36_elems.push_back(const_float_37);
       const_array_36_elems.push_back(const_float_37);
       const_array_36_elems.push_back(const_float_37);
-      Constant* const_array_36 = ConstantArray::get(ArrayTy_2, const_array_36_elems);
+      Constant* const_array_36 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_36_elems));
       std::vector<Constant*> const_array_38_elems;
       ConstantFP* const_float_39 = ConstantFP::get(context, APFloat(BitsToFloat(0x37CCF5CEU) /* 2.443316e-05 */));
       const_array_38_elems.push_back(const_float_39);
       const_array_38_elems.push_back(const_float_39);
       const_array_38_elems.push_back(const_float_39);
       const_array_38_elems.push_back(const_float_39);
-      Constant* const_array_38 = ConstantArray::get(ArrayTy_2, const_array_38_elems);
+      Constant* const_array_38 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_38_elems));
       std::vector<Constant*> const_array_40_elems;
       ConstantFP* const_float_41 = ConstantFP::get(context, APFloat(BitsToFloat(0xBAB6061AU) /* -1.388732e-03 */));
       const_array_40_elems.push_back(const_float_41);
       const_array_40_elems.push_back(const_float_41);
       const_array_40_elems.push_back(const_float_41);
       const_array_40_elems.push_back(const_float_41);
-      Constant* const_array_40 = ConstantArray::get(ArrayTy_2, const_array_40_elems);
+      Constant* const_array_40 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_40_elems));
       std::vector<Constant*> const_array_42_elems;
       ConstantFP* const_float_43 = ConstantFP::get(context, APFloat(BitsToFloat(0x3D2AAAA5U) /* 4.166665e-02 */));
       const_array_42_elems.push_back(const_float_43);
       const_array_42_elems.push_back(const_float_43);
       const_array_42_elems.push_back(const_float_43);
       const_array_42_elems.push_back(const_float_43);
-      Constant* const_array_42 = ConstantArray::get(ArrayTy_2, const_array_42_elems);
+      Constant* const_array_42 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_42_elems));
       std::vector<Constant*> const_array_44_elems;
       ConstantFP* const_float_45 = ConstantFP::get(context, APFloat(5.000000e-01f));
       const_array_44_elems.push_back(const_float_45);
       const_array_44_elems.push_back(const_float_45);
       const_array_44_elems.push_back(const_float_45);
       const_array_44_elems.push_back(const_float_45);
-      Constant* const_array_44 = ConstantArray::get(ArrayTy_2, const_array_44_elems);
+      Constant* const_array_44 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_44_elems));
       std::vector<Constant*> const_array_46_elems;
       ConstantFP* const_float_47 = ConstantFP::get(context, APFloat(1.000000e+00f));
       const_array_46_elems.push_back(const_float_47);
       const_array_46_elems.push_back(const_float_47);
       const_array_46_elems.push_back(const_float_47);
       const_array_46_elems.push_back(const_float_47);
-      Constant* const_array_46 = ConstantArray::get(ArrayTy_2, const_array_46_elems);
+      Constant* const_array_46 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_46_elems));
       std::vector<Constant*> const_array_48_elems;
       ConstantFP* const_float_49 = ConstantFP::get(context, APFloat(BitsToFloat(0xB94CA1F9U) /* -1.951530e-04 */));
       const_array_48_elems.push_back(const_float_49);
       const_array_48_elems.push_back(const_float_49);
       const_array_48_elems.push_back(const_float_49);
       const_array_48_elems.push_back(const_float_49);
-      Constant* const_array_48 = ConstantArray::get(ArrayTy_2, const_array_48_elems);
+      Constant* const_array_48 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_48_elems));
       std::vector<Constant*> const_array_50_elems;
       ConstantFP* const_float_51 = ConstantFP::get(context, APFloat(8.332161e-03f));
       const_array_50_elems.push_back(const_float_51);
       const_array_50_elems.push_back(const_float_51);
       const_array_50_elems.push_back(const_float_51);
       const_array_50_elems.push_back(const_float_51);
-      Constant* const_array_50 = ConstantArray::get(ArrayTy_2, const_array_50_elems);
+      Constant* const_array_50 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_50_elems));
       std::vector<Constant*> const_array_52_elems;
       ConstantFP* const_float_53 = ConstantFP::get(context, APFloat(BitsToFloat(0xBE2AAAA3U) /* -1.666666e-01 */));
       const_array_52_elems.push_back(const_float_53);
       const_array_52_elems.push_back(const_float_53);
       const_array_52_elems.push_back(const_float_53);
       const_array_52_elems.push_back(const_float_53);
-      Constant* const_array_52 = ConstantArray::get(ArrayTy_2, const_array_52_elems);
+      Constant* const_array_52 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_52_elems));
       Constant* const_ptr_54 = ConstantExpr::getCast(Instruction::BitCast, gvar_array__ZL17_ps_inv_sign_mask, PointerTy_6);
       Constant* const_ptr_55 = ConstantExpr::getCast(Instruction::BitCast, gvar_array__ZL13_ps_sign_mask, PointerTy_6);
       Constant* const_ptr_56 = ConstantExpr::getCast(Instruction::BitCast, gvar_array__ZL15_ps_cephes_FOPI, PointerTy_6);
@@ -1604,7 +1604,7 @@ private:
       ConstantInt* const_int64_67 = ConstantInt::get(context, APInt(64,  "-1", 10));
       const_packed_66_elems.push_back(const_int64_67);
       const_packed_66_elems.push_back(const_int64_67);
-      Constant* const_packed_66 = ConstantVector::get(VectorTy_10, const_packed_66_elems);
+      Constant* const_packed_66 = ConstantVector::get(ArrayRef<Constant*>(const_packed_66_elems));
       Constant* const_ptr_68 = ConstantExpr::getCast(Instruction::BitCast, gvar_array__ZL13_ps_coscof_p0, PointerTy_6);
       Constant* const_ptr_69 = ConstantExpr::getCast(Instruction::BitCast, gvar_array__ZL13_ps_coscof_p1, PointerTy_6);
       Constant* const_ptr_70 = ConstantExpr::getCast(Instruction::BitCast, gvar_array__ZL13_ps_coscof_p2, PointerTy_6);
@@ -1619,7 +1619,7 @@ private:
       const_packed_76_elems.push_back(const_int32_77);
       const_packed_76_elems.push_back(const_int32_77);
       const_packed_76_elems.push_back(const_int32_77);
-      Constant* const_packed_76 = ConstantVector::get(vectorTy_int_SIMD, const_packed_76_elems);
+      Constant* const_packed_76 = ConstantVector::get(ArrayRef<Constant*>(const_packed_76_elems));
 
       // Global Variable Definitions
       gvar_array__ZL17_ps_inv_sign_mask->setInitializer(const_array_18);
@@ -1666,7 +1666,7 @@ private:
         BinaryOperator* packed_tmp2_i54 = BinaryOperator::Create(Instruction::And, packed_tmp_i56, packed_tmp1_i53, "tmp2.i54", label_entry);
         LoadInst* packed_80 = new LoadInst(const_ptr_56, "", false, label_entry);
         BinaryOperator* packed_tmp_i51 = BinaryOperator::Create(Instruction::FMul, packed_tmp3_i59, packed_80, "tmp.i51", label_entry);
-        CallInst* packed_81 = CallInst::Create(generateCvttps2dq(mod), packed_tmp_i51, "", label_entry);
+        CallInst* packed_81 = CallInst::Create(generateCvttps2dq(mod), ArrayRef<Value*>(packed_tmp_i51), "", label_entry);
         packed_81->setCallingConv(CallingConv::C);
         packed_81->setTailCall(true);AttrListPtr packed_81_PAL;
         {
@@ -1686,7 +1686,7 @@ private:
         LoadInst* packed_85 = new LoadInst(const_ptr_58, "", false, label_entry);
         BinaryOperator* packed_tmp_i49 = BinaryOperator::Create(Instruction::And, packed_84, packed_85, "tmp.i49", label_entry);
         CastInst* packed_86 = new BitCastInst(packed_tmp_i49, vectorTy_int_SIMD, "", label_entry);
-        CallInst* packed_87 = CallInst::Create(generateCvtdq2ps(mod), packed_86, "", label_entry);
+        CallInst* packed_87 = CallInst::Create(generateCvtdq2ps(mod), ArrayRef<Value*>(packed_86), "", label_entry);
         packed_87->setCallingConv(CallingConv::C);
         packed_87->setTailCall(true);AttrListPtr packed_87_PAL;
         {
@@ -1705,7 +1705,7 @@ private:
         std::vector<Value*> packed_90_params;
         packed_90_params.push_back(packed_89);
         packed_90_params.push_back(const_int32_60);
-        CallInst* packed_90 = CallInst::Create(generatePsllid(mod), packed_90_params.begin(), packed_90_params.end(), "", label_entry);
+        CallInst* packed_90 = CallInst::Create(generatePsllid(mod), ArrayRef<Value*>(packed_90_params), "", label_entry);
         packed_90->setCallingConv(CallingConv::C);
         packed_90->setTailCall(true);AttrListPtr packed_90_PAL;
         {
@@ -1724,7 +1724,7 @@ private:
         std::vector<Value*> packed_93_params;
         packed_93_params.push_back(packed_92);
         packed_93_params.push_back(const_packed_62);
-        CallInst* packed_93 = CallInst::Create(generatePcmpeq(mod), packed_93_params.begin(), packed_93_params.end(), "", label_entry);
+        CallInst* packed_93 = CallInst::Create(generatePcmpeq(mod), ArrayRef<Value*>(packed_93_params), "", label_entry);
         packed_93->setCallingConv(CallingConv::C);
         packed_93->setTailCall(true);AttrListPtr packed_93_PAL;
         {
@@ -1755,7 +1755,7 @@ private:
         std::vector<Value*> packed_100_params;
         packed_100_params.push_back(packed_99);
         packed_100_params.push_back(const_int32_60);
-        CallInst* packed_100 = CallInst::Create(generatePsllid(mod), packed_100_params.begin(), packed_100_params.end(), "", label_entry);
+        CallInst* packed_100 = CallInst::Create(generatePsllid(mod), ArrayRef<Value*>(packed_100_params), "", label_entry);
         packed_100->setCallingConv(CallingConv::C);
         packed_100->setTailCall(true);AttrListPtr packed_100_PAL;
         {
@@ -1851,7 +1851,7 @@ private:
       ArrayType* ArrayTy_0 = ArrayType::get(Type::getFloatTy(context), 4);
       ArrayType* ArrayTy_2 = ArrayType::get(IntegerType::get(context, 32), 4);
 
-      std::vector<const Type*>FuncTy_5_args;
+      std::vector<Type*>FuncTy_5_args;
       FuncTy_5_args.push_back(vectorTy_float_SIMD);
       FunctionType* FuncTy_5 = FunctionType::get(
         /*Result=*/vectorTy_float_SIMD,
@@ -2046,119 +2046,119 @@ private:
       const_array_18_elems.push_back(const_float_19);
       const_array_18_elems.push_back(const_float_19);
       const_array_18_elems.push_back(const_float_19);
-      Constant* const_array_18 = ConstantArray::get(ArrayTy_0, const_array_18_elems);
+      Constant* const_array_18 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_18_elems));
       std::vector<Constant*> const_array_20_elems;
       ConstantInt* const_int32_21 = ConstantInt::get(context, APInt(32,  "8388608", 10));
       const_array_20_elems.push_back(const_int32_21);
       const_array_20_elems.push_back(const_int32_21);
       const_array_20_elems.push_back(const_int32_21);
       const_array_20_elems.push_back(const_int32_21);
-      Constant* const_array_20 = ConstantArray::get(ArrayTy_2, const_array_20_elems);
+      Constant* const_array_20 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_20_elems));
       std::vector<Constant*> const_array_22_elems;
       ConstantInt* const_int32_23 = ConstantInt::get(context, APInt(32,  "-2139095041", 10));
       const_array_22_elems.push_back(const_int32_23);
       const_array_22_elems.push_back(const_int32_23);
       const_array_22_elems.push_back(const_int32_23);
       const_array_22_elems.push_back(const_int32_23);
-      Constant* const_array_22 = ConstantArray::get(ArrayTy_2, const_array_22_elems);
+      Constant* const_array_22 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_22_elems));
       std::vector<Constant*> const_array_24_elems;
       ConstantFP* const_float_25 = ConstantFP::get(context, APFloat(5.000000e-01f));
       const_array_24_elems.push_back(const_float_25);
       const_array_24_elems.push_back(const_float_25);
       const_array_24_elems.push_back(const_float_25);
       const_array_24_elems.push_back(const_float_25);
-      Constant* const_array_24 = ConstantArray::get(ArrayTy_0, const_array_24_elems);
+      Constant* const_array_24 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_24_elems));
       std::vector<Constant*> const_array_26_elems;
       ConstantInt* const_int32_27 = ConstantInt::get(context, APInt(32,  "127", 10));
       const_array_26_elems.push_back(const_int32_27);
       const_array_26_elems.push_back(const_int32_27);
       const_array_26_elems.push_back(const_int32_27);
       const_array_26_elems.push_back(const_int32_27);
-      Constant* const_array_26 = ConstantArray::get(ArrayTy_2, const_array_26_elems);
+      Constant* const_array_26 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_26_elems));
       std::vector<Constant*> const_array_28_elems;
       ConstantFP* const_float_29 = ConstantFP::get(context, APFloat(BitsToFloat(0x3F3504F3U) /* 7.071068e-01 */));
       const_array_28_elems.push_back(const_float_29);
       const_array_28_elems.push_back(const_float_29);
       const_array_28_elems.push_back(const_float_29);
       const_array_28_elems.push_back(const_float_29);
-      Constant* const_array_28 = ConstantArray::get(ArrayTy_0, const_array_28_elems);
+      Constant* const_array_28 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_28_elems));
       std::vector<Constant*> const_array_30_elems;
       ConstantFP* const_float_31 = ConstantFP::get(context, APFloat(BitsToFloat(0x3D9021BBU) /* 7.037684e-02 */));
       const_array_30_elems.push_back(const_float_31);
       const_array_30_elems.push_back(const_float_31);
       const_array_30_elems.push_back(const_float_31);
       const_array_30_elems.push_back(const_float_31);
-      Constant* const_array_30 = ConstantArray::get(ArrayTy_0, const_array_30_elems);
+      Constant* const_array_30 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_30_elems));
       std::vector<Constant*> const_array_32_elems;
       ConstantFP* const_float_33 = ConstantFP::get(context, APFloat(-1.151461e-01f));
       const_array_32_elems.push_back(const_float_33);
       const_array_32_elems.push_back(const_float_33);
       const_array_32_elems.push_back(const_float_33);
       const_array_32_elems.push_back(const_float_33);
-      Constant* const_array_32 = ConstantArray::get(ArrayTy_0, const_array_32_elems);
+      Constant* const_array_32 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_32_elems));
       std::vector<Constant*> const_array_34_elems;
       ConstantFP* const_float_35 = ConstantFP::get(context, APFloat(BitsToFloat(0x3DEF251AU) /* 1.167700e-01 */));
       const_array_34_elems.push_back(const_float_35);
       const_array_34_elems.push_back(const_float_35);
       const_array_34_elems.push_back(const_float_35);
       const_array_34_elems.push_back(const_float_35);
-      Constant* const_array_34 = ConstantArray::get(ArrayTy_0, const_array_34_elems);
+      Constant* const_array_34 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_34_elems));
       std::vector<Constant*> const_array_36_elems;
       ConstantFP* const_float_37 = ConstantFP::get(context, APFloat(BitsToFloat(0xBDFE5D4FU) /* -1.242014e-01 */));
       const_array_36_elems.push_back(const_float_37);
       const_array_36_elems.push_back(const_float_37);
       const_array_36_elems.push_back(const_float_37);
       const_array_36_elems.push_back(const_float_37);
-      Constant* const_array_36 = ConstantArray::get(ArrayTy_0, const_array_36_elems);
+      Constant* const_array_36 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_36_elems));
       std::vector<Constant*> const_array_38_elems;
       ConstantFP* const_float_39 = ConstantFP::get(context, APFloat(BitsToFloat(0x3E11E9BFU) /* 1.424932e-01 */));
       const_array_38_elems.push_back(const_float_39);
       const_array_38_elems.push_back(const_float_39);
       const_array_38_elems.push_back(const_float_39);
       const_array_38_elems.push_back(const_float_39);
-      Constant* const_array_38 = ConstantArray::get(ArrayTy_0, const_array_38_elems);
+      Constant* const_array_38 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_38_elems));
       std::vector<Constant*> const_array_40_elems;
       ConstantFP* const_float_41 = ConstantFP::get(context, APFloat(BitsToFloat(0xBE2AAE50U) /* -1.666806e-01 */));
       const_array_40_elems.push_back(const_float_41);
       const_array_40_elems.push_back(const_float_41);
       const_array_40_elems.push_back(const_float_41);
       const_array_40_elems.push_back(const_float_41);
-      Constant* const_array_40 = ConstantArray::get(ArrayTy_0, const_array_40_elems);
+      Constant* const_array_40 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_40_elems));
       std::vector<Constant*> const_array_42_elems;
       ConstantFP* const_float_43 = ConstantFP::get(context, APFloat(BitsToFloat(0x3E4CCEACU) /* 2.000071e-01 */));
       const_array_42_elems.push_back(const_float_43);
       const_array_42_elems.push_back(const_float_43);
       const_array_42_elems.push_back(const_float_43);
       const_array_42_elems.push_back(const_float_43);
-      Constant* const_array_42 = ConstantArray::get(ArrayTy_0, const_array_42_elems);
+      Constant* const_array_42 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_42_elems));
       std::vector<Constant*> const_array_44_elems;
       ConstantFP* const_float_45 = ConstantFP::get(context, APFloat(BitsToFloat(0xBE7FFFFCU) /* -2.499999e-01 */));
       const_array_44_elems.push_back(const_float_45);
       const_array_44_elems.push_back(const_float_45);
       const_array_44_elems.push_back(const_float_45);
       const_array_44_elems.push_back(const_float_45);
-      Constant* const_array_44 = ConstantArray::get(ArrayTy_0, const_array_44_elems);
+      Constant* const_array_44 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_44_elems));
       std::vector<Constant*> const_array_46_elems;
       ConstantFP* const_float_47 = ConstantFP::get(context, APFloat(3.333333e-01f));
       const_array_46_elems.push_back(const_float_47);
       const_array_46_elems.push_back(const_float_47);
       const_array_46_elems.push_back(const_float_47);
       const_array_46_elems.push_back(const_float_47);
-      Constant* const_array_46 = ConstantArray::get(ArrayTy_0, const_array_46_elems);
+      Constant* const_array_46 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_46_elems));
       std::vector<Constant*> const_array_48_elems;
       ConstantFP* const_float_49 = ConstantFP::get(context, APFloat(BitsToFloat(0xB95E8083U) /* -2.121944e-04 */));
       const_array_48_elems.push_back(const_float_49);
       const_array_48_elems.push_back(const_float_49);
       const_array_48_elems.push_back(const_float_49);
       const_array_48_elems.push_back(const_float_49);
-      Constant* const_array_48 = ConstantArray::get(ArrayTy_0, const_array_48_elems);
+      Constant* const_array_48 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_48_elems));
       std::vector<Constant*> const_array_50_elems;
       ConstantFP* const_float_51 = ConstantFP::get(context, APFloat(6.933594e-01f));
       const_array_50_elems.push_back(const_float_51);
       const_array_50_elems.push_back(const_float_51);
       const_array_50_elems.push_back(const_float_51);
       const_array_50_elems.push_back(const_float_51);
-      Constant* const_array_50 = ConstantArray::get(ArrayTy_0, const_array_50_elems);
+      Constant* const_array_50 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_50_elems));
       Constant* const_ptr_52 = ConstantExpr::getCast(Instruction::BitCast, gvar_array__ZL5_ps_1, PointerTy_6);
       ConstantAggregateZero* const_packed_53 = ConstantAggregateZero::get(vectorTy_float_SIMD); //llvm 2.5
       ConstantInt* const_int8_54 = ConstantInt::get(context, APInt(8,  "2", 10));
@@ -2216,7 +2216,7 @@ private:
         packed_tmp_i50_params.push_back(packed_x);
         packed_tmp_i50_params.push_back(const_packed_53);
         packed_tmp_i50_params.push_back(const_int8_54);
-        CallInst* packed_tmp_i50 = CallInst::Create(generateCmpPS(mod), packed_tmp_i50_params.begin(), packed_tmp_i50_params.end(), "tmp.i50", label_entry);
+        CallInst* packed_tmp_i50 = CallInst::Create(generateCmpPS(mod), ArrayRef<Value*>(packed_tmp_i50_params), "tmp.i50", label_entry);
         packed_tmp_i50->setCallingConv(CallingConv::C);
         packed_tmp_i50->setTailCall(true);AttrListPtr packed_tmp_i50_PAL;
         {
@@ -2233,7 +2233,7 @@ private:
         std::vector<Value*> packed_75_params;
         packed_75_params.push_back(packed_x);
         packed_75_params.push_back(packed_74);
-        CallInst* packed_75 = CallInst::Create(generateMaxPS(mod), packed_75_params.begin(), packed_75_params.end(), "", label_entry);
+        CallInst* packed_75 = CallInst::Create(generateMaxPS(mod), ArrayRef<Value*>(packed_75_params), "", label_entry);
         packed_75->setCallingConv(CallingConv::C);
         packed_75->setTailCall(true);AttrListPtr packed_75_PAL;
         {
@@ -2250,7 +2250,7 @@ private:
         std::vector<Value*> packed_77_params;
         packed_77_params.push_back(packed_76);
         packed_77_params.push_back(const_int32_56);
-        CallInst* packed_77 = CallInst::Create(generatePsrlid(mod), packed_77_params.begin(), packed_77_params.end(), "", label_entry);
+        CallInst* packed_77 = CallInst::Create(generatePsrlid(mod), ArrayRef<Value*>(packed_77_params), "", label_entry);
         packed_77->setCallingConv(CallingConv::C);
         packed_77->setTailCall(true);AttrListPtr packed_77_PAL;
         {
@@ -2273,7 +2273,7 @@ private:
         LoadInst* packed_80 = new LoadInst(const_ptr_59, "", false, label_entry);
         CastInst* packed_81 = new BitCastInst(packed_80, vectorTy_int_SIMD, "", label_entry);
         BinaryOperator* packed_tmp_i41 = BinaryOperator::Create(Instruction::Sub, packed_77, packed_81, "tmp.i41", label_entry);
-        CallInst* packed_82 = CallInst::Create(generateCvtdq2ps(mod), packed_tmp_i41, "", label_entry);
+        CallInst* packed_82 = CallInst::Create(generateCvtdq2ps(mod), ArrayRef<Value*>(packed_tmp_i41), "", label_entry);
         packed_82->setCallingConv(CallingConv::C);
         packed_82->setTailCall(true);AttrListPtr packed_82_PAL;
         {
@@ -2292,7 +2292,7 @@ private:
         packed_tmp_i39_params.push_back(packed_tmp3_i45);
         packed_tmp_i39_params.push_back(packed_83);
         packed_tmp_i39_params.push_back(const_int8_61);
-        CallInst* packed_tmp_i39 = CallInst::Create(generateCmpPS(mod), packed_tmp_i39_params.begin(), packed_tmp_i39_params.end(), "tmp.i39", label_entry);
+        CallInst* packed_tmp_i39 = CallInst::Create(generateCmpPS(mod), ArrayRef<Value*>(packed_tmp_i39_params), "tmp.i39", label_entry);
         packed_tmp_i39->setCallingConv(CallingConv::C);
         packed_tmp_i39->setTailCall(true);AttrListPtr packed_tmp_i39_PAL;
         {
@@ -2389,7 +2389,7 @@ private:
       ArrayType* ArrayTy_0 = ArrayType::get(Type::getFloatTy(context), 4);
       ArrayType* ArrayTy_2 = ArrayType::get(IntegerType::get(context, 32), 4);
 
-      std::vector<const Type*>FuncTy_5_args;
+      std::vector<Type*>FuncTy_5_args;
       FuncTy_5_args.push_back(vectorTy_float_SIMD);
       FunctionType* FuncTy_5 = FunctionType::get(
         /*Result=*/vectorTy_float_SIMD,
@@ -2548,91 +2548,91 @@ private:
       const_array_20_elems.push_back(const_float_21);
       const_array_20_elems.push_back(const_float_21);
       const_array_20_elems.push_back(const_float_21);
-      Constant* const_array_20 = ConstantArray::get(ArrayTy_0, const_array_20_elems);
+      Constant* const_array_20 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_20_elems));
       std::vector<Constant*> const_array_22_elems;
       ConstantFP* const_float_23 = ConstantFP::get(context, APFloat(8.837626e+01f));
       const_array_22_elems.push_back(const_float_23);
       const_array_22_elems.push_back(const_float_23);
       const_array_22_elems.push_back(const_float_23);
       const_array_22_elems.push_back(const_float_23);
-      Constant* const_array_22 = ConstantArray::get(ArrayTy_0, const_array_22_elems);
+      Constant* const_array_22 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_22_elems));
       std::vector<Constant*> const_array_24_elems;
       ConstantFP* const_float_25 = ConstantFP::get(context, APFloat(-8.837626e+01f));
       const_array_24_elems.push_back(const_float_25);
       const_array_24_elems.push_back(const_float_25);
       const_array_24_elems.push_back(const_float_25);
       const_array_24_elems.push_back(const_float_25);
-      Constant* const_array_24 = ConstantArray::get(ArrayTy_0, const_array_24_elems);
+      Constant* const_array_24 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_24_elems));
       std::vector<Constant*> const_array_26_elems;
       ConstantFP* const_float_27 = ConstantFP::get(context, APFloat(1.442695e+00f));
       const_array_26_elems.push_back(const_float_27);
       const_array_26_elems.push_back(const_float_27);
       const_array_26_elems.push_back(const_float_27);
       const_array_26_elems.push_back(const_float_27);
-      Constant* const_array_26 = ConstantArray::get(ArrayTy_0, const_array_26_elems);
+      Constant* const_array_26 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_26_elems));
       std::vector<Constant*> const_array_28_elems;
       ConstantFP* const_float_29 = ConstantFP::get(context, APFloat(5.000000e-01f));
       const_array_28_elems.push_back(const_float_29);
       const_array_28_elems.push_back(const_float_29);
       const_array_28_elems.push_back(const_float_29);
       const_array_28_elems.push_back(const_float_29);
-      Constant* const_array_28 = ConstantArray::get(ArrayTy_0, const_array_28_elems);
+      Constant* const_array_28 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_28_elems));
       std::vector<Constant*> const_array_30_elems;
       ConstantFP* const_float_31 = ConstantFP::get(context, APFloat(6.933594e-01f));
       const_array_30_elems.push_back(const_float_31);
       const_array_30_elems.push_back(const_float_31);
       const_array_30_elems.push_back(const_float_31);
       const_array_30_elems.push_back(const_float_31);
-      Constant* const_array_30 = ConstantArray::get(ArrayTy_0, const_array_30_elems);
+      Constant* const_array_30 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_30_elems));
       std::vector<Constant*> const_array_32_elems;
       ConstantFP* const_float_33 = ConstantFP::get(context, APFloat(BitsToFloat(0xB95E8083U) /* -2.121944e-04 */));
       const_array_32_elems.push_back(const_float_33);
       const_array_32_elems.push_back(const_float_33);
       const_array_32_elems.push_back(const_float_33);
       const_array_32_elems.push_back(const_float_33);
-      Constant* const_array_32 = ConstantArray::get(ArrayTy_0, const_array_32_elems);
+      Constant* const_array_32 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_32_elems));
       std::vector<Constant*> const_array_34_elems;
       ConstantFP* const_float_35 = ConstantFP::get(context, APFloat(BitsToFloat(0x39506967U) /* 1.987569e-04 */));
       const_array_34_elems.push_back(const_float_35);
       const_array_34_elems.push_back(const_float_35);
       const_array_34_elems.push_back(const_float_35);
       const_array_34_elems.push_back(const_float_35);
-      Constant* const_array_34 = ConstantArray::get(ArrayTy_0, const_array_34_elems);
+      Constant* const_array_34 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_34_elems));
       std::vector<Constant*> const_array_36_elems;
       ConstantFP* const_float_37 = ConstantFP::get(context, APFloat(BitsToFloat(0x3AB743CEU) /* 1.398200e-03 */));
       const_array_36_elems.push_back(const_float_37);
       const_array_36_elems.push_back(const_float_37);
       const_array_36_elems.push_back(const_float_37);
       const_array_36_elems.push_back(const_float_37);
-      Constant* const_array_36 = ConstantArray::get(ArrayTy_0, const_array_36_elems);
+      Constant* const_array_36 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_36_elems));
       std::vector<Constant*> const_array_38_elems;
       ConstantFP* const_float_39 = ConstantFP::get(context, APFloat(8.333452e-03f));
       const_array_38_elems.push_back(const_float_39);
       const_array_38_elems.push_back(const_float_39);
       const_array_38_elems.push_back(const_float_39);
       const_array_38_elems.push_back(const_float_39);
-      Constant* const_array_38 = ConstantArray::get(ArrayTy_0, const_array_38_elems);
+      Constant* const_array_38 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_38_elems));
       std::vector<Constant*> const_array_40_elems;
       ConstantFP* const_float_41 = ConstantFP::get(context, APFloat(BitsToFloat(0x3D2AA9C1U) /* 4.166580e-02 */));
       const_array_40_elems.push_back(const_float_41);
       const_array_40_elems.push_back(const_float_41);
       const_array_40_elems.push_back(const_float_41);
       const_array_40_elems.push_back(const_float_41);
-      Constant* const_array_40 = ConstantArray::get(ArrayTy_0, const_array_40_elems);
+      Constant* const_array_40 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_40_elems));
       std::vector<Constant*> const_array_42_elems;
       ConstantFP* const_float_43 = ConstantFP::get(context, APFloat(BitsToFloat(0x3E2AAAAAU) /* 1.666667e-01 */));
       const_array_42_elems.push_back(const_float_43);
       const_array_42_elems.push_back(const_float_43);
       const_array_42_elems.push_back(const_float_43);
       const_array_42_elems.push_back(const_float_43);
-      Constant* const_array_42 = ConstantArray::get(ArrayTy_0, const_array_42_elems);
+      Constant* const_array_42 = ConstantArray::get(ArrayTy_0, ArrayRef<Constant*>(const_array_42_elems));
       std::vector<Constant*> const_array_44_elems;
       ConstantInt* const_int32_45 = ConstantInt::get(context, APInt(32,  "127", 10));
       const_array_44_elems.push_back(const_int32_45);
       const_array_44_elems.push_back(const_int32_45);
       const_array_44_elems.push_back(const_int32_45);
       const_array_44_elems.push_back(const_int32_45);
-      Constant* const_array_44 = ConstantArray::get(ArrayTy_2, const_array_44_elems);
+      Constant* const_array_44 = ConstantArray::get(ArrayTy_2, ArrayRef<Constant*>(const_array_44_elems));
       Constant* const_ptr_46 = ConstantExpr::getCast(Instruction::BitCast, gvar_array__ZL5_ps_1, PointerTy_6);
       Constant* const_ptr_47 = ConstantExpr::getCast(Instruction::BitCast, gvar_array__ZL10_ps_exp_hi, PointerTy_6);
       Constant* const_ptr_48 = ConstantExpr::getCast(Instruction::BitCast, gvar_array__ZL10_ps_exp_lo, PointerTy_6);
@@ -2680,7 +2680,7 @@ private:
         std::vector<Value*> packed_63_params;
         packed_63_params.push_back(packed_x);
         packed_63_params.push_back(packed_62);
-        CallInst* packed_63 = CallInst::Create(generateMinPS(mod), packed_63_params.begin(), packed_63_params.end(), "", label_entry);
+        CallInst* packed_63 = CallInst::Create(generateMinPS(mod), ArrayRef<Value*>(packed_63_params), "", label_entry);
         packed_63->setCallingConv(CallingConv::C);
         packed_63->setTailCall(true);AttrListPtr packed_63_PAL;
         {
@@ -2697,7 +2697,7 @@ private:
         std::vector<Value*> packed_65_params;
         packed_65_params.push_back(packed_63);
         packed_65_params.push_back(packed_64);
-        CallInst* packed_65 = CallInst::Create(generateMaxPS(mod), packed_65_params.begin(), packed_65_params.end(), "", label_entry);
+        CallInst* packed_65 = CallInst::Create(generateMaxPS(mod), ArrayRef<Value*>(packed_65_params), "", label_entry);
         packed_65->setCallingConv(CallingConv::C);
         packed_65->setTailCall(true);AttrListPtr packed_65_PAL;
         {
@@ -2714,7 +2714,7 @@ private:
         BinaryOperator* packed_tmp_i25 = BinaryOperator::Create(Instruction::FMul, packed_65, packed_66, "tmp.i25", label_entry);
         LoadInst* packed_67 = new LoadInst(const_ptr_50, "", false, label_entry);
         BinaryOperator* packed_tmp_i24 = BinaryOperator::Create(Instruction::FAdd, packed_tmp_i25, packed_67, "tmp.i24", label_entry);
-        CallInst* packed_68 = CallInst::Create(generateCvttps2dq(mod), packed_tmp_i24, "", label_entry);
+        CallInst* packed_68 = CallInst::Create(generateCvttps2dq(mod), ArrayRef<Value*>(packed_tmp_i24), "", label_entry);
         packed_68->setCallingConv(CallingConv::C);
         packed_68->setTailCall(true);AttrListPtr packed_68_PAL;
         {
@@ -2727,7 +2727,7 @@ private:
         }
         packed_68->setAttributes(packed_68_PAL);
 
-        CallInst* packed_69 = CallInst::Create(generateCvtdq2ps(mod), packed_68, "", label_entry);
+        CallInst* packed_69 = CallInst::Create(generateCvtdq2ps(mod), ArrayRef<Value*>(packed_68), "", label_entry);
         packed_69->setCallingConv(CallingConv::C);
         packed_69->setTailCall(true);AttrListPtr packed_69_PAL;
         {
@@ -2744,7 +2744,7 @@ private:
         packed_tmp_i23_params.push_back(packed_tmp_i24);
         packed_tmp_i23_params.push_back(packed_69);
         packed_tmp_i23_params.push_back(const_int8_51);
-        CallInst* packed_tmp_i23 = CallInst::Create(generateCmpPS(mod), packed_tmp_i23_params.begin(), packed_tmp_i23_params.end(), "tmp.i23", label_entry);
+        CallInst* packed_tmp_i23 = CallInst::Create(generateCmpPS(mod), ArrayRef<Value*>(packed_tmp_i23_params), "tmp.i23", label_entry);
         packed_tmp_i23->setCallingConv(CallingConv::C);
         packed_tmp_i23->setTailCall(true);AttrListPtr packed_tmp_i23_PAL;
         {
@@ -2787,7 +2787,7 @@ private:
         BinaryOperator* packed_tmp_i5 = BinaryOperator::Create(Instruction::FMul, packed_tmp_i6, packed_tmp_i16, "tmp.i5", label_entry);
         BinaryOperator* packed_tmp_i4 = BinaryOperator::Create(Instruction::FAdd, packed_tmp_i5, packed_tmp_i17, "tmp.i4", label_entry);
         BinaryOperator* packed_tmp_i3 = BinaryOperator::Create(Instruction::FAdd, packed_tmp_i4, packed_61, "tmp.i3", label_entry);
-        CallInst* packed_77 = CallInst::Create(generateCvttps2dq(mod), packed_tmp_i21, "", label_entry);
+        CallInst* packed_77 = CallInst::Create(generateCvttps2dq(mod), ArrayRef<Value*>(packed_tmp_i21), "", label_entry);
         packed_77->setCallingConv(CallingConv::C);
         packed_77->setTailCall(true);AttrListPtr packed_77_PAL;
         {
@@ -2806,7 +2806,7 @@ private:
         std::vector<Value*> packed_80_params;
         packed_80_params.push_back(packed_tmp_i2);
         packed_80_params.push_back(const_int32_60);
-        CallInst* packed_80 = CallInst::Create(generatePsllid(mod), packed_80_params.begin(), packed_80_params.end(), "", label_entry);
+        CallInst* packed_80 = CallInst::Create(generatePsllid(mod), ArrayRef<Value*>(packed_80_params), "", label_entry);
         packed_80->setCallingConv(CallingConv::C);
         packed_80->setTailCall(true);AttrListPtr packed_80_PAL;
         {
@@ -2839,7 +2839,7 @@ private:
 		VectorType* vectorTy_int_SIMD = VectorType::get(Type::getInt32Ty(context), simdWidth);
 		
         // Type Definitions
-		std::vector<const Type*>FuncTy_1_args;
+		std::vector<Type*>FuncTy_1_args;
 		FuncTy_1_args.push_back(vectorTy_float_SIMD);
 		FunctionType* FuncTy_1 = FunctionType::get(
 				/*Result=*/vectorTy_float_SIMD,
@@ -2870,63 +2870,63 @@ private:
 		const_packed_3_elems.push_back(const_float_4);
 		const_packed_3_elems.push_back(const_float_4);
 		const_packed_3_elems.push_back(const_float_4);
-		Constant* const_packed_3 = ConstantVector::get(vectorTy_float_SIMD, const_packed_3_elems);
+		Constant* const_packed_3 = ConstantVector::get(ArrayRef<Constant*>(const_packed_3_elems));
 		std::vector<Constant*> const_packed_5_elems;
 		ConstantInt* const_int32_6 = ConstantInt::get(context, APInt(32,  "23", 10));
 		const_packed_5_elems.push_back(const_int32_6);
 		const_packed_5_elems.push_back(const_int32_6);
 		const_packed_5_elems.push_back(const_int32_6);
 		const_packed_5_elems.push_back(const_int32_6);
-		Constant* const_packed_5 = ConstantVector::get(vectorTy_int_SIMD, const_packed_5_elems);
+		Constant* const_packed_5 = ConstantVector::get(ArrayRef<Constant*>(const_packed_5_elems));
 		std::vector<Constant*> const_packed_7_elems;
 		ConstantInt* const_int32_8 = ConstantInt::get(context, APInt(32,  "1065353216", 10));
 		const_packed_7_elems.push_back(const_int32_8);
 		const_packed_7_elems.push_back(const_int32_8);
 		const_packed_7_elems.push_back(const_int32_8);
 		const_packed_7_elems.push_back(const_int32_8);
-		Constant* const_packed_7 = ConstantVector::get(vectorTy_int_SIMD, const_packed_7_elems);
+		Constant* const_packed_7 = ConstantVector::get(ArrayRef<Constant*>(const_packed_7_elems));
 		std::vector<Constant*> const_packed_9_elems;
 		ConstantFP* const_float_10 = ConstantFP::get(context, APFloat(BitsToFloat(0x3AF61905U) /* 1.877577e-03 */));
 		const_packed_9_elems.push_back(const_float_10);
 		const_packed_9_elems.push_back(const_float_10);
 		const_packed_9_elems.push_back(const_float_10);
 		const_packed_9_elems.push_back(const_float_10);
-		Constant* const_packed_9 = ConstantVector::get(vectorTy_float_SIMD, const_packed_9_elems);
+		Constant* const_packed_9 = ConstantVector::get(ArrayRef<Constant*>(const_packed_9_elems));
 		std::vector<Constant*> const_packed_11_elems;
 		ConstantFP* const_float_12 = ConstantFP::get(context, APFloat(8.989340e-03f));
 		const_packed_11_elems.push_back(const_float_12);
 		const_packed_11_elems.push_back(const_float_12);
 		const_packed_11_elems.push_back(const_float_12);
 		const_packed_11_elems.push_back(const_float_12);
-		Constant* const_packed_11 = ConstantVector::get(vectorTy_float_SIMD, const_packed_11_elems);
+		Constant* const_packed_11 = ConstantVector::get(ArrayRef<Constant*>(const_packed_11_elems));
 		std::vector<Constant*> const_packed_13_elems;
 		ConstantFP* const_float_14 = ConstantFP::get(context, APFloat(BitsToFloat(0x3D64AA23U) /* 5.582632e-02 */));
 		const_packed_13_elems.push_back(const_float_14);
 		const_packed_13_elems.push_back(const_float_14);
 		const_packed_13_elems.push_back(const_float_14);
 		const_packed_13_elems.push_back(const_float_14);
-		Constant* const_packed_13 = ConstantVector::get(vectorTy_float_SIMD, const_packed_13_elems);
+		Constant* const_packed_13 = ConstantVector::get(ArrayRef<Constant*>(const_packed_13_elems));
 		std::vector<Constant*> const_packed_15_elems;
 		ConstantFP* const_float_16 = ConstantFP::get(context, APFloat(BitsToFloat(0x3E75EAD4U) /* 2.401536e-01 */));
 		const_packed_15_elems.push_back(const_float_16);
 		const_packed_15_elems.push_back(const_float_16);
 		const_packed_15_elems.push_back(const_float_16);
 		const_packed_15_elems.push_back(const_float_16);
-		Constant* const_packed_15 = ConstantVector::get(vectorTy_float_SIMD, const_packed_15_elems);
+		Constant* const_packed_15 = ConstantVector::get(ArrayRef<Constant*>(const_packed_15_elems));
 		std::vector<Constant*> const_packed_17_elems;
 		ConstantFP* const_float_18 = ConstantFP::get(context, APFloat(6.931531e-01f));
 		const_packed_17_elems.push_back(const_float_18);
 		const_packed_17_elems.push_back(const_float_18);
 		const_packed_17_elems.push_back(const_float_18);
 		const_packed_17_elems.push_back(const_float_18);
-		Constant* const_packed_17 = ConstantVector::get(vectorTy_float_SIMD, const_packed_17_elems);
+		Constant* const_packed_17 = ConstantVector::get(ArrayRef<Constant*>(const_packed_17_elems));
 		std::vector<Constant*> const_packed_19_elems;
 		ConstantFP* const_float_20 = ConstantFP::get(context, APFloat(BitsToFloat(0x3F7FFFFFU) /* 9.999999e-01 */));
 		const_packed_19_elems.push_back(const_float_20);
 		const_packed_19_elems.push_back(const_float_20);
 		const_packed_19_elems.push_back(const_float_20);
 		const_packed_19_elems.push_back(const_float_20);
-		Constant* const_packed_19 = ConstantVector::get(vectorTy_float_SIMD, const_packed_19_elems);
+		Constant* const_packed_19 = ConstantVector::get(ArrayRef<Constant*>(const_packed_19_elems));
 
 		// Function Definitions
 
@@ -2973,7 +2973,7 @@ private:
 		VectorType* vectorTy_int_SIMD = VectorType::get(Type::getInt32Ty(context), simdWidth);
 
 		// Type Definitions
-		std::vector<const Type*>FuncTy_1_args;
+		std::vector<Type*>FuncTy_1_args;
 		FuncTy_1_args.push_back(vectorTy_float_SIMD);
 		FunctionType* FuncTy_1 = FunctionType::get(
 			/*Result=*/vectorTy_float_SIMD,
@@ -3006,77 +3006,77 @@ private:
 		const_packed_3_elems.push_back(const_int32_4);
 		const_packed_3_elems.push_back(const_int32_4);
 		const_packed_3_elems.push_back(const_int32_4);
-		Constant* const_packed_3 = ConstantVector::get(vectorTy_int_SIMD, const_packed_3_elems);
+		Constant* const_packed_3 = ConstantVector::get(ArrayRef<Constant*>(const_packed_3_elems));
 		std::vector<Constant*> const_packed_5_elems;
 		ConstantInt* const_int32_6 = ConstantInt::get(context, APInt(32,  "255", 10));
 		const_packed_5_elems.push_back(const_int32_6);
 		const_packed_5_elems.push_back(const_int32_6);
 		const_packed_5_elems.push_back(const_int32_6);
 		const_packed_5_elems.push_back(const_int32_6);
-		Constant* const_packed_5 = ConstantVector::get(vectorTy_int_SIMD, const_packed_5_elems);
+		Constant* const_packed_5 = ConstantVector::get(ArrayRef<Constant*>(const_packed_5_elems));
 		std::vector<Constant*> const_packed_7_elems;
 		ConstantInt* const_int32_8 = ConstantInt::get(context, APInt(32,  "-127", 10));
 		const_packed_7_elems.push_back(const_int32_8);
 		const_packed_7_elems.push_back(const_int32_8);
 		const_packed_7_elems.push_back(const_int32_8);
 		const_packed_7_elems.push_back(const_int32_8);
-		Constant* const_packed_7 = ConstantVector::get(vectorTy_int_SIMD, const_packed_7_elems);
+		Constant* const_packed_7 = ConstantVector::get(ArrayRef<Constant*>(const_packed_7_elems));
 		std::vector<Constant*> const_packed_9_elems;
 		ConstantInt* const_int32_10 = ConstantInt::get(context, APInt(32,  "1065353216", 10));
 		const_packed_9_elems.push_back(const_int32_10);
 		const_packed_9_elems.push_back(const_int32_10);
 		const_packed_9_elems.push_back(const_int32_10);
 		const_packed_9_elems.push_back(const_int32_10);
-		Constant* const_packed_9 = ConstantVector::get(vectorTy_int_SIMD, const_packed_9_elems);
+		Constant* const_packed_9 = ConstantVector::get(ArrayRef<Constant*>(const_packed_9_elems));
 		std::vector<Constant*> const_packed_11_elems;
 		ConstantInt* const_int32_12 = ConstantInt::get(context, APInt(32,  "1073741823", 10));
 		const_packed_11_elems.push_back(const_int32_12);
 		const_packed_11_elems.push_back(const_int32_12);
 		const_packed_11_elems.push_back(const_int32_12);
 		const_packed_11_elems.push_back(const_int32_12);
-		Constant* const_packed_11 = ConstantVector::get(vectorTy_int_SIMD, const_packed_11_elems);
+		Constant* const_packed_11 = ConstantVector::get(ArrayRef<Constant*>(const_packed_11_elems));
 		std::vector<Constant*> const_packed_13_elems;
 		ConstantFP* const_float_14 = ConstantFP::get(context, APFloat(5.965155e-02f));
 		const_packed_13_elems.push_back(const_float_14);
 		const_packed_13_elems.push_back(const_float_14);
 		const_packed_13_elems.push_back(const_float_14);
 		const_packed_13_elems.push_back(const_float_14);
-		Constant* const_packed_13 = ConstantVector::get(vectorTy_float_SIMD, const_packed_13_elems);
+		Constant* const_packed_13 = ConstantVector::get(ArrayRef<Constant*>(const_packed_13_elems));
 		std::vector<Constant*> const_packed_15_elems;
 		ConstantFP* const_float_16 = ConstantFP::get(context, APFloat(BitsToFloat(0x3EEE7397U) /* 4.657256e-01 */));
 		const_packed_15_elems.push_back(const_float_16);
 		const_packed_15_elems.push_back(const_float_16);
 		const_packed_15_elems.push_back(const_float_16);
 		const_packed_15_elems.push_back(const_float_16);
-		Constant* const_packed_15 = ConstantVector::get(vectorTy_float_SIMD, const_packed_15_elems);
+		Constant* const_packed_15 = ConstantVector::get(ArrayRef<Constant*>(const_packed_15_elems));
 		std::vector<Constant*> const_packed_17_elems;
 		ConstantFP* const_float_18 = ConstantFP::get(context, APFloat(BitsToFloat(0x3FBD96DDU) /* 1.481166e+00 */));
 		const_packed_17_elems.push_back(const_float_18);
 		const_packed_17_elems.push_back(const_float_18);
 		const_packed_17_elems.push_back(const_float_18);
 		const_packed_17_elems.push_back(const_float_18);
-		Constant* const_packed_17 = ConstantVector::get(vectorTy_float_SIMD, const_packed_17_elems);
+		Constant* const_packed_17 = ConstantVector::get(ArrayRef<Constant*>(const_packed_17_elems));
 		std::vector<Constant*> const_packed_19_elems;
 		ConstantFP* const_float_20 = ConstantFP::get(context, APFloat(BitsToFloat(0x402153F6U) /* 2.520750e+00 */));
 		const_packed_19_elems.push_back(const_float_20);
 		const_packed_19_elems.push_back(const_float_20);
 		const_packed_19_elems.push_back(const_float_20);
 		const_packed_19_elems.push_back(const_float_20);
-		Constant* const_packed_19 = ConstantVector::get(vectorTy_float_SIMD, const_packed_19_elems);
+		Constant* const_packed_19 = ConstantVector::get(ArrayRef<Constant*>(const_packed_19_elems));
 		std::vector<Constant*> const_packed_21_elems;
 		ConstantFP* const_float_22 = ConstantFP::get(context, APFloat(BitsToFloat(0x4038D96CU) /* 2.888270e+00 */));
 		const_packed_21_elems.push_back(const_float_22);
 		const_packed_21_elems.push_back(const_float_22);
 		const_packed_21_elems.push_back(const_float_22);
 		const_packed_21_elems.push_back(const_float_22);
-		Constant* const_packed_21 = ConstantVector::get(vectorTy_float_SIMD, const_packed_21_elems);
+		Constant* const_packed_21 = ConstantVector::get(ArrayRef<Constant*>(const_packed_21_elems));
 		std::vector<Constant*> const_packed_23_elems;
 		ConstantFP* const_float_24 = ConstantFP::get(context, APFloat(1.000000e+00f));
 		const_packed_23_elems.push_back(const_float_24);
 		const_packed_23_elems.push_back(const_float_24);
 		const_packed_23_elems.push_back(const_float_24);
 		const_packed_23_elems.push_back(const_float_24);
-		Constant* const_packed_23 = ConstantVector::get(vectorTy_float_SIMD, const_packed_23_elems);
+		Constant* const_packed_23 = ConstantVector::get(ArrayRef<Constant*>(const_packed_23_elems));
 
 		// Global Variable Definitions
 
@@ -3127,7 +3127,7 @@ private:
 		VectorType* vectorTy_float_SIMD = VectorType::get(Type::getFloatTy(context), simdWidth);
 
 		// Type Definitions
-		std::vector<const Type*>FuncTy_2_args;
+		std::vector<Type*>FuncTy_2_args;
 		FuncTy_2_args.push_back(vectorTy_float_SIMD);
 		FuncTy_2_args.push_back(vectorTy_float_SIMD);
 		FunctionType* FuncTy_2 = FunctionType::get(
@@ -3164,13 +3164,13 @@ private:
 			BasicBlock* label_entry = BasicBlock::Create(context, "entry",pow_ps,0);
 
 			// Block entry (label_entry)
-			CallInst* packed_4 = CallInst::Create(generateLog2PS(mod, simdWidth), packed_x, "", label_entry);
+			CallInst* packed_4 = CallInst::Create(generateLog2PS(mod, simdWidth), ArrayRef<Value*>(packed_x), "", label_entry);
 			packed_4->setCallingConv(CallingConv::C);
 			packed_4->setTailCall(true);AttrListPtr packed_4_PAL;
 			packed_4->setAttributes(packed_4_PAL);
 
 			BinaryOperator* packed_5 = BinaryOperator::Create(Instruction::FMul, packed_4, packed_y, "", label_entry);
-			CallInst* packed_6 = CallInst::Create(generateExp2PS(mod, simdWidth), packed_5, "", label_entry);
+			CallInst* packed_6 = CallInst::Create(generateExp2PS(mod, simdWidth), ArrayRef<Value*>(packed_5), "", label_entry);
 			packed_6->setCallingConv(CallingConv::C);
 			packed_6->setTailCall(true);AttrListPtr packed_6_PAL;
 			packed_6->setAttributes(packed_6_PAL);
@@ -3200,7 +3200,7 @@ private:
 		VectorType* vectorTy_int_SIMD = VectorType::get(Type::getInt32Ty(context), simdWidth);
 
 		// Type Definitions
-		std::vector<const Type*>FuncTy_2_args;
+		std::vector<Type*>FuncTy_2_args;
 		FuncTy_2_args.push_back(vectorTy_float_SIMD);
 		FunctionType* FuncTy_2 = FunctionType::get(
 			/*Result=*/vectorTy_float_SIMD,
@@ -3245,7 +3245,7 @@ private:
 			elems.push_back(scalarConst);
 			elems.push_back(scalarConst);
 			elems.push_back(scalarConst);
-			Constant* packedConst = ConstantVector::get(vectorTy_int_SIMD, elems);
+			Constant* packedConst = ConstantVector::get(ArrayRef<Constant*>(elems));
 
 			BinaryOperator* andInst = BinaryOperator::Create(Instruction::And, bc, packedConst, "", label_entry);
 			BitCastInst* bc2 = new BitCastInst(andInst, vectorTy_float_SIMD, "", label_entry);

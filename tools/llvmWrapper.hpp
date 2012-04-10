@@ -45,17 +45,19 @@
 #include <llvm/ExecutionEngine/JIT.h> //required to prevent "JIT has not been linked in" errors
 
 #include <llvm/Target/TargetData.h>
-#include <llvm/Target/TargetSelect.h>
+#include <llvm/Support/TargetSelect.h>
 
 // optimization
 #include <llvm/PassManager.h>
 #include <llvm/LinkAllPasses.h>
-#include <llvm/Support/StandardPasses.h>
+#include <llvm/CodeGen/Passes.h>
 #include <llvm/Transforms/IPO.h> //FunctionInliningPass
 #include <llvm/Transforms/Utils/Cloning.h> //InlineFunction
 #include <llvm/Support/Timer.h>
 
 #include <llvm/LLVMContext.h>
+
+#include "llvm/Support/ManagedStatic.h" // llvm_shutdown()
 
 using namespace llvm;
 
@@ -192,12 +194,13 @@ ExecutionEngine* createExecutionEngine(Module* mod) {
 		EngineBuilder eb = EngineBuilder(mod);
 		eb.setEngineKind(EngineKind::JIT);
 		eb.setErrorStr(&errorMessage);
-		eb.setJITMemoryManager(JITMemoryManager::CreateDefaultMemManager());
-		eb.setOptLevel(CodeGenOpt::Aggressive);
-		eb.setAllocateGVsWithCode(false);
-		eb.setCodeModel(CodeModel::Default);
+		//eb.setJITMemoryManager(JITMemoryManager::CreateDefaultMemManager());
+		//eb.setOptLevel(CodeGenOpt::Default);
+		//eb.setAllocateGVsWithCode(false);
+		//eb.setCodeModel(CodeModel::JITDefault); // setting this to "Default" crashes!
+		//eb.setRelocationModel(Reloc::PIC_);
 		//eb.setMArch("x86-64");
-		//eb.setMCPU("corei7");
+		//eb.setMCPU("penryn");
 
 		globalExecEngine = eb.create();
 
@@ -222,6 +225,8 @@ ExecutionEngine* createExecutionEngine(Module* mod) {
 		}
 		globalExecEngine->addModule(mod);
 	}
+
+	globalExecEngine->runStaticConstructorsDestructors(false);
 
 	return globalExecEngine;
 }
@@ -268,6 +273,14 @@ int executeMain(void* mainPtr, int argc, char **argv) {
 	tg.print(dbgs());
 
 	return res;
+}
+
+static void shutdown() {
+	outs() << "shutting down... ";
+	globalExecEngine->runStaticConstructorsDestructors(true);
+	delete globalExecEngine;
+	//llvm_shutdown(); // "pointer being freed was not allocated"
+	outs() << "done.\n";
 }
 
 //
@@ -388,8 +401,11 @@ void optimizeModuleSimple(Module* mod) {
 
 	PassManager Passes;
 
+	// remove debug symbols etc. (packetizer can not handle it) (#17)
+	Passes.add(createStripSymbolsPass());
 	// transform to SSA
-	createStandardAliasAnalysisPasses(&Passes);
+	Passes.add(createTypeBasedAliasAnalysisPass());
+	Passes.add(createBasicAliasAnalysisPass());
 	Passes.add(createScalarReplAggregatesPass(-1, true));
 	Passes.add(createPromoteMemoryToRegisterPass());
 	// remove dead code (packetizer can not handle it)
