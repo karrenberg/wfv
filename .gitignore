@@ -1,0 +1,30 @@
+*~
+*.o
+.sconsign.dblite
+*.so
+*.bak
+*.os
+*.a
+build
+*.bc
+packetizeFunction
+wfvTestSuite
+wfvUnitTests
+packetizeFunction.exe
+wfvTestSuite.exe
+wfvUnitTests.exe
+*.ll
+*.pdb
+obj
+lib
+test/gtest/make/sample1_unittest*
+
+# eclipse
+.project
+.cproject
+
+# vim
+*.swp
+
+# netbeans
+nbproject

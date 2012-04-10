@@ -1,0 +1,250 @@
+/**
+ * @file   README
+ * @date   20.04.2010
+ * @author Ralf Karrenberg
+ *
+ * This file is distributed under the University of Illinois Open Source
+ * License. See the COPYING file in the root directory for details.
+ *
+ * Copyright (C) 2008, 2009, 2010, 2011 Saarland University
+ *
+ */
+
+================================================================================
+0. MORE DOCUMENTATION
+
+For detailed explanations, including descriptions of the algorithm, consider
+the paper "Whole-Function Vectorization" and the master's thesis of the author:
+
+http://www.cdl.uni-saarland.de/people/karrenberg/
+
+
+If you should find errors of any kind, both in the paper, the thesis, or the
+code, please write a bug-report to karrenberg@cdl.uni-saarland.de .
+
+
+
+================================================================================
+1. IMPORTANT
+
+Please keep in mind that there are lots of code-constructs the packetizer is not
+able to packetize due to different things:
+
+- It is not possible to packetize certain code, e.g. it is undecidable
+  whether a load from an arbitrary address should remain scalar and be
+  replicated or if it should be converted to a vector load.
+  Most importantly, instructions that work on or produce data that exceeds a
+  precision of 32bits can not be packetized on SSE architectures.
+  This also implies that the scalar code must not contain any statements
+  that already use packetized data types (e.g. an RGB color has to be stored
+  in a struct with 3 or 4 floats instead of a single __m128 (vector of size 4)).
+
+- There is still missing functionality, e.g. for handling irreducible
+  control flow or data-types with mixed uniform and varying values (*).
+
+- There is probably a number of unknown bugs.
+
+
+(*) uniform = a value that is the same for all N instances of the scalar source
+              function, where N is the SIMD width.
+    varying = a value that differs or might differ between different instances.
+
+
+
+================================================================================
+2. BUILDING THE PACKETIZER
+
+The packetizer currently builds against LLVM 2.9 final.
+
+Makefile-based build process:
+	- set environment variable $LLVM_INSTALL_DIR according to your system
+	- run make with one of the following targets:
+		- lib/libPacketizer.a (UNIX default for 'all', static library)
+		- lib/Packetizer.lib  (Windows default for 'all', static library)
+		- packetizerTestSuite (test suite executable and test suite)
+		- packetizeFunction   (stand-alone executable)
+	- make sure to pass "DEBUG=[0,1]" and/or "LLVM_NO_DEBUG=[0,1]"
+	  according to the desired configuration and the LLVM build
+	- tested compilers: gcc (4.4.1), clang (2.9), icc (11.1)
+	- see the Makefile for additional parameters
+
+Windows setup (MinGW/MSYS + MSVC):
+	- download and install msysgit full installer (code.google.com/p/msysgit)
+		- the full installer gives you a working environment including make
+	- set environment variables according to Visual Studio Shell (PATH, INCLUDE,
+	  LIB, LIBPATH)
+	- be sure that "link" and other tools point to the appropriate VS tools
+	  instead of the MinGW ones!
+	- use mingw32-make.exe for building (make.exe interprets MSVC-flags as
+	  unix-paths)
+	- see the Makefile for additional parameters
+
+
+
+================================================================================
+3. HOW TO TEST THE PACKETIZER
+
+This should be included in an LLVM bitcode module that the packetizer should
+work with:
+
+- the source function for packetization
+  see above: scalar code, no vectors, no long int, no double, no loading from
+  unknown locations, no multiple indirection, no pointer aliasing, ...
+
+- the target function for packetization
+  given by an empty function prototype with appropriate signature:
+    - The number of arguments has to match number of arguments of source
+      function (except for one additional mask argument, if supplied).
+    - The return type and each argument type can either exactly match their
+      scalar counterparts (uniform argument) or match the type constructed by
+      the type packetization rules (varying argument, see section 3). There are
+      a few exceptions to allow e.g. <2 x i64> to be treated like <4 x i32>.
+    - Note that there is currently no support for struct arguments with mixed
+      uniform and varying elements implemented.
+
+For testing purposes, you can use the binary "packetizeFunction" on a module:
+
+packetizeFunction -m module.bc -f sourceFunctionName -t targetFunctionName
+
+
+In order to test if the packetizer is working correctly, use the test suites:
+
+./packetizerTestSuite -testX				  X = { 1, 2, 3 }
+./packetizerUnitTests
+
+Note that all executables have additional parameters, e.g. for verbose output 
+(use --help).
+
+
+
+================================================================================
+4. HOW TO INTEGRATE THE PACKETIZER INTO A PROJECT
+
+Integration into a third-party project can be done as follows:
+
+- include "packetizerAPI.hpp" or "packetizerAPI_C.h" in your application
+  (build/include/packetizerAPI.hpp) for either the C++ or C API.
+- link your application with the library
+- NOTE: If you experience problems with unresolved external symbols, check
+        if you should compile the application with PACKETIZER_STATIC_LIBS
+		defined.
+
+
+Example of how to make use of the packetizer:
+
+#include "packetizerAPI.hpp"
+
+// If set, BLENDVPS intrinsic is used for blending of vectors
+const bool use_sse41 = true;
+// If set, AVX instruction set is used (SIMD width of 256 bits!)
+const bool use_avx = false;
+// If set, debug information is printed (might be a lot of output!).
+// Has no effect unless packetizer is compiled in debug mode.
+const bool verbose = false;
+
+// Should be either 4 (SSE) or 8 (AVX)
+const unsigned simdWidth = 4;
+// Can be set to a value larger than simdWidth (but only a multiple).
+// In this case, a wrapper is generated around the vectorized function.
+// Note: This feature has not been used or tested for a long time.
+const unsigned packetizationSize = 4;
+
+Packetizer::Packetizer packetizer(mod,
+                                  simdWidth,
+                                  packetizationSize,
+                                  use_sse41,
+                                  use_avx,
+                                  verbose);
+
+// Add functions that should be packetized
+packetizer.addFunction("sourceFunction", "targetFunction");
+
+// Add 'native' function mapping
+// This allows the packetizer to replace calls to "trace" by an already
+// available packet function "traceRay_4" with an optional mask parameter.
+llvm::Function* trace_4 = ...;
+const int maskArgumentIndex = 1; // -1 means the function does not take a mask
+
+packetizer.addVaryingFunctionMapping("trace", maskArgumentIndex, trace_4);
+
+packetizer.run();
+
+
+
+================================================================================
+5. TYPE PACKETIZATION RULES
+
+The packetizer currently expects all data to be in "struct-of-array" (SoA)
+layout. This results in the following packetization rules that are used inside
+the packetizer and that have to be obeyed by the user when declaring the target
+function and setting up the data:
+
+(LLVM type syntax)
+
+packetize(scalar type  )  |  packet type
+-------------------------------------------------------------------
+packetize( float       )  |  <N x float>
+packetize( i1          )  |  <N x i32>
+packetize( i8          )  |  <N x i32>
+packetize( i32         )  |  <N x i32>
+packetize( T *         )  |  packetize( T ) *
+packetize( [ T ]       )  |  [ packetize( T ) ]
+packetize( { T1; T2; } )  |  { packetize( T1 ); packetize( T2 ); }
+
+legend:
+T  = arbitrary recursive type following the rules
+*  = pointer
+[] = array
+{} = struct
+<> = vector
+N  = SIMD width of target architecture
+
+
+
+================================================================================
+6. SIMPLE "BEST PRACTICE" RULES
+
+The packetizer has mostly been used (and therefore tested) in environments with
+restricted complexity concerning data types. While support for a lot of features
+is implemented, most of them are not tested sufficiently (e.g. struct and array
+access).
+If you do not plan to hack on the packetizer itself, consider the following
+recommendations:
+
+- Only use simple data types (i1, i32, float, pointers, no arrays, no
+  structs) as arguments to the source function.
+- If necessary, write a wrapper with the original signature of the target
+  function that extracts scalar arguments from aggregates and then calls a
+  "simplified" packetized function which takes only scalar arguments.
+- Only use simple data types (i1, i8, i32, float, no arrays, no structs) inside
+  the source function.
+- Minimize the usage of pointers.
+
+These recommendations have three different effects:
+- reduced packetization time
+- reduced runtime
+- reduced risk of compile-time and runtime errors due to bugs/missing features
+
+
+
+================================================================================
+7. MISC
+
+When compiling LLVM 2.9 under Visual Studio 2008 in 64bit Release mode,
+compilation of LLVMCore.lib may loop infinitely. Change the optimization level
+of the module to /O1 by hand.
+
+The library in general should compile under the following operating systems:
+- Linux    : Kernel 2.6 or later
+- Windows  : XP or later
+- Mac OS X : 10.5 or later
+
+The library in general should compile with the following compilers:
+- GCC >= 4.4
+- MSVC >= 2008
+- ICC >= 10
+- LLVM >= 2.9
+
+However, note that no regular testing is done on all platforms with all
+compilers.
+

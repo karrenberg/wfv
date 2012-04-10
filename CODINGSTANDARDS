@@ -1,0 +1,97 @@
+/**
+ * @file   CODINGSTANDARDS
+ * @date   30.11.2011
+ * @author Ralf Karrenberg
+ *
+ * This file is distributed under the University of Illinois Open Source
+ * License. See the COPYING file in the root directory for details.
+ *
+ * Copyright (C) 2011 Saarland University
+ *
+ */
+
+================================================================================
+0. INTRODUCTION
+
+These are Just some randomly gathered remarks of how I would like to see the
+code in this project.
+This does not necessarily reflect the current state but should be obeyed for
+new code.
+The only exception from this is the "tabs to spaces" convention, which should
+be changed for all files at once at some point.
+
+================================================================================
+1. NAMING
+
+- camelcase
+- give meaningful names, even if the variable name becomes excessively long!
+- Types start with a capital letter
+- Variables start with a lowercase letter
+- Class members should start with a lowercase 'm', e.g. mVerbose
+- Output parameters of functions should start with a lowercase 'o', e.g. oPosition
+- Method names start with a small letter
+- Static method names start with a capital letter
+- #defined values and macros are in uppercase with underscores, e.g. SIMD_WIDTH
+- static constants are in uppercase with underscores
+
+================================================================================
+2. FORMATTING
+
+- tabsize 4, tabs to spaces (currently *not* the case!)
+- maximum line width of 100
+- no indentation inside namespaces
+- no indentation of "private"/"public"/"protected"
+
+- function declarations (should somehow depend on #parameters):
+void classFun(T param1, T param2, T param3,
+			  T param4, T param5) const;
+
+- function implementations (should somehow depend on #parameters):
+void
+ClassName::classFun(T param1,
+					T param2,
+					T param3,
+					T param4,
+					T param5) const
+{
+	// body
+}
+
+- switch:
+switch (someVal)
+{
+	case VAL1:
+	{
+		// ...
+	}
+	case VAL2:
+	{
+		// ...
+	}
+}
+
+================================================================================
+3. MISC
+
+- try to prevent unnecessary indentation by using break/continue/return
+
+
+================================================================================
+4. CONTRIBUTING CODE (USING THE GIT REPOSITORY)
+
+This does not really belong here, but is worthwile mentioning.
+
+- try to keep the history linear, i.e. use "git pull --rebase"
+- don't push multiple commits that revert each other
+	- instead, use "git reset" and fix your commits upfront
+	- one batch of commits should never introduce code and remove it again
+- keep commits separated (use git add -p and git commit --amend)
+- never push unless all test suites succeed
+- *always* write detailed commit messages
+- formatting of commit messages:
+	- one short description in the first line
+	- one blank line
+	- detailed description of what this commit does
+	- reference/close issues with "refs #12345" and "closes #12345" 
+- whenever the code adds functionality or fixes a bug, include a test in the
+  commit if none existed so far
