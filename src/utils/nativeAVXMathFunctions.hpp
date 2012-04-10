@@ -66,68 +66,68 @@ using namespace llvm;
 
 class NativeAVXMathFunctions {
 public:
-    inline Function* getSinPS(Module& mod, const unsigned simdWidth) const { return NULL; }
-    inline Function* getCosPS(Module& mod, const unsigned simdWidth) const { return NULL; }
-    inline Function* getSinCosPS(Module& mod, const unsigned simdWidth) const { return NULL; }
-    inline Function* getLogPS(Module& mod, const unsigned simdWidth) const { return NULL; }
-    inline Function* getExpPS(Module& mod, const unsigned simdWidth) const { return NULL; }
-    inline Function* getLog2PS(Module& mod, const unsigned simdWidth) const { return NULL; }
-    inline Function* getExp2PS(Module& mod, const unsigned simdWidth) const { return NULL; }
-    inline Function* getPowPS(Module& mod, const unsigned simdWidth) const { return NULL; }
-	inline Function* getAbsPS(Module& mod, const unsigned simdWidth) const { return NULL; }
+    inline Function* getSinPS(Module* mod, const unsigned simdWidth) const { return NULL; }
+    inline Function* getCosPS(Module* mod, const unsigned simdWidth) const { return NULL; }
+    inline Function* getSinCosPS(Module* mod, const unsigned simdWidth) const { return NULL; }
+    inline Function* getLogPS(Module* mod, const unsigned simdWidth) const { return NULL; }
+    inline Function* getExpPS(Module* mod, const unsigned simdWidth) const { return NULL; }
+    inline Function* getLog2PS(Module* mod, const unsigned simdWidth) const { return NULL; }
+    inline Function* getExp2PS(Module* mod, const unsigned simdWidth) const { return NULL; }
+    inline Function* getPowPS(Module* mod, const unsigned simdWidth) const { return NULL; }
+	inline Function* getAbsPS(Module* mod, const unsigned simdWidth) const { return NULL; }
 
-    inline Function* getRoundPS(Module& mod) const { return generateRoundPS(mod); }
+    inline Function* getRoundPS(Module* mod) const { return generateRoundPS(mod); }
 
-    inline Function* getRsqrtPS(Module& mod) const { return generateRsqrtPS(mod); }
-    inline Function* getSqrtPS(Module& mod) const { return generateSqrtPS(mod); }
-    inline Function* getRcpPS(Module& mod) const { return generateRcpPS(mod); }
-    inline Function* getMinPS(Module& mod) const { return generateMinPS(mod); }
-    inline Function* getMaxPS(Module& mod) const { return generateMaxPS(mod); }
-    inline Function* getCmpPS(Module& mod) const { return generateCmpPS(mod); }
-    inline Function* getAddSubPS(Module& mod) const { return generateAddSubPS(mod); }
+    inline Function* getRsqrtPS(Module* mod) const { return generateRsqrtPS(mod); }
+    inline Function* getSqrtPS(Module* mod) const { return generateSqrtPS(mod); }
+    inline Function* getRcpPS(Module* mod) const { return generateRcpPS(mod); }
+    inline Function* getMinPS(Module* mod) const { return generateMinPS(mod); }
+    inline Function* getMaxPS(Module* mod) const { return generateMaxPS(mod); }
+    inline Function* getCmpPS(Module* mod) const { return generateCmpPS(mod); }
+    inline Function* getAddSubPS(Module* mod) const { return generateAddSubPS(mod); }
 
 private:
     /////////////////////////////
     // AVX function generation //
     /////////////////////////////
     //intrinsics have to be generated/declared BEFORE math functions!
-    inline Function* generateRsqrtPS(Module& mod) const {
-		return Intrinsic::getDeclaration(&mod, Intrinsic::x86_avx_rsqrt_ps_256);
+    inline Function* generateRsqrtPS(Module* mod) const {
+		return Intrinsic::getDeclaration(mod, Intrinsic::x86_avx_rsqrt_ps_256);
     }
-    inline Function* generateSqrtPS(Module& mod) const {
-		return Intrinsic::getDeclaration(&mod, Intrinsic::x86_avx_sqrt_ps_256);
+    inline Function* generateSqrtPS(Module* mod) const {
+		return Intrinsic::getDeclaration(mod, Intrinsic::x86_avx_sqrt_ps_256);
     }
-    inline Function* generateRcpPS(Module& mod) const {
-		return Intrinsic::getDeclaration(&mod, Intrinsic::x86_avx_rcp_ps_256);
+    inline Function* generateRcpPS(Module* mod) const {
+		return Intrinsic::getDeclaration(mod, Intrinsic::x86_avx_rcp_ps_256);
     }
-    inline Function* generateMaxPS(Module& mod) const {
-		return Intrinsic::getDeclaration(&mod, Intrinsic::x86_avx_max_ps_256);
+    inline Function* generateMaxPS(Module* mod) const {
+		return Intrinsic::getDeclaration(mod, Intrinsic::x86_avx_max_ps_256);
     }
-    inline Function* generateMinPS(Module& mod) const {
-		return Intrinsic::getDeclaration(&mod, Intrinsic::x86_avx_min_ps_256);
+    inline Function* generateMinPS(Module* mod) const {
+		return Intrinsic::getDeclaration(mod, Intrinsic::x86_avx_min_ps_256);
     }
-    inline Function* generateCmpPS(Module& mod) const {
-		return Intrinsic::getDeclaration(&mod, Intrinsic::x86_avx_cmp_ps_256);
+    inline Function* generateCmpPS(Module* mod) const {
+		return Intrinsic::getDeclaration(mod, Intrinsic::x86_avx_cmp_ps_256);
     }
-    inline Function* generateAddSubPS(Module& mod) const {
-		return Intrinsic::getDeclaration(&mod, Intrinsic::x86_avx_addsub_ps_256);
+    inline Function* generateAddSubPS(Module* mod) const {
+		return Intrinsic::getDeclaration(mod, Intrinsic::x86_avx_addsub_ps_256);
     }
-    inline Function* generateRoundPS(Module& mod) const {
-		return Intrinsic::getDeclaration(&mod, Intrinsic::x86_avx_round_ps_256);
+    inline Function* generateRoundPS(Module* mod) const {
+		return Intrinsic::getDeclaration(mod, Intrinsic::x86_avx_round_ps_256);
     }
 
 	// TODO: write these in C and generate LLVM IR with clang... should be a lot easier ;)
-	/*
-    Function* generateSinPS(Module& mod, const unsigned simdWidth)
-    Function* generateCosPS(Module& mod, const unsigned simdWidth)
-    Function* generateSinCosPS(Module& mod, const unsigned simdWidth)
-    Function* generateLogPS(Module& mod, const unsigned simdWidth)
-    Function* generateExpPS(Module& mod, const unsigned simdWidth)
+    /*
+    Function* generateSinPS(Module* mod, const unsigned simdWidth)
+    Function* generateCosPS(Module* mod, const unsigned simdWidth)
+    Function* generateSinCosPS(Module* mod, const unsigned simdWidth)
+    Function* generateLogPS(Module* mod, const unsigned simdWidth)
+    Function* generateExpPS(Module* mod, const unsigned simdWidth)
 
-    Function* generateExp2PS(Module& mod, const unsigned simdWidth)
-	Function* generateLog2PS(Module& mod, const unsigned simdWidth)
-	Function* generatePowPS(Module& mod, const unsigned simdWidth)
-	Function* generateAbsPS(Module& mod, const unsigned simdWidth)
+    Function* generateExp2PS(Module* mod, const unsigned simdWidth)
+	Function* generateLog2PS(Module* mod, const unsigned simdWidth)
+	Function* generatePowPS(Module* mod, const unsigned simdWidth)
+	Function* generateAbsPS(Module* mod, const unsigned simdWidth)
 	*/
 };
 

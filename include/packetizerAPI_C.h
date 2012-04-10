@@ -23,7 +23,8 @@ extern "C" {
 typedef struct OpaquePacketizer *PKTPacketizerRef;
 
 PKTPacketizerRef 
-PKTCreatePacketizer(LLVMModuleRef module, 
+PKTCreatePacketizer(LLVMModuleRef module,
+                    LLVMContextRef context,
                     const unsigned simdWidth, const unsigned packetizationSize,
                     const bool use_sse41, const bool use_avx, 
                     const bool verbose);

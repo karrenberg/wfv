@@ -44,7 +44,7 @@ class MemAccessCanonicalizer : public FunctionPass {
 public:
 	static char ID; // Pass identification, replacement for typeid
 	MemAccessCanonicalizer(const bool verbose_flag = false)
-			: FunctionPass(ID), verbose(verbose_flag)
+			: FunctionPass(ID), mVerbose(verbose_flag)
 	{
 		initializeMemAccessCanonicalizerPass(*PassRegistry::getPassRegistry());
 	}
@@ -162,7 +162,7 @@ public:
 	}
 
 private:
-	const bool verbose;
+	const bool mVerbose;
 };
 
 } // namespace

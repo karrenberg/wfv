@@ -53,7 +53,7 @@ class LoopBranchCanonicalizer : public FunctionPass {
 public:
 	static char ID; // Pass identification, replacement for typeid
 	LoopBranchCanonicalizer(const bool verbose_flag = false)
-			: FunctionPass(ID), verbose(verbose_flag)
+			: FunctionPass(ID), mVerbose(verbose_flag)
 	{
 		initializeLoopBranchCanonicalizerPass(*PassRegistry::getPassRegistry());
 	}
@@ -142,7 +142,7 @@ private:
 	Constant* boolOneConst;
 	Constant* boolZeroConst;
 
-	bool verbose;
+	bool mVerbose;
 
 	void canonicalizeLoopBranches(Loop* loop) {
 		//canonicalize sub-loops

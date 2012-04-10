@@ -53,29 +53,23 @@ public:
 	static char ID; // Pass identification, replacement for typeid
 	FunctionPacketizer()
 	: FunctionPass(ID),
-			info(Packetizer::PacketizerInfo(dummyModule, 0, 0, false, false, true)),
+			mInfo(NULL),
 			source(NULL),
 			target(NULL),
 			failed(NULL),
-			verbose(true),
-			varyingNativeFunctions(WholeFunctionVectorizer::NativeFunctionMapType()),
-			nativeMethods(NativeMethods(false, false, true))
+			mVerbose(true)
 	{}
-	FunctionPacketizer(const Packetizer::PacketizerInfo& _info,
+	FunctionPacketizer(const Packetizer::PacketizerInfo* info,
 					 Function* sourceFn,
 					 Function* targetFn,
-					 const WholeFunctionVectorizer::NativeFunctionMapType& varyingNativeFuns,
-					 const NativeMethods& _nativeMethods,
 					 bool* failedFlag,
 					 const bool verbose_flag=false)
 	: FunctionPass(ID),
-			info(_info),
+			mInfo(info),
 			source(sourceFn),
 			target(targetFn),
 			failed(failedFlag),
-			verbose(verbose_flag),
-			varyingNativeFunctions(varyingNativeFuns),
-			nativeMethods(_nativeMethods)
+			mVerbose(verbose_flag)
 	{
 		initializeFunctionPacketizerPass(*PassRegistry::getPassRegistry());
 	}
@@ -89,6 +83,7 @@ public:
 		}
 		entryMasks.clear();
 		constantArgs.clear();
+        delete maskGraph;
 	}
 
 	virtual void getAnalysisUsage(AnalysisUsage &AU) const {
@@ -178,14 +173,12 @@ public:
 	}
 
 private:
-	const Packetizer::PacketizerInfo info;
+	const Packetizer::PacketizerInfo* mInfo;
 	Function* source;
 	Function* target;
 	AnalysisResults* analysisResults;
 	bool* failed;
-	const bool verbose; // required for DEBUG makros, could be changed to use info.verbose
-	const WholeFunctionVectorizer::NativeFunctionMapType& varyingNativeFunctions;
-	const NativeMethods& nativeMethods;
+	const bool mVerbose; // required for DEBUG makros, could be changed to use info.verbose
 
 	MaskGraph* maskGraph;
 
@@ -226,7 +219,7 @@ private:
 	 **/
 	bool packetizeFunction(const Function* f, Function* f_SIMD, const MaskGraph& oldMaskGraph) {
 		DEBUG_PKT( outs() << "\npacketizing function '" << f->getNameStr()
-				<< "' in module '" << info.module.getModuleIdentifier() << "'... \n\n"; );
+				<< "' in module '" << mInfo->mModule->getModuleIdentifier() << "'... \n\n"; );
 
 		const std::string functionName = f->getNameStr();
 
@@ -251,8 +244,8 @@ private:
 		DEBUG_PKT( outs() << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; );
 		DEBUG_PKT( outs() << "mapping masks...\n"; );
 		DEBUG_PKT( outs() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; );
-		LoopInfo li;
-		maskGraph = new MaskGraph(*f_SIMD, li, verbose); // "useful" loop info not required here
+		LoopInfo li; // "useful" loop info not required here
+		maskGraph = new MaskGraph(*f_SIMD, li, f_SIMD->getContext(), mVerbose);
 		mapMaskGraph(oldMaskGraph, *maskGraph, valueMap);
 		DEBUG_PKT( outs() << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; );
 		DEBUG_PKT( outs() << "successfully mapped masks!\n"; );
@@ -279,7 +272,7 @@ private:
 				BitCastInst* bc = createBitCastToEquivalentPacketType(A, insertBefore);
 				if (!bc) continue;
 				ArrayRef<Value*> arg(A);
-				MDNode* mtd = MDNode::get(getGlobalContext(), arg);
+				MDNode* mtd = MDNode::get(*mInfo->mContext, arg);
 				bc->setMetadata(Packetizer::WFV_META_ARG_CAST, mtd);
 
 				Packetizer::uncheckedReplaceAllUsesWith(A, bc);
@@ -532,7 +525,7 @@ private:
 			}
 
 			Value* cond = brInst->getCondition();
-			Type* int32Ty = Type::getInt32Ty(getGlobalContext());
+			Type* int32Ty = Type::getInt32Ty(*mInfo->mContext);
 			if (cond->getType() == int32Ty) continue;
 
 			// add cond to set and collect use-paths
@@ -567,12 +560,12 @@ private:
 				Value* retVal = ret->getReturnValue();
 
 				Type* type = f_SIMD->getReturnType();
-				if (type == VectorType::get(Type::getInt64Ty(getGlobalContext()), 2)) {
+				if (type == VectorType::get(Type::getInt64Ty(*mInfo->mContext), 2)) {
 					BitCastInst* bc = new BitCastInst(retVal, type, "", ret);
 					addValueInfo(bc, ret);
 					ret->mutateType(type);
 				}
-				if (type == VectorType::get(Type::getDoubleTy(getGlobalContext()), 2)) {
+				if (type == VectorType::get(Type::getDoubleTy(*mInfo->mContext), 2)) {
 					BitCastInst* bc = new BitCastInst(retVal, type, "", ret);
 					addValueInfo(bc, ret);
 					ret->mutateType(type);
@@ -603,8 +596,8 @@ private:
 		if (!f_arr) {
 			std::stringstream sstr;
 			sstr << "INTERNAL ERROR: Could not create wrapper for packetization"
-					<< " size " << info.packetizationSize << "! (SIMD width: "
-					<< info.simdWidth;
+					<< " size " << mInfo->mPacketizationSize << "! (SIMD width: "
+					<< mInfo->mSimdWidth;
 			throw std::logic_error(sstr.str());
 		}
 
@@ -642,8 +635,8 @@ private:
 			return NULL;
 		}
 
-		if (oldType == info.vectorTy_intSIMD ||
-				oldType == info.vectorTy_floatSIMD)
+		if (oldType == mInfo->mVectorTyIntSIMD ||
+				oldType == mInfo->mVectorTyFloatSIMD)
 		{
 			DEBUG_PKT( outs() << "  is of suitable packet type - ignored!\n"; );
 			return NULL;
@@ -667,8 +660,8 @@ private:
 		assert (oldType);
 		assert (isPacketizedType(oldType));
 
-		if (oldType == info.vectorTy_intSIMD ||
-				oldType == info.vectorTy_floatSIMD)
+		if (oldType == mInfo->mVectorTyIntSIMD ||
+				oldType == mInfo->mVectorTyFloatSIMD)
 		{
 			return oldType;
 		}
@@ -679,15 +672,15 @@ private:
 			case Type::VectorTyID:
 			{
 				VectorType* vType = cast<VectorType>(oldType);
-				if (vType == VectorType::get(Type::getInt64Ty(getGlobalContext()), 2) ||
-						vType == VectorType::get(Type::getInt16Ty(getGlobalContext()), 8) ||
-						vType == VectorType::get(Type::getInt8Ty(getGlobalContext()), 16))
+				if (vType == VectorType::get(Type::getInt64Ty(*mInfo->mContext), 2) ||
+						vType == VectorType::get(Type::getInt16Ty(*mInfo->mContext), 8) ||
+						vType == VectorType::get(Type::getInt8Ty(*mInfo->mContext), 16))
 				{
-					return info.vectorTy_intSIMD;
+					return mInfo->mVectorTyIntSIMD;
 				}
-				if (vType == VectorType::get(Type::getDoubleTy(getGlobalContext()), 2))
+				if (vType == VectorType::get(Type::getDoubleTy(*mInfo->mContext), 2))
 				{
-					return info.vectorTy_floatSIMD;
+					return mInfo->mVectorTyFloatSIMD;
 				}
 				errs() << "ERROR: bad vector type found: " << *vType << "\n";
 				return NULL;
@@ -713,7 +706,7 @@ private:
 					Type* newElemType = createEquivalentPacketType(elemType);
 					elems.push_back(newElemType);
 				}
-				return StructType::get(getGlobalContext(), elems, sType->isPacked());
+				return StructType::get(*mInfo->mContext, elems, sType->isPacked());
 			}
 			case Type::PointerTyID:
 			{
@@ -740,7 +733,7 @@ private:
 		if (type->isPointerTy()) {
 			dummy = new BitCastInst(c, type, "dummy", insertBefore);
 		} else {
-			dummy = SelectInst::Create(Constant::getNullValue(Type::getInt1Ty(getGlobalContext())), c, c, "dummy", insertBefore);
+			dummy = SelectInst::Create(Constant::getNullValue(Type::getInt1Ty(*mInfo->mContext)), c, c, "dummy", insertBefore);
 		}
 		// not adding these results in not being able to print temporary states
 		addValueInfo(dummy, replacedVal);
@@ -753,7 +746,7 @@ private:
 		if (type->isPointerTy()) {
 			dummy = new BitCastInst(c, type, "dummy", insertAtEnd);
 		} else {
-			dummy = SelectInst::Create(Constant::getNullValue(Type::getInt1Ty(getGlobalContext())), c, c, "dummy", insertAtEnd);
+			dummy = SelectInst::Create(Constant::getNullValue(Type::getInt1Ty(*mInfo->mContext)), c, c, "dummy", insertAtEnd);
 		}
 		// not adding these results in not being able to print temporary states
 		addValueInfo(dummy, replacedVal);
@@ -762,8 +755,8 @@ private:
 
 	Constant* createPacketConstantIntFromBool(bool b) {
 		std::vector<Constant*> cVec; //vector of 'info.simdWidth' int32
-		Constant* const_int32 = b ? Constant::getAllOnesValue(Type::getInt32Ty(getGlobalContext())) : Constant::getNullValue(Type::getInt32Ty(getGlobalContext()));
-		for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
+		Constant* const_int32 = b ? Constant::getAllOnesValue(Type::getInt32Ty(*mInfo->mContext)) : Constant::getNullValue(Type::getInt32Ty(*mInfo->mContext));
+		for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
 			cVec.push_back(const_int32);
 		}
 		return ConstantVector::get(ArrayRef<Constant*>(cVec));
@@ -774,7 +767,7 @@ private:
 		std::vector<Constant* > vecvec;
 
 		if (isa<UndefValue>(oldC)) {
-			c = UndefValue::get(packetizeSIMDType(oldC->getType()));
+			c = UndefValue::get(Packetizer::packetizeSIMDType(oldC->getType(), *mInfo));
 			DEBUG_PKT( outs() << "created new undefined packet constant: " << *c << "\n"; );
 			// if not inside map already, add info
 			if (c && !analysisResults->getValueInfo(c))
@@ -793,7 +786,7 @@ private:
 		}
 
 		if (oldC->isNullValue()) {
-			Constant* c = Constant::getNullValue(packetizeSIMDType(oldC->getType()));
+			Constant* c = Constant::getNullValue(Packetizer::packetizeSIMDType(oldC->getType(), *mInfo));
 			// if not inside map already, add info
 			if (c && !analysisResults->getValueInfo(c))
 				addValueInfo(c, true, true, false, true, false, false, false, false);
@@ -802,29 +795,29 @@ private:
 
 		// TODO: unsure whether this test makes sense
 		if (oldC == Constant::getAllOnesValue(oldC->getType())) {
-			Constant* c = Constant::getAllOnesValue(packetizeSIMDType(oldC->getType()));
+			Constant* c = Constant::getAllOnesValue(Packetizer::packetizeSIMDType(oldC->getType(), *mInfo));
 			// if not inside map already, add info
 			if (c && !analysisResults->getValueInfo(c))
 				addValueInfo(c, true, true, false, false, false, false, false, false);
 			return c;
 		}
 
-		for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
-			vecvec.push_back(Packetizer::getMax32BitConstant(oldC));
+		for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
+			vecvec.push_back(Packetizer::getMax32BitConstant(oldC, *mInfo->mContext));
 		}
 
 		Type::TypeID oldTypeID = oldC->getType()->getTypeID();
 		switch (oldTypeID) {
 			case Type::FloatTyID :
 			{
-				Type* simdType = packetizeSIMDType(oldC->getType());
+				Type* simdType = Packetizer::packetizeSIMDType(oldC->getType(), *mInfo);
 				assert (isa<VectorType>(simdType));
 				c = ConstantVector::get(ArrayRef<Constant*>(vecvec));
 				break;
 			}
 			case Type::IntegerTyID :
 			{
-				Type* simdType = packetizeSIMDType(oldC->getType());
+				Type* simdType = Packetizer::packetizeSIMDType(oldC->getType(), *mInfo);
 				assert (isa<VectorType>(simdType));
 				c = ConstantVector::get(ArrayRef<Constant*>(vecvec));
 				break;
@@ -835,8 +828,8 @@ private:
 				c = oldC;
 				break;
 				////http://www.nabble.com/Creating-Pointer-Constants-td22401381.html
-				//ConstantInt* constInt = ConstantInt::get(getGlobalContext(), Type::getInt64Ty(getGlobalContext()), (uintptr_t)thePointer);
-				//Value* constPtr = ConstantExpr::getIntToPtr(constInt, llvm::PointerType::getUnqual(Type::getInt32Ty(getGlobalContext())));
+				//ConstantInt* constInt = ConstantInt::get(info.context, Type::getInt64Ty(info.context), (uintptr_t)thePointer);
+				//Value* constPtr = ConstantExpr::getIntToPtr(constInt, llvm::PointerType::getUnqual(Type::getInt32Ty(info.context)));
 			}
 			case Type::VectorTyID :
 			{
@@ -849,9 +842,9 @@ private:
 				ConstantArray* oldArrC = cast<ConstantArray>(oldC);
 				ArrayType* arrType = oldArrC->getType();
 
-				assert (packetizeSIMDType(arrType)->isArrayTy());
-				ArrayType* newArrType = cast<ArrayType>(packetizeSIMDType(arrType));
-				assert (packetizeSIMDType(arrType->getElementType()) == newArrType->getElementType());
+				assert (Packetizer::packetizeSIMDType(arrType, *mInfo)->isArrayTy());
+				ArrayType* newArrType = cast<ArrayType>(Packetizer::packetizeSIMDType(arrType, *mInfo));
+				assert (Packetizer::packetizeSIMDType(arrType->getElementType(), *mInfo) == newArrType->getElementType());
 				const unsigned numVals = newArrType->getNumElements();
 				// recursively create packet constants
 				Constant** vals = new Constant*[numVals]();
@@ -889,129 +882,11 @@ private:
 		return c;
 	}
 
-	/**
-	 * method for SIMD width packetization
-	 * -> only 32bit-float, integers <= 32bit, pointers, arrays and structs allowed
-	 * -> no scalar datatypes allowed
-	 * -> no pointers to pointers allowed
-	 * TODO: Use Packetizer::packetizeSIMDType (equivalent impl in llvmTools.hpp, but requires supplying info and other namespace)
-	 **/
-	Type* packetizeSIMDType(Type* oldType) {
-		Type::TypeID oldTypeID = oldType->getTypeID();
-		switch (oldTypeID) {
-			//case Type::getVoidTy(getGlobalContext())ID : return Type::getVoidTy(getGlobalContext()); //not allowed
-			case Type::DoubleTyID:
-			case Type::FloatTyID:
-			{
-				return info.vectorTy_floatSIMD;
-			}
-			case Type::IntegerTyID:
-			{
-				// TODO: Support arbitrary types < 32bit. #11
-#if 1
-				return info.vectorTy_intSIMD;
-#else
-				if (oldType->getPrimitiveSizeInBits() >= 32U) {
-					return info.vectorTy_intSIMD;
-				}
-				return VectorType::get(oldType, info.simdWidth);
-#endif
-			}
-			//case Type::VectorTyID: return NULL;  //not allowed!
-			case Type::PointerTyID:
-			{
-				PointerType* pType = cast<PointerType>(oldType);
-				//Type* elType = pType->getElementType();
-				//if (elType->isPointerTy()) {
-					//throw std::logic_error("INTERNAL ERROR: packetization can not handle multiple indirection!");
-				//}
-				return PointerType::get(packetizeSIMDType(pType->getElementType()), pType->getAddressSpace());
-			}
-			case Type::ArrayTyID:
-			{
-				ArrayType* aType = cast<ArrayType>(oldType);
-				return ArrayType::get(packetizeSIMDType(aType->getElementType()), aType->getNumElements());
-			}
-			case Type::StructTyID:
-			{
-				StructType* sType = cast<StructType>(oldType);
-				std::vector<Type*> newParams;
-				for (unsigned i=0; i<sType->getNumContainedTypes(); ++i) {
-					newParams.push_back(packetizeSIMDType(sType->getElementType(i)));
-				}
-				return StructType::get(getGlobalContext(), newParams, sType->isPacked());
-			}
-
-			default:
-			{
-				errs() << "\nERROR: only arguments of type float, int, pointer, array or struct can be packetized, not '" << *oldType << "'!\n";
-				throw std::logic_error("INTERNAL ERROR: 'first' packetization (scalar -> internal simd) can only handle float, int, pointers, arrays and structs!");
-			}
-		}
-	}
-
-	/**
-	 * method for arbitrary packetization size
-	 * packetize types from simd-format to arbitrary size
-	 * -> only pointers, packets, arrays and structs allowed
-	 * -> no scalar datatypes allowed
-	 * -> no pointers to pointers allowed
-	 **/
-	Type* packetizeSIMDWrapperType(Type* oldType) {
-		if (info.totalSIMDIterations == 1) return oldType;
-		Type::TypeID oldTypeID = oldType->getTypeID();
-		switch (oldTypeID) {
-			//case Type::VoidTyID: return Type::getVoidTy(getGlobalContext());     //not allowed
-			//case Type::FloatTyID: return info.vectorTy_float4; //not allowed
-			//case Type::IntegerTyID: return info.vectorTy_int4; //not allowed
-			case Type::VectorTyID:
-			{
-				//only put into array if 'inside' pointer
-				return PointerType::getUnqual(oldType);
-			}
-			case Type::PointerTyID:
-			{
-				PointerType* pType = cast<PointerType>(oldType);
-				Type* elType = pType->getElementType();
-				//if (elType->isPointerTy()) {
-					//throw std::logic_error("INTERNAL ERROR: packetization can not handle multiple indirection!");
-				//}
-				if (elType->isVectorTy()) {
-					Type* newElType = elType == info.vectorTy_floatSIMD ? ArrayType::get(info.vectorTy_floatSIMD, info.totalSIMDIterations)
-						: elType == info.vectorTy_intSIMD ? ArrayType::get(info.vectorTy_intSIMD, info.totalSIMDIterations) : NULL;
-					assert (newElType && "bad vector type found (should never fire)!");
-					return PointerType::get(packetizeSIMDWrapperType(newElType), pType->getAddressSpace());
-				} else {
-					return PointerType::get(packetizeSIMDWrapperType(pType->getElementType()), pType->getAddressSpace());
-				}
-			}
-			case Type::ArrayTyID:
-			{
-				return ArrayType::get(oldType, info.totalSIMDIterations);
-			}
-			case Type::StructTyID:
-			{
-				StructType* sType = cast<StructType>(oldType);
-				std::vector<Type*> newParams;
-				for (unsigned i=0; i<sType->getNumContainedTypes(); ++i) {
-					newParams.push_back(packetizeSIMDWrapperType(sType->getElementType(i)));
-				}
-				return StructType::get(getGlobalContext(), newParams, sType->isPacked());
-			}
-
-			default :
-			{
-				errs() << "\nERROR: only arguments of type pointer, packet, array or struct can be packetized, not '" << *oldType << "'!\n";
-				throw std::logic_error("INTERNAL ERROR: 'second' packetization (internal simd -> wrapper) can only handle pointers, packets, arrays and structs!");
-			}
-		}
-	}
-
 	// This function only performs a check if the given type is a valid
 	// packet type, applying the type rules (e.g. SoA layout)
 	bool isPacketizedType(Type* type) const {
 		//first check most common types
-		if (type == info.vectorTy_floatSIMD || type == info.vectorTy_intSIMD) return true;
+		if (type == mInfo->mVectorTyFloatSIMD || type == mInfo->mVectorTyIntSIMD) return true;
 
 		Type::TypeID oldTypeID = type->getTypeID();
 		//if none of these, test for primitive types
@@ -1039,8 +914,8 @@ private:
 	inline bool registerTypeSizeMatches(Type* typeA, Type* typeB) {
 		if (typeA == typeB) return true;
 
-		const uint64_t sizeA = info.targetData->getTypeSizeInBits(typeA);
-		const uint64_t sizeB = info.targetData->getTypeSizeInBits(typeB);
+		const uint64_t sizeA = mInfo->mTargetData->getTypeSizeInBits(typeA);
+		const uint64_t sizeB = mInfo->mTargetData->getTypeSizeInBits(typeB);
 
 		return sizeA == sizeB;
 	}
@@ -1182,6 +1057,8 @@ private:
 	void broadcastNonPacketizedValues(Function* f_SIMD) {
 		DEBUG_PKT( outs() << "\nreplicating non-packetized values...\n"; );
 
+        outs() << *f_SIMD;
+
 		// loop over all instructions, if they are packetized, check their operands
 		for (Function::iterator BB=f_SIMD->begin(), BBE=f_SIMD->end(); BB!=BBE; ++BB) {
 			DEBUG_PKT( outs() << "\n  testing block '" << BB->getNameStr() << "'...\n"; );
@@ -1199,11 +1076,13 @@ private:
 					continue;
 				}
 #else
-				if (isa<ExtractElementInst>(I)) continue; //ignore extract element (generated code from splitting)
+                // Ignore code generated during splitting.
+				if (isa<ExtractElementInst>(I)) continue; 
 #endif
-				if (isa<InsertElementInst>(I)) continue; //ignore insert element (generated code from splitting)
-				if (isa<ExtractValueInst>(I)) continue; //ignore extract value (generated code from splitting)
-				if (isa<InsertValueInst>(I)) continue; //ignore insert value (generated code from splitting)
+                // Ignore code generated during splitting.
+				if (isa<InsertElementInst>(I)) continue;
+				if (isa<ExtractValueInst>(I)) continue;
+				if (isa<InsertValueInst>(I)) continue;
 
 				// ignore our own introduced pointer casts
 				if (isScalarToVectorPtrCast(I)) {
@@ -1313,9 +1192,9 @@ private:
 		DEBUG_PKT( outs() << "      replicating value: " << *oldVal << "\n"; );
 
 		Type* oldType = oldVal->getType();
-		assert (oldType != Type::getVoidTy(getGlobalContext()) && "must never call broadcastValue() on values of type void!");
-		assert (oldType != Type::getLabelTy(getGlobalContext()) && "must never call broadcastValue() on values of type label!");
-		Type* newType = packetizeSIMDType(oldType);
+		assert (oldType != Type::getVoidTy(*mInfo->mContext) && "must never call broadcastValue() on values of type void!");
+		assert (oldType != Type::getLabelTy(*mInfo->mContext) && "must never call broadcastValue() on values of type label!");
+		Type* newType = Packetizer::packetizeSIMDType(oldType, *mInfo);
 
 		const bool isConsecutive = analysisResults->isConsecutive(oldVal);
 
@@ -1346,19 +1225,19 @@ private:
 //#define PACKETIZER_USE_SHUFFLE_BROADCAST
 #ifdef PACKETIZER_USE_SHUFFLE_BROADCAST
 				// NOTE:
-				newVal = InsertElementInst::Create(newVal, oldVal, info.const_int32_0, "", insertBefore);
+				newVal = InsertElementInst::Create(newVal, oldVal, mInfo->mConstInt32Zero, "", insertBefore);
 				std::vector<Constant*> maskElems;
-				for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
-					maskElems.push_back(info.const_int32_0);
+				for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
+					maskElems.push_back(mInfo->mConstInt32Zero);
 				}
 				Value* mask = ConstantVector::get(ArrayRef<Constant*>(maskElems));
 				newVal = new ShuffleVectorInst(newVal, UndefValue::get(newType), mask, "", insertBefore);
 #else
-				for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
-					newVal = InsertElementInst::Create(newVal, oldVal, ConstantInt::get(getGlobalContext(), APInt(32, i)), "", insertBefore);
+				for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
+					newVal = InsertElementInst::Create(newVal, oldVal, ConstantInt::get(*mInfo->mContext, APInt(32, i)), "", insertBefore);
 					addValueInfo(newVal, false, true, false, false, false, false, false, false); // INDEX_SAME
 					if (isConsecutive) {
-						oldVal = BinaryOperator::Create(Instruction::FAdd, oldVal, ConstantFP::get(Type::getFloatTy(getGlobalContext()), 1.0), "consec.inc", insertBefore);
+						oldVal = BinaryOperator::Create(Instruction::FAdd, oldVal, ConstantFP::get(Type::getFloatTy(*mInfo->mContext), 1.0), "consec.inc", insertBefore);
 						addValueInfo(oldVal, false, true, false, false, false, false, false, false); // INDEX_SAME
 					}
 				}
@@ -1372,16 +1251,16 @@ private:
 				Value* newVal = UndefValue::get(newType);
 				// if oldVal is a boolean, we have to generate a vector with elements -1 or 0
 				if (oldVal->getType()->isIntegerTy(1)) {
-					assert (newType == info.vectorTy_intSIMD);
+					assert (newType == mInfo->mVectorTyIntSIMD);
 					assert (!isConsecutive && "broadcast of consecutive boolean value requested - what should that mean? :P");
-					newVal = SelectInst::Create(oldVal, info.const_vec_SIMD_int32_neg1, Constant::getNullValue(newType), "", insertBefore);
+					newVal = SelectInst::Create(oldVal, mInfo->mConstVecSIMDInt32MinusOne, Constant::getNullValue(newType), "", insertBefore);
 					addValueInfo(newVal, false, true, false, false, false, false, false, false); // INDEX_SAME
 				} else {
-					for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
-						newVal = InsertElementInst::Create(newVal, oldVal, ConstantInt::get(getGlobalContext(), APInt(32, i)), "", insertBefore);
+					for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
+						newVal = InsertElementInst::Create(newVal, oldVal, ConstantInt::get(*mInfo->mContext, APInt(32, i)), "", insertBefore);
 						addValueInfo(newVal, false, true, false, false, false, false, false, false); // INDEX_SAME
 						if (isConsecutive) {
-							oldVal = BinaryOperator::Create(Instruction::Add, oldVal, ConstantInt::get(getGlobalContext(), APInt(32, 1)), "consec.inc", insertBefore);
+							oldVal = BinaryOperator::Create(Instruction::Add, oldVal, mInfo->mConstInt32One, "consec.inc", insertBefore);
 							addValueInfo(oldVal, false, true, false, false, false, false, false, false); // INDEX_SAME
 						}
 					}
@@ -1439,12 +1318,12 @@ private:
 				// broadcast that value (=recurse),
 				// store the broadcasted value into the newly allocated object
 				// and finally return the new pointer (the alloca)
-				LoadInst* loadedScalarVal = new LoadInst(oldVal, "", false, info.alignmentScalar, insertBefore);
+				LoadInst* loadedScalarVal = new LoadInst(oldVal, "", false, mInfo->mAlignmentScalar, insertBefore);
                 addValueInfo(loadedScalarVal, false, true, false, false, false, false, false, false); // INDEX_SAME
 				Value* newVal = broadcastValue(loadedScalarVal, insertBefore);
 
-				AllocaInst* newPtr = new AllocaInst(newType->getContainedType(0), info.const_int32_1, info.alignmentSIMD, "", insertBefore);
-				StoreInst* sti = new StoreInst(newVal, newPtr, false, info.alignmentSIMD, insertBefore);
+				AllocaInst* newPtr = new AllocaInst(newType->getContainedType(0), mInfo->mConstInt32One, mInfo->mAlignmentSIMD, "", insertBefore);
+				StoreInst* sti = new StoreInst(newVal, newPtr, false, mInfo->mAlignmentSIMD, insertBefore);
 				DEBUG_PKT( outs() << "    new pointer: " << *newPtr << "\n"; );
 				assert (newPtr->getType() == newType);
 				addFalseValueInfo(newPtr); // TODO: really varying?
@@ -1466,15 +1345,15 @@ private:
 	// TODO: use generateHorizontalExtract()/Merge()
 	Function* createSIMDWrapperFunction(Function* f_SIMD, const std::string& name) {
 		DEBUG_PKT( outs() << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; );
-		DEBUG_PKT( outs() << "creating wrapper function for info.packetizationSize " << info.packetizationSize << "... "; );
-		if (info.packetizationSize == info.simdWidth) {
+		DEBUG_PKT( outs() << "creating wrapper function for info.packetizationSize " << mInfo->mPacketizationSize << "... "; );
+		if (mInfo->mPacketizationSize == mInfo->mSimdWidth) {
 			DEBUG_PKT( outs() << "skipped (info.packetizationSize == SIMD width).\n"; );
 			DEBUG_PKT( outs() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n"; );
 			return f_SIMD;
 		}
 		DEBUG_PKT( outs() << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n"; );
 
-		assert (info.packetizationSize >= info.simdWidth && info.packetizationSize % info.simdWidth == 0);
+		assert (mInfo->mPacketizationSize >= mInfo->mSimdWidth && mInfo->mPacketizationSize % mInfo->mSimdWidth == 0);
 
 		//--------------------------------------------------------------------------
 		// create new argument-types
@@ -1490,16 +1369,16 @@ private:
 				argTypes.push_back(A->getType());
 				DEBUG_PKT( outs() << "    type not packetized, ignored!\n"; );
 			} else {
-				argTypes.push_back(packetizeSIMDWrapperType(A->getType()));
+				argTypes.push_back(Packetizer::packetizeSIMDWrapperType(A->getType(), *mInfo));
 			}
 		}
 
 		//--------------------------------------------------------------------------
 		// create new return-type
 		//--------------------------------------------------------------------------
-		const bool hasReturnValue = f_SIMD->getReturnType() != Type::getVoidTy(getGlobalContext());
+		const bool hasReturnValue = f_SIMD->getReturnType() != Type::getVoidTy(*mInfo->mContext);
 		const bool hasPacketizedReturnValue = hasReturnValue && isPacketizedType(f_SIMD->getReturnType());
-		Type* returnType = hasReturnValue ? packetizeSIMDWrapperType(f_SIMD->getReturnType()) : Type::getVoidTy(getGlobalContext());
+		Type* returnType = hasReturnValue ? Packetizer::packetizeSIMDWrapperType(f_SIMD->getReturnType(), *mInfo) : Type::getVoidTy(*mInfo->mContext);
 
 
 		//--------------------------------------------------------------------------
@@ -1512,7 +1391,7 @@ private:
 		//std::string name = f_SIMD->getNameStr();
 		//f_SIMD->setName(name + "_SIMD");
 		//Function* f_arr = Function::Create(fTy, f_SIMD->getLinkage(), name, info.module);
-		Function* f_arr = Function::Create(fTy, f_SIMD->getLinkage(), name, &info.module);
+		Function* f_arr = Function::Create(fTy, f_SIMD->getLinkage(), name, mInfo->mModule);
 
 		f_arr->setCallingConv(CallingConv::C);
 
@@ -1533,15 +1412,15 @@ private:
 		//insert 'info.packetizationSize / info.simdWidth' calls to f_SIMD
 		//DEBUG_PKT( outs() << "creating loop with " << loopIterations << " calls to " << f_SIMD->getNameStr() << "...\n"; );
 
-		BasicBlock* entryBB = BasicBlock::Create(getGlobalContext(), "entry", f_arr, 0);
-		BasicBlock* loopBB = BasicBlock::Create(getGlobalContext(), "loop", f_arr, 0);
-		BasicBlock* exitBB = BasicBlock::Create(getGlobalContext(), "exit", f_arr, 0);
+		BasicBlock* entryBB = BasicBlock::Create(*mInfo->mContext, "entry", f_arr, 0);
+		BasicBlock* loopBB = BasicBlock::Create(*mInfo->mContext, "loop", f_arr, 0);
+		BasicBlock* exitBB = BasicBlock::Create(*mInfo->mContext, "exit", f_arr, 0);
 
 
 		//fill entry-block
 
-		Constant* iterationNrConst = ConstantInt::get(getGlobalContext(), APInt(32, info.totalSIMDIterations));
-		Constant* arraySizeConst = ConstantInt::get(getGlobalContext(), APInt(32, 16 * info.totalSIMDIterations)); //sizeof(__m128) = 16
+		Constant* iterationNrConst = ConstantInt::get(*mInfo->mContext, APInt(32, mInfo->mTotalSIMDIterations));
+		Constant* arraySizeConst = ConstantInt::get(*mInfo->mContext, APInt(32, 16 * mInfo->mTotalSIMDIterations)); //sizeof(__m128) = 16
 		//malloc does not work, ignores alignment...
 		//MallocInst* result = new MallocInst(info.vectorTy_float4, arraySize, info.alignmentSIMD, "res", entry);
 
@@ -1549,16 +1428,16 @@ private:
 		Instruction* result = NULL;
 		if (hasReturnValue && hasPacketizedReturnValue) {
 			//create alloc, bitcast, call to posix_memalign and load
-			AllocaInst* resultArrayPtr = new AllocaInst(returnType, info.const_int32_1, info.alignmentSIMD, "res.ptr", entryBB);
-			resultArrayPtr->setAlignment(info.alignmentPtr);
-			//CastInst* ra_ptr_cast_i8 = new BitCastInst(resultArrayPtr, PointerType::get(PointerType::get(IntegerType::get(getGlobalContext(), 8), 0), 0), "", entryBB);
+			AllocaInst* resultArrayPtr = new AllocaInst(returnType, mInfo->mConstInt32One, mInfo->mAlignmentSIMD, "res.ptr", entryBB);
+			resultArrayPtr->setAlignment(mInfo->mAlignmentPtr);
+			//CastInst* ra_ptr_cast_i8 = new BitCastInst(resultArrayPtr, PointerType::get(PointerType::get(IntegerType::get(info.context, 8), 0), 0), "", entryBB);
 			//createPosixMemalignCall(ra_ptr_cast_i8, arraySizeConst, "", entryBB);
 			//resultMemAlignPtr = ra_ptr_cast_i8; //don't free return value!
 			result = new LoadInst(resultArrayPtr, "res", false, entryBB);
 
 		} else if (hasReturnValue) {
 			//result = new MallocInst(returnType, arraySizeConst, info.alignmentScalar, "res", entryBB);
-			result = new AllocaInst(returnType, arraySizeConst, info.alignmentScalar, "res", entryBB);
+			result = new AllocaInst(returnType, arraySizeConst, mInfo->mAlignmentScalar, "res", entryBB);
 		}
 
 
@@ -1570,9 +1449,9 @@ private:
 		//fill bb (loop)
 
 		//create phi-function for loop-variable (use dummy-forward-reference)
-		Argument* fwdref = new Argument(IntegerType::get(getGlobalContext(), 32));
-		PHINode* int32_i_0_reg2mem_0 = PHINode::Create(IntegerType::get(getGlobalContext(), 32), 2U, "i.0.reg2mem.0", loopBB);
-		int32_i_0_reg2mem_0->addIncoming(ConstantInt::getNullValue(Type::getInt32Ty(getGlobalContext())), entryBB);
+		Argument* fwdref = new Argument(IntegerType::get(*mInfo->mContext, 32));
+		PHINode* int32_i_0_reg2mem_0 = PHINode::Create(IntegerType::get(*mInfo->mContext, 32), 2U, "i.0.reg2mem.0", loopBB);
+		int32_i_0_reg2mem_0->addIncoming(mInfo->mConstInt32Zero, entryBB);
 		int32_i_0_reg2mem_0->addIncoming(fwdref, loopBB);
 
 		DEBUG_PKT( outs() << "created phi function for loop-variable.\n"; );
@@ -1602,15 +1481,15 @@ private:
 		//TODO: does it have to be an array? -> non-packetized return value? -> not allowed!
 		if (hasReturnValue) {
 			//std::vector<Value*> indices;
-			//indices.push_back(Constant::getNullValue(Type::getInt32Ty(getGlobalContext())));
+			//indices.push_back(Constant::getNullValue(Type::getInt32Ty(info.context)));
 			//indices.push_back(int32_i_0_reg2mem_0);
 			GetElementPtrInst* resultArrayIndex = GetElementPtrInst::Create(result, ArrayRef<Value*>(int32_i_0_reg2mem_0), "", loopBB);
 			//GetElementPtrInst* resultIndex = GetElementPtrInst::Create(result, ArrayRef<Value*>(indices), "", loopBB);
 			//LoadInst* loadI = new LoadInst(resultIndex, "", false, info.alignmentSIMD, loopBB); //volatile=false
 			DEBUG_PKT( outs() << "    f_SIMD_call: " << *f_SIMD_call << "\n"; );
 			DEBUG_PKT( outs() << "    resultArrayIndex: " << *resultArrayIndex << "\n"; );
-			if (hasPacketizedReturnValue) new StoreInst(f_SIMD_call, resultArrayIndex, false, info.alignmentSIMD, loopBB);
-			else new StoreInst(f_SIMD_call, resultArrayIndex, false, info.alignmentScalar, loopBB);
+			if (hasPacketizedReturnValue) new StoreInst(f_SIMD_call, resultArrayIndex, false, mInfo->mAlignmentSIMD, loopBB);
+			else new StoreInst(f_SIMD_call, resultArrayIndex, false, mInfo->mAlignmentScalar, loopBB);
 
 			DEBUG_PKT( outs() << "created store-instruction for return value of call\n"; );
 		}
@@ -1619,7 +1498,7 @@ private:
 		generateStoreBackForWrapper(f_SIMD_call, int32_i_0_reg2mem_0, loopBB);
 
 		//increment loop-variable
-		BinaryOperator* int32_indvar_next = BinaryOperator::Create(Instruction::Add, int32_i_0_reg2mem_0, ConstantInt::get(getGlobalContext(), APInt(32, 1)), "indvar.next", loopBB);
+		BinaryOperator* int32_indvar_next = BinaryOperator::Create(Instruction::Add, int32_i_0_reg2mem_0, mInfo->mConstInt32One, "indvar.next", loopBB);
 		//test exit condition
 		CmpInst* int1_exitcond = CmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_EQ, int32_indvar_next, iterationNrConst, "exitcond", loopBB);
 		//conditionally branch out of loop or to begin of loop
@@ -1627,8 +1506,8 @@ private:
 
 		DEBUG_PKT( outs() << "loop block finished!\n"; );
 
-		if (hasReturnValue) ReturnInst::Create(getGlobalContext(), result, exitBB);
-		else ReturnInst::Create(getGlobalContext(), exitBB);
+		if (hasReturnValue) ReturnInst::Create(*mInfo->mContext, result, exitBB);
+		else ReturnInst::Create(*mInfo->mContext, exitBB);
 
 		// Resolve Forward Reference of loop-block
 		fwdref->replaceAllUsesWith(int32_indvar_next); delete fwdref;
@@ -1646,7 +1525,7 @@ private:
 
 	// TODO: use uniform/varying info!?
 	Instruction* generateExtractForWrapper(Value* V, Value* index, Type* targetType, std::string name, Instruction* allocPos, BasicBlock* insertAtEnd) {
-		Instruction* insertBefore = createDummy(Type::getInt32Ty(getGlobalContext()), V, insertAtEnd);
+		Instruction* insertBefore = createDummy(Type::getInt32Ty(*mInfo->mContext), V, insertAtEnd);
 		Instruction* extractInst = generateExtractForWrapper(V, index, targetType, name, allocPos, insertBefore);
 		removeFromInstructionInfo(insertBefore);
 		insertBefore->eraseFromParent();
@@ -1658,7 +1537,7 @@ private:
 		Type* valType = V->getType();
 		const unsigned valTypeID = valType->getTypeID();
 
-		assert (valType == packetizeSIMDWrapperType(targetType) && "bad target type found for extraction of value (for wrapper-call to SIMD function)");
+		assert (valType == Packetizer::packetizeSIMDWrapperType(targetType, *mInfo) && "bad target type found for extraction of value (for wrapper-call to SIMD function)");
 
 		switch (valTypeID) {
 			case Type::VectorTyID :
@@ -1704,11 +1583,11 @@ private:
 					for (unsigned i=0; i<sType->getNumElements(); ++i) {
 						//first load ith struct-element through pointer
 						std::vector<Value*> indices;
-						indices.push_back(info.const_int32_0); //step through pointer //TODO: can pull that out of the loop
-						indices.push_back(ConstantInt::get(getGlobalContext(), APInt(32, i))); //ith struct-element
-						if (info.totalSIMDIterations > 1) indices.push_back(index); //loop-index for array-access
+						indices.push_back(mInfo->mConstInt32Zero); //step through pointer //TODO: can pull that out of the loop
+						indices.push_back(ConstantInt::get(*mInfo->mContext, APInt(32, i))); //ith struct-element
+						if (mInfo->mTotalSIMDIterations > 1) indices.push_back(index); //loop-index for array-access
 						GetElementPtrInst* gepI = GetElementPtrInst::Create(V, ArrayRef<Value*>(indices), "", insertBefore);
-						LoadInst* loadI = new LoadInst(gepI, "", false, info.alignmentSIMD, insertBefore); //volatile=false
+						LoadInst* loadI = new LoadInst(gepI, "", false, mInfo->mAlignmentSIMD, insertBefore); //volatile=false
 						//DEBUG_NPKT( outs() << "    GEP: " << *gepI << "\n"; );
 						DEBUG_PKT( outs() << "    load: " << *loadI << "\n"; );
 
@@ -1717,10 +1596,10 @@ private:
 
 						//finally store loaded value in newly allocated struct (call-argument)
 						indices.clear();
-						indices.push_back(info.const_int32_0); //step through pointer
-						indices.push_back(ConstantInt::get(getGlobalContext(), APInt(32, i))); //index of struct-element
+						indices.push_back(mInfo->mConstInt32Zero); //step through pointer
+						indices.push_back(ConstantInt::get(*mInfo->mContext, APInt(32, i))); //index of struct-element
 						gepI = GetElementPtrInst::Create(structVal, ArrayRef<Value*>(indices), "", insertBefore);
-						StoreInst* sti = new StoreInst(loadI, gepI, false, info.alignmentSIMD, insertBefore);
+						StoreInst* sti = new StoreInst(loadI, gepI, false, mInfo->mAlignmentSIMD, insertBefore);
 						//DEBUG_NPKT( outs() << "    GEP: " << *gepI << "\n"; );
 						DEBUG_PKT( outs() << "    store: " << *sti << "\n"; );
 
@@ -1738,7 +1617,7 @@ private:
 						DEBUG_PKT( outs() << "    generating code for indexing argument of array of packet type...\n"; );
 						//if we have a standard array of values, simply take the indexed array-element
 						GetElementPtrInst* gepI = GetElementPtrInst::Create(V, ArrayRef<Value*>(index), "", insertBefore);
-						LoadInst* loadI = new LoadInst(gepI, name, false, info.alignmentSIMD, insertBefore); //volatile=false
+						LoadInst* loadI = new LoadInst(gepI, name, false, mInfo->mAlignmentSIMD, insertBefore); //volatile=false
 						DEBUG_PKT( outs() << "    extract instruction: " << *loadI << "\n"; );
 						addFalseValueInfo(gepI); // TODO: really varying?
 						addFalseValueInfo(loadI); // TODO: really varying?
@@ -1748,7 +1627,7 @@ private:
 						//e.g. <4 x float> *, scalar type = float *
 						DEBUG_PKT( outs() << "    generating code for indexing argument of (pointer to first element of) array of packet type...\n"; );
 						std::vector<Value*> indices;
-						indices.push_back(info.const_int32_0); //step through pointer
+						indices.push_back(mInfo->mConstInt32Zero); //step through pointer
 						indices.push_back(index); //loop-index for array-access
 						GetElementPtrInst* gepI = GetElementPtrInst::Create(V, ArrayRef<Value*>(indices), "", insertBefore);
 						DEBUG_PKT( outs() << "    extract instruction: " << *gepI << "\n"; );
@@ -1766,7 +1645,7 @@ private:
 							DEBUG_PKT( outs() << "    generating code for indexing argument of pointer to array of primitive type...\n"; );
 							//if we have a standard array of values, simply take the indexed array-element
 							GetElementPtrInst* gepI = GetElementPtrInst::Create(V, ArrayRef<Value*>(index), "", insertBefore);
-							LoadInst* loadI = new LoadInst(gepI, name, false, info.alignmentSIMD, insertBefore); //volatile=false
+							LoadInst* loadI = new LoadInst(gepI, name, false, mInfo->mAlignmentSIMD, insertBefore); //volatile=false
 							DEBUG_PKT( outs() << "    extract instruction: " << *loadI << "\n"; );
 							addFalseValueInfo(gepI); // TODO: really varying?
 							addFalseValueInfo(loadI); // TODO: really varying?
@@ -1776,7 +1655,7 @@ private:
 							//e.g. [ info.totalSIMDIterations x <4 x i32> ] *, 'smaller' type = <4 x float> *
 							DEBUG_PKT( outs() << "    generating code for indexing argument of (pointer to first element of) array of packet type...\n"; );
 							std::vector<Value*> indices;
-							indices.push_back(info.const_int32_0); //step through pointer
+							indices.push_back(mInfo->mConstInt32Zero); //step through pointer
 							indices.push_back(index); //loop-index for array-access
 							GetElementPtrInst* gepI = GetElementPtrInst::Create(V, ArrayRef<Value*>(indices), "", insertBefore);
 							//LoadInst* loadI = new LoadInst(gepI, name, false, info.alignmentSIMD, insertBefore); //volatile=false
@@ -1804,96 +1683,6 @@ private:
 	}
 
 
-	/**
-	 * replaces all uses (=calls) of 'extF' by 'newF' and inserts bitcasts wherever
-	 * necessary (NOTE: currently the method just blindly bitcasts without check!)
-	 * @param extF the function to be replaced (in this context the externally declared one)
-	 * @param newF the replacing function (in this context the packetized method)
-	 * @unused
-	 */
-#if 0
-	void replaceExternalFunctionUses(Function* extF, Function* newF) {
-		DEBUG_PKT( outs() << "replacing uses of external function '" << extF->getNameStr() << "' by function '" << newF->getNameStr() << "'...\n"; );
-		for (Function::use_iterator U=extF->use_begin(); U!=extF->use_end(); ) {
-			User* user = cast<User>(*U++);
-
-			//we have to handle constant expressions separately
-			//e.g. store i8* bitcast (<4 x float>* (<4 x float>*, <4 x float>*)* @test_generated to i8*), i8** %4, align 4
-			//TODO: need to implement generating bitcasts if types do not match (see below)
-			if (ConstantExpr* CE = dyn_cast<ConstantExpr>(user)) {
-				DEBUG_PKT( outs() << "  replacing use in constant expression: " << *CE << "\n"; );
-
-				CE->replaceUsesOfWithOnConstant(extF, newF, NULL);
-
-				continue;
-			}
-
-			assert (isa<Instruction>(user) && "use of function has to be an instruction!");
-			DEBUG_PKT( outs() << "  replacing use: " << *user << "\n"; );
-
-			//TODO: need to implement generating bitcasts if types do not match (see below)
-			if (StoreInst* storeInst = dyn_cast<StoreInst>(user)) {
-				assert (isa<Function>(storeInst->getValueOperand()));
-				assert (storeInst->getValueOperand() == extF);
-				StoreInst* newStore = new StoreInst(newF, storeInst->getPointerOperand(), storeInst->isVolatile(), storeInst->getAlignment(), storeInst);
-				DEBUG_PKT( outs() << "    new store: " << *newStore << "\n"; );
-				updateValueInfo(storeInst, newStore, false);
-				storeInst->eraseFromParent();
-				continue;
-			}
-
-			//TODO: need to implement generating bitcasts if types do not match (see below)
-			if (LoadInst* loadInst = dyn_cast<LoadInst>(user)) {
-				assert (false && "does it make sense to have a load as the use of a function?");
-				LoadInst* newLoad = new LoadInst(newF, loadInst->getNameStr(), loadInst->isVolatile(), loadInst->getAlignment(), loadInst);
-				DEBUG_PKT( outs() << "    new load: " << *newLoad << "\n"; );
-				updateValueInfo(loadInst, newLoad, false);
-				loadInst->replaceAllUsesWith(newLoad);
-				loadInst->eraseFromParent();
-				continue;
-			}
-
-
-			CallSite CS = CallSite(cast<Instruction>(user));
-			Instruction* csInst = CS.getInstruction();
-			assert (csInst && CS.getCalledFunction() && "use of function has to be a call site!");
-			//if (CS.getCalledFunction()->isDeclaration()) continue;
-
-			std::vector<Value*> newArgs;
-			Function::arg_iterator newA = newF->arg_begin();
-			for (CallSite::arg_iterator A=CS.arg_begin(); A!=CS.arg_end(); ++A, ++newA) {
-				assert (isa<Value>(A));
-				Value* argV = cast<Value>(A);
-				if (argV->getType() == newA->getType()) {
-					newArgs.push_back(argV);
-					//DEBUG_PKT( outs() << "  argument left untouched: " << *argV << "\n"; );
-					continue; //args match, nothing to do
-				}
-				//args do not match, warn and insert bitcast
-				errs() << "WARNING: argument types do not match, inserting bitcast!\n";
-				errs() << "  type of function-argument: " << *newA->getType() << "\n";
-				errs() << "  type of supplied value: " << *argV->getType() << "\n";
-				BitCastInst* bc = new BitCastInst(argV, newA->getType(), "", csInst);
-				newArgs.push_back(bc);
-				addValueInfo(bc, argV);
-				//DEBUG_PKT( outs() << "  modified argument: " << *newArgs.back() << "\n"; );
-				//csInst->replaceUsesOfWith(argV, bcInst); //does not work, need to build new call
-			}
-
-			assert (newArgs.size() == extF->getArgumentList().size());
-
-			//create new call
-			CS.setCalledFunction(newF);
-			for (unsigned i=0; i<newArgs.size(); ++i) {
-				CS.setArgument(i, newArgs[i]);
-			}
-			CS.setAttributes(newF->getAttributes());
-			CS.setCallingConv(newF->getCallingConv());
-			DEBUG_PKT( outs() << "  created new call: " << *csInst << "\n"; );
-		}
-	}
-#endif
-
 	// Returns the element type for a splitting operation.
 	// The input type is required to be packetized, meaning that e.g. on
 	// leaf level of a struct, the underlying type is a packet (vector)
@@ -1909,7 +1698,7 @@ private:
 			case Type::VectorTyID:
 			{
 				VectorType* vType = cast<VectorType>(type);
-				assert (type == packetizeSIMDType(vType->getScalarType()));
+				assert (type == Packetizer::packetizeSIMDType(vType->getScalarType(), *mInfo));
 				return vType->getScalarType();
 			}
 			case Type::ArrayTyID:
@@ -1917,7 +1706,7 @@ private:
 				ArrayType* aType = cast<ArrayType>(type);
 				// create array-type with newElementType
 				Type* newElementType = getScalarFromPacketizedType(aType->getElementType());
-				assert (type == packetizeSIMDType(ArrayType::get(newElementType, aType->getNumElements())));
+				assert (type == Packetizer::packetizeSIMDType(ArrayType::get(newElementType, aType->getNumElements()), *mInfo));
 				return ArrayType::get(newElementType, aType->getNumElements());
 			}
 			case Type::StructTyID:
@@ -1930,15 +1719,15 @@ private:
 					assert (subType && "can not extract element type: struct field is not packetized!");
 					params.push_back(subType);
 				}
-				assert (type == packetizeSIMDType(StructType::get(getGlobalContext(), params, sType->isPacked())));
-				return StructType::get(getGlobalContext(), params, sType->isPacked());
+				assert (type == Packetizer::packetizeSIMDType(StructType::get(*mInfo->mContext, params, sType->isPacked()), *mInfo));
+				return StructType::get(*mInfo->mContext, params, sType->isPacked());
 			}
 			case Type::PointerTyID:
 			{
 				PointerType* pType = cast<PointerType>(type);
 				Type* subType = getScalarFromPacketizedType(pType->getElementType());
 				assert (subType && "can not extract element type: struct field is not packetized!");
-				assert (type == packetizeSIMDType(PointerType::get(subType, pType->getAddressSpace())));
+				assert (type == Packetizer::packetizeSIMDType(PointerType::get(subType, pType->getAddressSpace()), *mInfo));
 				return PointerType::get(subType, pType->getAddressSpace());
 			}
 			default:
@@ -1958,7 +1747,7 @@ private:
 	// element of the original packet value.
 	// EXAMPLE: todo ;)
 	inline Instruction* generateHorizontalExtract(Value* V, Value* indexVal, const std::string& name, Instruction* allocPos, BasicBlock* insertAtEnd) {
-		Instruction* insertBefore = createDummy(Type::getInt32Ty(getGlobalContext()), V, insertAtEnd);
+		Instruction* insertBefore = createDummy(Type::getInt32Ty(*mInfo->mContext), V, insertAtEnd);
 		Instruction* extractInst = generateHorizontalExtract(V, indexVal, name, allocPos, insertBefore);
 		removeFromInstructionInfo(insertBefore);
 		insertBefore->eraseFromParent();
@@ -2032,11 +1821,11 @@ private:
 				// store the extracted value into the newly allocated object
 				// and finally return the new pointer (the alloca)
 				PointerType* pType = cast<PointerType>(pType);
-				LoadInst* loadedVal = new LoadInst(V, name, false, info.alignmentSIMD, insertBefore);
+				LoadInst* loadedVal = new LoadInst(V, name, false, mInfo->mAlignmentSIMD, insertBefore);
 				Value* newVal = generateHorizontalExtract(loadedVal, indexVal, name, allocPos, insertBefore);
 
-				AllocaInst* newPtr = new AllocaInst(elementType->getContainedType(0), info.const_int32_1, info.alignmentScalar, name, allocPos);
-				StoreInst* sti = new StoreInst(newVal, newPtr, false, info.alignmentScalar, insertBefore);
+				AllocaInst* newPtr = new AllocaInst(elementType->getContainedType(0), mInfo->mConstInt32One, mInfo->mAlignmentScalar, name, allocPos);
+				StoreInst* sti = new StoreInst(newVal, newPtr, false, mInfo->mAlignmentScalar, insertBefore);
 				DEBUG_PKT( outs() << "    extracted element (new pointer): " << *newPtr << "\n"; );
 				assert (newPtr->getType() == elementType);
 				addFalseValueInfo(loadedVal); // TODO: really varying?
@@ -2070,10 +1859,10 @@ private:
 		Type* elementType = splitVals[0]->getType();
 		DEBUG_PKT( outs() << "    target type: " << *targetType << "\n"; );
 		DEBUG_PKT( outs() << "    element type: " << *elementType << "\n"; );
-		assert ((targetType == elementType || targetType == packetizeSIMDType(elementType)) && "element target type has to be packetized element type or uniform!");
+		assert ((targetType == elementType || targetType == Packetizer::packetizeSIMDType(elementType, *mInfo)) && "element target type has to be packetized element type or uniform!");
 
 		DEBUG_PKT( outs() << "    values:\n"; );
-		for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
+		for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
 			assert (splitVals[i]);
 			DEBUG_PKT( outs() << "     *" << *splitVals[i] << "\n"; );
 			assert (splitVals[i]->getType() == elementType);
@@ -2099,8 +1888,8 @@ private:
 			{
 				// simply merge info.simdWidth scalars into a vector
 				assert (elementType->isFloatTy() || elementType->isIntegerTy(32) || elementType->isIntegerTy(1));
-				for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
-					result = InsertElementInst::Create(result, splitVals[i], ConstantInt::get(getGlobalContext(), APInt(32, i)), "", insertBefore);
+				for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
+					result = InsertElementInst::Create(result, splitVals[i], ConstantInt::get(*mInfo->mContext, APInt(32, i)), "", insertBefore);
 					addFalseValueInfo(result); // TODO: really varying?
 				}
 				break;
@@ -2114,9 +1903,9 @@ private:
 				//assert (elemType->isArrayTy()); //TODO: activate
 
 				for (unsigned j=0, je=aType->getNumElements(); j<je; ++j) {
-					Value** values = new Value*[info.simdWidth]();
+					Value** values = new Value*[mInfo->mSimdWidth]();
 					// extract jth value from each of the input arrays
-					for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
+					for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
 						values[i] = ExtractValueInst::Create(splitVals[i], ArrayRef<unsigned>(j), "", insertBefore);
 						addFalseValueInfo(values[i]); // TODO: really varying?
 					}
@@ -2138,9 +1927,9 @@ private:
 				//assert (elemType->isStructTy()); //TODO: activate
 
 				for (unsigned j=0, je=sType->getNumElements(); j<je; ++j) {
-					Value** values = new Value*[info.simdWidth]();
+					Value** values = new Value*[mInfo->mSimdWidth]();
 					// extract jth value from each of the input structs
-					for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
+					for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
 						values[i] = ExtractValueInst::Create(splitVals[i], ArrayRef<unsigned>(j), "", insertBefore);
 						addFalseValueInfo(values[i]); // TODO: really varying?
 					}
@@ -2160,18 +1949,18 @@ private:
 				assert (elementType->isPointerTy() && "elements have to be pointers!");
 				//assert (elemType->isPointerTy()); //TODO: activate
 
-				Value** values = new Value*[info.simdWidth]();
+				Value** values = new Value*[mInfo->mSimdWidth]();
 				// load from each of the input pointers
-				for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
-					values[i] = new LoadInst(splitVals[i], "", false, info.alignmentSIMD, insertBefore);
+				for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
+					values[i] = new LoadInst(splitVals[i], "", false, mInfo->mAlignmentSIMD, insertBefore);
 					addFalseValueInfo(values[i]); // TODO: really varying?
 				}
 				// merge the loaded values
 				Instruction* mergedStructElem = generateHorizontalMerge(values, pType->getElementType(), "", insertBefore);
 				// allocate space for the new type
-				result = new AllocaInst(pType->getElementType(), info.const_int32_0, info.alignmentSIMD, "", insertBefore);
+				result = new AllocaInst(pType->getElementType(), mInfo->mConstInt32Zero, mInfo->mAlignmentSIMD, "", insertBefore);
 				// store the merged element into the newly allocated space
-				StoreInst* storeInst = new StoreInst(mergedStructElem, result, false, info.alignmentSIMD, insertBefore);
+				StoreInst* storeInst = new StoreInst(mergedStructElem, result, false, mInfo->mAlignmentSIMD, insertBefore);
 				addFalseValueInfo(result); // TODO: really varying?
 				addFalseValueInfo(storeInst); // TODO: really varying?
 
@@ -2211,7 +2000,7 @@ private:
 	}
 
 	void generateStoreBackForSplitting(CallInst* call, Value* index, std::vector<Value*>& oldCallArgs, BasicBlock* insertAtEnd) {
-		Instruction* insertBefore = createDummy(Type::getInt32Ty(getGlobalContext()), call, insertAtEnd);
+		Instruction* insertBefore = createDummy(Type::getInt32Ty(*mInfo->mContext), call, insertAtEnd);
 		generateStoreBackForSplitting(call, index, oldCallArgs, insertBefore);
 		removeFromInstructionInfo(insertBefore);
 		insertBefore->eraseFromParent();
@@ -2242,16 +2031,16 @@ private:
 				{
 					//get index where to store
 					std::vector<Value*> indices;
-					indices.push_back(info.const_int32_0); //step through pointer
+					indices.push_back(mInfo->mConstInt32Zero); //step through pointer
 					indices.push_back(index); //index of simd iteration
 					GetElementPtrInst* argArrayIndex = GetElementPtrInst::Create(argVal, ArrayRef<Value*>(indices), "", insertBefore);
 					//get value what to store out of pointer which was supplied to f_SIMD
-					LoadInst* packetVal = new LoadInst(simdOpVal, "", false, info.alignmentSIMD, insertBefore);
+					LoadInst* packetVal = new LoadInst(simdOpVal, "", false, mInfo->mAlignmentSIMD, insertBefore);
 					addFalseValueInfo(argArrayIndex); // TODO: really varying?
 					addFalseValueInfo(packetVal); // TODO: really varying?
 
 					//store
-					StoreInst* storeInst = new StoreInst(packetVal, argArrayIndex, false, info.alignmentSIMD, insertBefore);
+					StoreInst* storeInst = new StoreInst(packetVal, argArrayIndex, false, mInfo->mAlignmentSIMD, insertBefore);
 					DEBUG_PKT( outs() << "    argArrayIndex: " << *argArrayIndex << "\n"; );
 					DEBUG_PKT( outs() << "    new store: " << *storeInst << "\n"; );
 					addFalseValueInfo(storeInst); // TODO: really varying?
@@ -2269,8 +2058,8 @@ private:
 					for (unsigned i=0; i<sType->getNumElements(); ++i) {
 						//get index where to store
 						std::vector<Value*> indices;
-						indices.push_back(info.const_int32_0); //step through pointer
-						indices.push_back(ConstantInt::get(getGlobalContext(), APInt(32, i))); //index of struct element
+						indices.push_back(mInfo->mConstInt32Zero); //step through pointer
+						indices.push_back(ConstantInt::get(*mInfo->mContext, APInt(32, i))); //index of struct element
 						indices.push_back(index); //index of simd iteration
 						GetElementPtrInst* argArrayIndex = GetElementPtrInst::Create(argVal, ArrayRef<Value*>(indices), "", insertBefore);
 						DEBUG_PKT( outs() << "    argArrayIndex: " << *argArrayIndex << "\n"; );
@@ -2280,17 +2069,17 @@ private:
 						//DEBUG_PKT( outs() << "    new load: " << *structVal << "\n"; );
 						//get index to correct value out of the supplied struct
 						indices.clear();
-						indices.push_back(info.const_int32_0); //step through pointer
-						indices.push_back(ConstantInt::get(getGlobalContext(), APInt(32, i))); //index of simd iteration
+						indices.push_back(mInfo->mConstInt32Zero); //step through pointer
+						indices.push_back(ConstantInt::get(*mInfo->mContext, APInt(32, i))); //index of simd iteration
 						GetElementPtrInst* storeStructIndex = GetElementPtrInst::Create(simdOpVal, ArrayRef<Value*>(indices), "", insertBefore);
 						DEBUG_PKT( outs() << "    storeStructIndex: " << *storeStructIndex << "\n"; );
 						addFalseValueInfo(storeStructIndex); // TODO: really varying?
 						//load value of this index (= value to store back to wrapper-arg)
-						LoadInst* structElemVal = new LoadInst(storeStructIndex, "", false, info.alignmentSIMD, insertBefore); //is correct struct-element
+						LoadInst* structElemVal = new LoadInst(storeStructIndex, "", false, mInfo->mAlignmentSIMD, insertBefore); //is correct struct-element
 						DEBUG_PKT( outs() << "    structElemVal: " << *structElemVal << "\n"; );
 						addFalseValueInfo(structElemVal); // TODO: really varying?
 						//store
-						StoreInst* storeInst = new StoreInst(structElemVal, argArrayIndex, false, info.alignmentSIMD, insertBefore);
+						StoreInst* storeInst = new StoreInst(structElemVal, argArrayIndex, false, mInfo->mAlignmentSIMD, insertBefore);
 						DEBUG_PKT( outs() << "    new store: " << *storeInst << "\n"; );
 						addFalseValueInfo(storeInst); // TODO: really varying?
 					}
@@ -2331,15 +2120,15 @@ private:
 				{
 					//get index where to store
 					std::vector<Value*> indices;
-					indices.push_back(info.const_int32_0); //step through pointer
+					indices.push_back(mInfo->mConstInt32Zero); //step through pointer
 					indices.push_back(index); //index of simd iteration
 					GetElementPtrInst* argArrayIndex = GetElementPtrInst::Create(wrapperArg, ArrayRef<Value*>(indices), "", insertAtEnd);
 					//get value what to store out of pointer which was supplied to f_SIMD
-					LoadInst* packetVal = new LoadInst(simdOpVal, "", false, info.alignmentSIMD, insertAtEnd);
+					LoadInst* packetVal = new LoadInst(simdOpVal, "", false, mInfo->mAlignmentSIMD, insertAtEnd);
 					addFalseValueInfo(argArrayIndex); // TODO: really varying?
 					addFalseValueInfo(packetVal); // TODO: really varying?
 					//store
-					StoreInst* storeInst = new StoreInst(packetVal, argArrayIndex, false, info.alignmentSIMD, insertAtEnd);
+					StoreInst* storeInst = new StoreInst(packetVal, argArrayIndex, false, mInfo->mAlignmentSIMD, insertAtEnd);
 					DEBUG_PKT( outs() << "    argArrayIndex: " << *argArrayIndex << "\n"; );
 					DEBUG_PKT( outs() << "    new store: " << *storeInst << "\n"; );
 					addFalseValueInfo(storeInst); // TODO: really varying?
@@ -2357,8 +2146,8 @@ private:
 					for (unsigned i=0; i<sType->getNumElements(); ++i) {
 						//get index where to store
 						std::vector<Value*> indices;
-						indices.push_back(info.const_int32_0); //step through pointer
-						indices.push_back(ConstantInt::get(getGlobalContext(), APInt(32, i))); //index of struct element
+						indices.push_back(mInfo->mConstInt32Zero); //step through pointer
+						indices.push_back(ConstantInt::get(*mInfo->mContext, APInt(32, i))); //index of struct element
 						indices.push_back(index); //index of simd iteration
 						GetElementPtrInst* argArrayIndex = GetElementPtrInst::Create(wrapperArg, ArrayRef<Value*>(indices), "", insertAtEnd);
 						DEBUG_PKT( outs() << "    argArrayIndex: " << *argArrayIndex << "\n"; );
@@ -2368,17 +2157,17 @@ private:
 						//DEBUG_PKT( outs() << "    new load: " << *structVal << "\n"; );
 						//get index to correct value out of the supplied struct
 						indices.clear();
-						indices.push_back(info.const_int32_0); //step through pointer
-						indices.push_back(ConstantInt::get(getGlobalContext(), APInt(32, i))); //index of simd iteration
+						indices.push_back(mInfo->mConstInt32Zero); //step through pointer
+						indices.push_back(ConstantInt::get(*mInfo->mContext, APInt(32, i))); //index of simd iteration
 						GetElementPtrInst* storeStructIndex = GetElementPtrInst::Create(simdOpVal, ArrayRef<Value*>(indices), "", insertAtEnd);
 						DEBUG_PKT( outs() << "    storeStructIndex: " << *storeStructIndex << "\n"; );
 						addFalseValueInfo(storeStructIndex); // TODO: really varying?
 						//load value of this index (= value to store back to wrapper-arg)
-						LoadInst* structElemVal = new LoadInst(storeStructIndex, "", false, info.alignmentSIMD, insertAtEnd); //is correct struct-element
+						LoadInst* structElemVal = new LoadInst(storeStructIndex, "", false, mInfo->mAlignmentSIMD, insertAtEnd); //is correct struct-element
 						DEBUG_PKT( outs() << "    structElemVal: " << *structElemVal << "\n"; );
 						addFalseValueInfo(structElemVal); // TODO: really varying?
 						//store
-						StoreInst* storeInst = new StoreInst(structElemVal, argArrayIndex, false, info.alignmentSIMD, insertAtEnd);
+						StoreInst* storeInst = new StoreInst(structElemVal, argArrayIndex, false, mInfo->mAlignmentSIMD, insertAtEnd);
 						DEBUG_PKT( outs() << "    new store: " << *storeInst << "\n"; );
 						addFalseValueInfo(storeInst); // TODO: really varying?
 					}
@@ -2396,10 +2185,10 @@ private:
 		//always generate allocs in entry block of function
 		insertBefore = insertBefore->getParent()->getParent()->getEntryBlock().getTerminator();
 
-		AllocaInst* structPtr = new AllocaInst(targetType, info.const_int32_2, info.alignmentSIMD, "", insertBefore);
-		PtrToIntInst* ptr2IntInst = new PtrToIntInst(structPtr, info.targetData->getIntPtrType(getGlobalContext()), "", insertBefore);
-		BinaryOperator* andInst = BinaryOperator::Create(Instruction::And, ptr2IntInst, ConstantInt::get(info.targetData->getIntPtrType(getGlobalContext()), -16, true), "", insertBefore);
-		BinaryOperator* addInst = BinaryOperator::Create(Instruction::Add, andInst, ConstantInt::get(info.targetData->getIntPtrType(getGlobalContext()), 16, true), "", insertBefore);
+		AllocaInst* structPtr = new AllocaInst(targetType, mInfo->mConstInt32Two, mInfo->mAlignmentSIMD, "", insertBefore);
+		PtrToIntInst* ptr2IntInst = new PtrToIntInst(structPtr, mInfo->mTargetData->getIntPtrType(*mInfo->mContext), "", insertBefore);
+		BinaryOperator* andInst = BinaryOperator::Create(Instruction::And, ptr2IntInst, ConstantInt::get(mInfo->mTargetData->getIntPtrType(*mInfo->mContext), -16, true), "", insertBefore);
+		BinaryOperator* addInst = BinaryOperator::Create(Instruction::Add, andInst, ConstantInt::get(mInfo->mTargetData->getIntPtrType(*mInfo->mContext), 16, true), "", insertBefore);
 		IntToPtrInst* int2PtrInst = new IntToPtrInst(addInst, structPtr->getType(), "", insertBefore);
 		addFalseValueInfo(structPtr); // TODO: really varying?
 		addFalseValueInfo(ptr2IntInst); // TODO: really varying?
@@ -2503,7 +2292,7 @@ private:
 
 				if (opV->getType()->isVoidTy() || isPacketizedType(opV->getType())) continue;
 
-				Instruction* dummyI = createDummy(packetizeSIMDType(opV->getType()), opV, oldI);
+				Instruction* dummyI = createDummy(Packetizer::packetizeSIMDType(opV->getType(), *mInfo), opV, oldI);
 				dummies.push_back(std::make_pair(dummyI, opV));
 
 				Packetizer::uncheckedReplaceAllUsesWith(opV, dummyI);
@@ -2521,7 +2310,7 @@ private:
 			{
 				if (oldI->getNumOperands() < 1) newI = oldI;
 				else {
-					newI = ReturnInst::Create(getGlobalContext(), oldI->getOperand(0), oldI);
+					newI = ReturnInst::Create(*mInfo->mContext, oldI->getOperand(0), oldI);
 					addValueInfo(newI, oldI);
 				}
 				break;
@@ -2617,15 +2406,15 @@ private:
 			// Logical operators
 			case Instruction::And:
 			{
-				Instruction* bcInst1 = new BitCastInst(oldI->getOperand(0), info.vectorTy_intSIMD, "", oldI);
-				Instruction* bcInst2 = new BitCastInst(oldI->getOperand(1), info.vectorTy_intSIMD, "", oldI);
+				Instruction* bcInst1 = new BitCastInst(oldI->getOperand(0), mInfo->mVectorTyIntSIMD, "", oldI);
+				Instruction* bcInst2 = new BitCastInst(oldI->getOperand(1), mInfo->mVectorTyIntSIMD, "", oldI);
 				BinaryOperator* andInst = BinaryOperator::Create(Instruction::And, bcInst1, bcInst2, name, oldI);
 				addValueInfo(bcInst1, oldI);
 				addValueInfo(bcInst2, oldI);
 				addValueInfo(andInst, oldI);
-				Type* newType = packetizeSIMDType(oldType);
-				if (newType == info.vectorTy_floatSIMD) {
-					newI = new BitCastInst(andInst, info.vectorTy_floatSIMD, "", oldI);
+				Type* newType = Packetizer::packetizeSIMDType(oldType, *mInfo);
+				if (newType == mInfo->mVectorTyFloatSIMD) {
+					newI = new BitCastInst(andInst, mInfo->mVectorTyFloatSIMD, "", oldI);
 					addValueInfo(newI, oldI);
 				}
 				else newI = andInst;
@@ -2633,15 +2422,15 @@ private:
 			}
 			case Instruction::Or:
 			{
-				Instruction* bcInst1 = new BitCastInst(oldI->getOperand(0), info.vectorTy_intSIMD, "", oldI);
-				Instruction* bcInst2 = new BitCastInst(oldI->getOperand(1), info.vectorTy_intSIMD, "", oldI);
+				Instruction* bcInst1 = new BitCastInst(oldI->getOperand(0), mInfo->mVectorTyIntSIMD, "", oldI);
+				Instruction* bcInst2 = new BitCastInst(oldI->getOperand(1), mInfo->mVectorTyIntSIMD, "", oldI);
 				BinaryOperator* orInst = BinaryOperator::Create(Instruction::Or, bcInst1, bcInst2, name, oldI);
 				addValueInfo(bcInst1, oldI);
 				addValueInfo(bcInst2, oldI);
 				addValueInfo(orInst, oldI);
-				Type* newType = packetizeSIMDType(oldType);
-				if (newType == info.vectorTy_floatSIMD) {
-					newI = new BitCastInst(orInst, info.vectorTy_floatSIMD, "", oldI);
+				Type* newType = Packetizer::packetizeSIMDType(oldType, *mInfo);
+				if (newType == mInfo->mVectorTyFloatSIMD) {
+					newI = new BitCastInst(orInst, mInfo->mVectorTyFloatSIMD, "", oldI);
 					addValueInfo(newI, oldI);
 				}
 				else newI = orInst;
@@ -2649,15 +2438,15 @@ private:
 			}
 			case Instruction::Xor:
 			{
-				Instruction* bcInst1 = new BitCastInst(oldI->getOperand(0), info.vectorTy_intSIMD, "", oldI);
-				Instruction* bcInst2 = new BitCastInst(oldI->getOperand(1), info.vectorTy_intSIMD, "", oldI);
+				Instruction* bcInst1 = new BitCastInst(oldI->getOperand(0), mInfo->mVectorTyIntSIMD, "", oldI);
+				Instruction* bcInst2 = new BitCastInst(oldI->getOperand(1), mInfo->mVectorTyIntSIMD, "", oldI);
 				BinaryOperator* xorInst = BinaryOperator::Create(Instruction::Xor, bcInst1, bcInst2, name, oldI);
 				addValueInfo(bcInst1, oldI);
 				addValueInfo(bcInst2, oldI);
 				addValueInfo(xorInst, oldI);
-				Type* newType = packetizeSIMDType(oldType);
-				if (newType == info.vectorTy_floatSIMD) {
-					newI = new BitCastInst(xorInst, info.vectorTy_floatSIMD, "", oldI);
+				Type* newType = Packetizer::packetizeSIMDType(oldType, *mInfo);
+				if (newType == mInfo->mVectorTyFloatSIMD) {
+					newI = new BitCastInst(xorInst, mInfo->mVectorTyFloatSIMD, "", oldI);
 					addValueInfo(newI, oldI);
 				}
 				else newI = xorInst;
@@ -2669,8 +2458,8 @@ private:
 			{
 				AllocaInst* oldAlloca = cast<AllocaInst>(oldI);
 				// TODO: does simply taking the contained type work in all cases?
-				Type* newType = packetizeSIMDType(oldType);
-				newI = new AllocaInst(newType->getContainedType(0), oldAlloca->getArraySize(), info.alignmentSIMD, name, oldI);
+				Type* newType = Packetizer::packetizeSIMDType(oldType, *mInfo);
+				newI = new AllocaInst(newType->getContainedType(0), oldAlloca->getArraySize(), mInfo->mAlignmentSIMD, name, oldI);
 				addValueInfo(newI, oldI);
 				break;
 			}
@@ -2706,7 +2495,7 @@ private:
 				// If the target type still fits into a SIMD register after packetization,
 				// go ahead. Otherwise, ZExt to largest possible type and issue warning.
 				if (oldType->getPrimitiveSizeInBits() <= 32U) {
-					Type* newType = packetizeSIMDType(oldType);
+					Type* newType = Packetizer::packetizeSIMDType(oldType, *mInfo);
 					if (isa<TruncInst>(oldI))
 						newI = new TruncInst(oldI->getOperand(0), newType, name, oldI);
 					else if (isa<SExtInst>(oldI))
@@ -2729,7 +2518,7 @@ private:
 				if (oldC) {
 					// Create new constant that fits into SIMD register
 					// or throw exception if constant is too large for this.
-					operand = Packetizer::getMax32BitConstant(oldC);
+					operand = Packetizer::getMax32BitConstant(oldC, *mInfo->mContext);
 					assert (operand);
 				}
 
@@ -2739,7 +2528,7 @@ private:
 				}
 
 				Type* newType = oldType->isFloatTy() ?
-					info.vectorTy_floatSIMD : info.vectorTy_intSIMD;
+					mInfo->mVectorTyFloatSIMD : mInfo->mVectorTyIntSIMD;
 
 				// We replace the sext/fpext/etc. by its operand, so we have to
 				// merge the split info of both values into the operand.
@@ -2768,49 +2557,49 @@ private:
 			}
 			case Instruction::FPToUI:
 			{
-				Type* newType = packetizeSIMDType(oldType);
+				Type* newType = Packetizer::packetizeSIMDType(oldType, *mInfo);
 			 	newI = new FPToUIInst(oldI->getOperand(0), newType, name, oldI);
 				addValueInfo(newI, oldI);
 				break;
 			}
 			case Instruction::FPToSI:
 			{
-				Type* newType = packetizeSIMDType(oldType);
+				Type* newType = Packetizer::packetizeSIMDType(oldType, *mInfo);
 			 	newI = new FPToSIInst(oldI->getOperand(0), newType, name, oldI);
 				addValueInfo(newI, oldI);
 				break;
 			}
 			case Instruction::UIToFP:
 			{
-				Type* newType = packetizeSIMDType(oldType);
+				Type* newType = Packetizer::packetizeSIMDType(oldType, *mInfo);
 			 	newI = new UIToFPInst(oldI->getOperand(0), newType, name, oldI);
 				addValueInfo(newI, oldI);
 				break;
 			}
 			case Instruction::SIToFP:
 			{
-				Type* newType = packetizeSIMDType(oldType);
+				Type* newType = Packetizer::packetizeSIMDType(oldType, *mInfo);
 			 	newI = new SIToFPInst(oldI->getOperand(0), newType, name, oldI);
 				addValueInfo(newI, oldI);
 				break;
 			}
 			case Instruction::IntToPtr:
 			{
-				Type* newType = packetizeSIMDType(oldType);
+				Type* newType = Packetizer::packetizeSIMDType(oldType, *mInfo);
 			 	newI = new IntToPtrInst(oldI->getOperand(0), newType, name, oldI);
 				addValueInfo(newI, oldI);
 				break;
 			}
 			case Instruction::PtrToInt:
 			{
-				Type* newType = packetizeSIMDType(oldType);
+				Type* newType = Packetizer::packetizeSIMDType(oldType, *mInfo);
 			 	newI = new PtrToIntInst(oldI->getOperand(0), newType, name, oldI);
 				addValueInfo(newI, oldI);
 				break;
 			}
 			case Instruction::BitCast:
 			{
-				Type* newType = packetizeSIMDType(oldType);
+				Type* newType = Packetizer::packetizeSIMDType(oldType, *mInfo);
 			 	newI = new BitCastInst(oldI->getOperand(0), newType, name, oldI);
 				addValueInfo(newI, oldI);
 				break;
@@ -2821,11 +2610,11 @@ private:
 			{
 				ICmpInst* icmp = cast<ICmpInst>(oldI);
 
-				if (!info.use_avx) {
+				if (!mInfo->mUseAVX) {
 					// There is no pcmp for AVX yet, so we only create this for
 					// SSE.
-					BitCastInst* bcInst1 = new BitCastInst(icmp->getOperand(0), info.vectorTy_intSIMD, "icmp_cast1", icmp);
-					BitCastInst* bcInst2 = new BitCastInst(icmp->getOperand(1), info.vectorTy_intSIMD, "icmp_cast2", icmp);
+					BitCastInst* bcInst1 = new BitCastInst(icmp->getOperand(0), mInfo->mVectorTyIntSIMD, "icmp_cast1", icmp);
+					BitCastInst* bcInst2 = new BitCastInst(icmp->getOperand(1), mInfo->mVectorTyIntSIMD, "icmp_cast2", icmp);
 					addFalseValueInfo(bcInst1);
 					addFalseValueInfo(bcInst2);
 					icmp->replaceUsesOfWith(icmp->getOperand(0), bcInst1);
@@ -2836,12 +2625,12 @@ private:
 
 				//workaround: cast, fcmp, cast
 				//create cast-instructions that convert input-values to float4 (have to be inserted before fcmp)
-				BitCastInst* bcInst1 = new BitCastInst(oldI->getOperand(0), info.vectorTy_floatSIMD, "icmp_cast1", oldI);
-				BitCastInst* bcInst2 = new BitCastInst(oldI->getOperand(1), info.vectorTy_floatSIMD, "icmp_cast2", oldI);
+				BitCastInst* bcInst1 = new BitCastInst(oldI->getOperand(0), mInfo->mVectorTyFloatSIMD, "icmp_cast1", oldI);
+				BitCastInst* bcInst2 = new BitCastInst(oldI->getOperand(1), mInfo->mVectorTyFloatSIMD, "icmp_cast2", oldI);
 				addFalseValueInfo(bcInst1);
 				addFalseValueInfo(bcInst2);
 				//construct fcmp with dummies and converted predicate
-				Instruction* dummy = createDummy(Type::getFloatTy(getGlobalContext()), oldI, oldI);
+				Instruction* dummy = createDummy(Type::getFloatTy(*mInfo->mContext), oldI, oldI);
 				CmpInst* fcmp = CmpInst::Create(Instruction::FCmp, convertICmpToFCmpPredicate(icmp->getPredicate()), dummy, dummy, "icmp_fcmp", oldI);
 				addValueInfo(fcmp, oldI);
 				//replace dummies of fcmp with bitcasts to correct type for packetization
@@ -2857,7 +2646,7 @@ private:
 				newI = fcmp4;
 #else
 				//cast back to packetized old type
-				Type* newType = packetizeSIMDType(oldType);
+				Type* newType = Packetizer::packetizeSIMDType(oldType, *mInfo);
 				newI = new BitCastInst(fcmp4, newType, "icmp_res", oldI);
 				addValueInfo(newI, oldI);
 #endif
@@ -2870,8 +2659,8 @@ private:
 #ifndef PACKETIZER_USE_SCALAR_MASKS
 				//cast back to packetized old type
 				// TODO: activate this again when we got rid of the SSE intrinsics. #10
-				//Type* newType = packetizeSIMDType(oldType);
-				Type* newType = info.vectorTy_floatSIMD;
+				//Type* newType = Packetizer::packetizeSIMDType(oldType, *mInfo);
+				Type* newType = mInfo->mVectorTyFloatSIMD;
 				newI = new BitCastInst(newI, newType, "icmp_res", oldI);
 				addValueInfo(newI, oldI);
 #endif
@@ -2882,10 +2671,10 @@ private:
 			{
 				PHINode* oldPhi = cast<PHINode>(oldI);
 
-				Type* newType = packetizeSIMDType(oldType);
-				if (newType != info.vectorTy_floatSIMD &&
-						newType != info.vectorTy_intSIMD &&
-						(isa<PointerType>(newType) && newType->getContainedType(0)->isPrimitiveType() && newType != info.getPointerVectorType(cast<PointerType>(newType)))
+				Type* newType = Packetizer::packetizeSIMDType(oldType, *mInfo);
+				if (newType != mInfo->mVectorTyFloatSIMD &&
+						newType != mInfo->mVectorTyIntSIMD &&
+						(isa<PointerType>(newType) && newType->getContainedType(0)->isPrimitiveType() && newType != mInfo->getPointerVectorType(cast<PointerType>(newType)))
 				   ) {
 					errs() << "ERROR: only int or float allowed as operand types for packet phi!\n";
 					return false;
@@ -2901,7 +2690,7 @@ private:
 					if (isPacketizedType(incV->getType())) continue;
 
 					// use type of operand for dummy to be able to create correct bitcasts after creation of new phi
-					Type* newIncVType = packetizeSIMDType(incV->getType());
+					Type* newIncVType = Packetizer::packetizeSIMDType(incV->getType(), *mInfo);
 
 					// Replace all incoming values that are not of correct type by dummies.
 					// Store the dummy-instruction pairs to be able to undo this after creation of new phi.
@@ -3295,7 +3084,7 @@ private:
 #else
 		const bool isAligned = analysisResults->isAligned(pointer);
 #endif
-		const unsigned alignment = isAligned ? info.alignmentSIMD : 1;
+		const unsigned alignment = isAligned ? mInfo->mAlignmentSIMD : 1;
 
 		if (!isAligned) {
 			DEBUG_PKT( outs() << "  unaligned vector load required!\n"; );
@@ -3356,8 +3145,8 @@ private:
 						<< "(can optimize: single scalar store)!\n"; );
 			}
 
-			Value* lastElemIdx = ConstantInt::get(getGlobalContext(),
-												  APInt(32, info.simdWidth-1));
+			Value* lastElemIdx = ConstantInt::get(*mInfo->mContext,
+												  APInt(32, mInfo->mSimdWidth-1));
 			Value* lastElem = generateHorizontalExtract(value,
 														lastElemIdx,
 														"",
@@ -3383,7 +3172,7 @@ private:
 #else
 		const bool isAligned = analysisResults->isAligned(pointer);
 #endif
-		const unsigned alignment = isAligned ? info.alignmentSIMD : 1;
+		const unsigned alignment = isAligned ? mInfo->mAlignmentSIMD : 1;
 
 		if (!isAligned) {
 			DEBUG_PKT( outs() << "  unaligned vector store required!\n"; );
@@ -3397,7 +3186,7 @@ private:
 		// create vectorized dummy-value
 		Type* oldValueType = value->getType();
 		Instruction* dummy = isPacketizedType(oldValueType) ? NULL :
-			createDummy(packetizeSIMDType(oldValueType), value, oldStore);
+			createDummy(Packetizer::packetizeSIMDType(oldValueType, *mInfo), value, oldStore);
 
 		StoreInst* vectorStore = new StoreInst(dummy ? dummy : value,
 												   pointer,
@@ -3439,7 +3228,7 @@ private:
 		const bool pointerIsPacketized = isPacketizedType(oldPointerType);
 		assert (!pointerIsPacketized || requiresPacketPointer);
 		Type* vecPointerType = pointerIsPacketized ?
-			oldPointerType : packetizeSIMDType(oldPointerType);
+			oldPointerType : Packetizer::packetizeSIMDType(oldPointerType, *mInfo);
 
 		Instruction* dummy = requiresPacketPointer ?
 			createDummy(vecPointerType, pointer, oldGEP) : NULL;
@@ -3489,7 +3278,7 @@ private:
 		Value* condition = oldSelect->getCondition();
 		Value* trueValue = oldSelect->getTrueValue();
 		Value* falseValue = oldSelect->getFalseValue();
-		Type* newType = packetizeSIMDType(oldSelect->getType());
+		Type* newType = Packetizer::packetizeSIMDType(oldSelect->getType(), *mInfo);
 
 		// values to be split should be caught before calling this function
 		assert (!analysisResults->requiresSplitFull(oldSelect));
@@ -3520,7 +3309,7 @@ private:
 		if (!isPacketizedType(condition->getType()) &&
 				!analysisResults->isUniform(condition))
 		{
-			dummies[0] = createDummy(packetizeSIMDType(condition->getType()), condition, oldSelect);
+			dummies[0] = createDummy(Packetizer::packetizeSIMDType(condition->getType(), *mInfo), condition, oldSelect);
 			condition = dummies[0];
 		}
 
@@ -3528,7 +3317,7 @@ private:
 			if (isa<Constant>(trueValue)) {
 				trueValue = createPacketConstant(cast<Constant>(trueValue));
 			} else {
-				dummies[1] = createDummy(packetizeSIMDType(trueValue->getType()), trueValue, oldSelect);
+				dummies[1] = createDummy(Packetizer::packetizeSIMDType(trueValue->getType(), *mInfo), trueValue, oldSelect);
 				trueValue = dummies[1];
 			}
 		}
@@ -3537,7 +3326,7 @@ private:
 			if (isa<Constant>(falseValue)) {
 				falseValue = createPacketConstant(cast<Constant>(falseValue));
 			} else {
-				dummies[2] = createDummy(packetizeSIMDType(falseValue->getType()), falseValue, oldSelect);
+				dummies[2] = createDummy(Packetizer::packetizeSIMDType(falseValue->getType(), *mInfo), falseValue, oldSelect);
 				falseValue = dummies[2];
 			}
 		}
@@ -3560,7 +3349,7 @@ private:
 
 		// TODO: If we have scalar masks, we cannot distinguish between uniform and vectorized,
 		//       so this here will not do the right job
-		if (condition->getType() != Type::getInt32Ty(getGlobalContext())) {
+		if (condition->getType() != Type::getInt32Ty(*mInfo->mContext)) {
 			assert (condition->getType()->isIntegerTy(1));
 			DEBUG_PKT( outs() << "packetizing uniform select (scalar condition)...\n"; );
 			SelectInst* sel =  SelectInst::Create(condition, trueValue, falseValue, oldSelect->getName(), oldSelect);
@@ -3586,24 +3375,24 @@ private:
 			throw std::logic_error("INTERNAL ERROR: NOT IMPLEMENTED!");
 		}
 
-		if (info.use_avx) {
+		if (mInfo->mUseAVX) {
 			//version 1 - use AVX blend
 			std::vector<Value* > params;
 			params.clear();
-			if (trueValue->getType() != info.vectorTy_floatSIMD) {
-				trueValue = new BitCastInst(trueValue, info.vectorTy_floatSIMD, "blend_true", oldSelect);
-				falseValue = new BitCastInst(falseValue, info.vectorTy_floatSIMD, "blend_false", oldSelect);
+			if (trueValue->getType() != mInfo->mVectorTyFloatSIMD) {
+				trueValue = new BitCastInst(trueValue, mInfo->mVectorTyFloatSIMD, "blend_true", oldSelect);
+				falseValue = new BitCastInst(falseValue, mInfo->mVectorTyFloatSIMD, "blend_false", oldSelect);
 				addFalseValueInfo(trueValue); // TODO: really varying?
 				addFalseValueInfo(falseValue); // TODO: really varying?
 			}
 			params.push_back(falseValue);
 			params.push_back(trueValue);
 			params.push_back(condition);
-			Function *blendps = Intrinsic::getDeclaration(&info.module, Intrinsic::x86_avx_blend_ps_256);
+			Function *blendps = Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_avx_blend_ps_256);
 			CallInst* call = createExternalIntrinsicCall(blendps, params, oldSelect->getName(), oldSelect);
 			addValueInfo(call, oldSelect);
 			Value* result = call;
-			if (newType != info.vectorTy_floatSIMD) {
+			if (newType != mInfo->mVectorTyFloatSIMD) {
 				result = new BitCastInst(call, newType, "blend_result", oldSelect);
 				addValueInfo(result, oldSelect);
 			}
@@ -3615,24 +3404,24 @@ private:
 				}
 			}
 			return result;
-		} else if (info.use_sse41) {
+		} else if (mInfo->mUseSSE41) {
 			//version 2 - use SSE4.1 blend
 			std::vector<Value* > params;
 			params.clear();
-			if (trueValue->getType() != info.vectorTy_floatSIMD) {
-				trueValue = new BitCastInst(trueValue, info.vectorTy_floatSIMD, "blend_true", oldSelect);
-				falseValue = new BitCastInst(falseValue, info.vectorTy_floatSIMD, "blend_false", oldSelect);
+			if (trueValue->getType() != mInfo->mVectorTyFloatSIMD) {
+				trueValue = new BitCastInst(trueValue, mInfo->mVectorTyFloatSIMD, "blend_true", oldSelect);
+				falseValue = new BitCastInst(falseValue, mInfo->mVectorTyFloatSIMD, "blend_false", oldSelect);
 				addFalseValueInfo(trueValue); // TODO: really varying?
 				addFalseValueInfo(falseValue); // TODO: really varying?
 			}
 			params.push_back(falseValue);
 			params.push_back(trueValue);
 			params.push_back(condition);
-			Function *blendps = Intrinsic::getDeclaration(&info.module, Intrinsic::x86_sse41_blendps);
+			Function *blendps = Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_sse41_blendps);
 			CallInst* call = createExternalIntrinsicCall(blendps, params, oldSelect->getName(), oldSelect);
 			addValueInfo(call, oldSelect);
 			Value* result = call;
-			if (newType != info.vectorTy_floatSIMD) {
+			if (newType != mInfo->mVectorTyFloatSIMD) {
 				result = new BitCastInst(call, newType, "blend_result", oldSelect);
 				addValueInfo(result, oldSelect);
 			}
@@ -3686,40 +3475,40 @@ private:
 			assert (isa<CompositeType>(newType));
 			//CompositeType* compType = cast<CompositeType>(trueValue->getType());
 			// loop over each element of the type and generate select
-			Value** selects = new Value*[info.simdWidth]();
+			Value** selects = new Value*[mInfo->mSimdWidth]();
 
 			// be sure that condition has correct type before extracting
-			if (condition->getType() != info.vectorTy_intSIMD) {
-				condition = new BitCastInst(condition, info.vectorTy_intSIMD, "", oldSelect);
+			if (condition->getType() != mInfo->mVectorTyIntSIMD) {
+				condition = new BitCastInst(condition, mInfo->mVectorTyIntSIMD, "", oldSelect);
 				addFalseValueInfo(condition); // TODO: really varying?
 			}
 			// extract scalar values from condition
-			Value** conditions = new Value*[info.simdWidth]();
-			for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
-				conditions[i] = ExtractElementInst::Create(condition, ConstantInt::get(getGlobalContext(), APInt(32, i)), "", oldSelect);
+			Value** conditions = new Value*[mInfo->mSimdWidth]();
+			for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
+				conditions[i] = ExtractElementInst::Create(condition, ConstantInt::get(*mInfo->mContext, APInt(32, i)), "", oldSelect);
 				addFalseValueInfo(conditions[i]); // TODO: really varying?
 			}
 			// generate check if condition is true/false (select requires i1, not i32)
-			for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
-				conditions[i] = CmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_NE, conditions[i], info.const_int32_0, "", oldSelect);
+			for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
+				conditions[i] = CmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_NE, conditions[i], mInfo->mConstInt32Zero, "", oldSelect);
 				addFalseValueInfo(conditions[i]); // TODO: really varying?
 			}
 			// extract true/false values
-			Value** scalarTrueVals = new Value*[info.simdWidth]();
-			Value** scalarFalseVals = new Value*[info.simdWidth]();
+			Value** scalarTrueVals = new Value*[mInfo->mSimdWidth]();
+			Value** scalarFalseVals = new Value*[mInfo->mSimdWidth]();
 			DEBUG_PKT( outs() << "\ngenerating extracts for true values...\n"; );
-			for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
-				scalarTrueVals[i] = generateHorizontalExtract(trueValue, ConstantInt::get(getGlobalContext(), APInt(32, i)), "", oldSelect, oldSelect);
+			for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
+				scalarTrueVals[i] = generateHorizontalExtract(trueValue, ConstantInt::get(*mInfo->mContext, APInt(32, i)), "", oldSelect, oldSelect);
 				DEBUG_PKT( outs() << "\n  scalar true value " << i << ": " << *scalarTrueVals[i] << "\n\n"; );
 			}
 			DEBUG_PKT( outs() << "\ngenerating extracts for false values...\n"; );
-			for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
-				scalarFalseVals[i] = generateHorizontalExtract(falseValue, ConstantInt::get(getGlobalContext(), APInt(32, i)), "", oldSelect, oldSelect);
+			for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
+				scalarFalseVals[i] = generateHorizontalExtract(falseValue, ConstantInt::get(*mInfo->mContext, APInt(32, i)), "", oldSelect, oldSelect);
 				DEBUG_PKT( outs() << "\n  scalar false value " << i << ": " << *scalarFalseVals[i] << "\n\n"; );
 			}
 
 			DEBUG_PKT( outs() << "\ngenerating selects...\n"; );
-			for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
+			for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
 				DEBUG_PKT( outs() << "  condition: " << *conditions[i] << "\n"; );
 				DEBUG_PKT( outs() << "  true val : " << *scalarTrueVals[i] << "\n"; );
 				DEBUG_PKT( outs() << "  false val: " << *scalarFalseVals[i] << "\n"; );
@@ -3757,65 +3546,65 @@ private:
 
 		Instruction* result = NULL;
 
-		if (info.use_avx) {
+		if (mInfo->mUseAVX) {
 			//version 1 - use AVX blend
 			std::vector<Value* > params;
-			if (condition->getType() != info.vectorTy_floatSIMD) {
-				BitCastInst* bc = new BitCastInst(condition, info.vectorTy_floatSIMD, "blend_cond", oldSelect);
+			if (condition->getType() != mInfo->mVectorTyFloatSIMD) {
+				BitCastInst* bc = new BitCastInst(condition, mInfo->mVectorTyFloatSIMD, "blend_cond", oldSelect);
 				addValueInfo(bc, condition);
 				condition = bc;
 			}
 
 			params.clear();
-			if (trueValue->getType() != info.vectorTy_floatSIMD) {
-				trueValue = new BitCastInst(trueValue, info.vectorTy_floatSIMD, "blend_true", oldSelect);
-				falseValue = new BitCastInst(falseValue, info.vectorTy_floatSIMD, "blend_false", oldSelect);
+			if (trueValue->getType() != mInfo->mVectorTyFloatSIMD) {
+				trueValue = new BitCastInst(trueValue, mInfo->mVectorTyFloatSIMD, "blend_true", oldSelect);
+				falseValue = new BitCastInst(falseValue, mInfo->mVectorTyFloatSIMD, "blend_false", oldSelect);
 				addFalseValueInfo(trueValue);
 				addFalseValueInfo(falseValue);
 			}
 			params.push_back(falseValue);
 			params.push_back(trueValue);
 			params.push_back(condition);
-			Function *blendvps = Intrinsic::getDeclaration(&info.module, Intrinsic::x86_avx_blendv_ps_256);
+			Function *blendvps = Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_avx_blendv_ps_256);
 			CallInst* call = createExternalIntrinsicCall(blendvps, params, oldSelect->getName(), oldSelect);
 			addValueInfo(call, oldSelect);
 			result = call;
-			if (newType != info.vectorTy_floatSIMD) {
+			if (newType != mInfo->mVectorTyFloatSIMD) {
 				result = new BitCastInst(call, newType, "blend_result", oldSelect);
 				addValueInfo(result, oldSelect);
 			}
-		} else if (info.use_sse41) {
+		} else if (mInfo->mUseSSE41) {
 			//version 2 - use SSE4.1 blend
 			std::vector<Value* > params;
-			if (condition->getType() != info.vectorTy_floatSIMD) {
-				condition = new BitCastInst(condition, info.vectorTy_floatSIMD, "blend_cond", oldSelect);
+			if (condition->getType() != mInfo->mVectorTyFloatSIMD) {
+				condition = new BitCastInst(condition, mInfo->mVectorTyFloatSIMD, "blend_cond", oldSelect);
 				addFalseValueInfo(condition);
 			}
 
 			params.clear();
-			if (trueValue->getType() != info.vectorTy_floatSIMD) {
-				trueValue = new BitCastInst(trueValue, info.vectorTy_floatSIMD, "blend_true", oldSelect);
-				falseValue = new BitCastInst(falseValue, info.vectorTy_floatSIMD, "blend_false", oldSelect);
+			if (trueValue->getType() != mInfo->mVectorTyFloatSIMD) {
+				trueValue = new BitCastInst(trueValue, mInfo->mVectorTyFloatSIMD, "blend_true", oldSelect);
+				falseValue = new BitCastInst(falseValue, mInfo->mVectorTyFloatSIMD, "blend_false", oldSelect);
 				addFalseValueInfo(trueValue);
 				addFalseValueInfo(falseValue);
 			}
 			params.push_back(falseValue);
 			params.push_back(trueValue);
 			params.push_back(condition);
-			Function *blendvps = Intrinsic::getDeclaration(&info.module, Intrinsic::x86_sse41_blendvps);
+			Function *blendvps = Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_sse41_blendvps);
 			CallInst* call = createExternalIntrinsicCall(blendvps, params, oldSelect->getName(), oldSelect);
 			addValueInfo(call, oldSelect);
 			result = call;
-			if (newType != info.vectorTy_floatSIMD) {
+			if (newType != mInfo->mVectorTyFloatSIMD) {
 				result = new BitCastInst(call, newType, "blend_result", oldSelect);
 				addValueInfo(result, oldSelect);
 			}
 		} else {
 			//version 3 - use SSE2 bit-level instructions
-			CastInst* cond_i32 = new BitCastInst(condition, info.vectorTy_intSIMD, "blend_cond_i32", oldSelect);
-			CastInst* res1_i32 = new BitCastInst(trueValue, info.vectorTy_intSIMD, "blend_true_i32", oldSelect);
-			CastInst* res2_i32 = new BitCastInst(falseValue, info.vectorTy_intSIMD, "blend_false_i32", oldSelect);
-			Instruction* xorInst = BinaryOperator::Create(Instruction::Xor, cond_i32, info.const_vec_SIMD_int32_neg1, "blend_xor", oldSelect);
+			CastInst* cond_i32 = new BitCastInst(condition, mInfo->mVectorTyIntSIMD, "blend_cond_i32", oldSelect);
+			CastInst* res1_i32 = new BitCastInst(trueValue, mInfo->mVectorTyIntSIMD, "blend_true_i32", oldSelect);
+			CastInst* res2_i32 = new BitCastInst(falseValue, mInfo->mVectorTyIntSIMD, "blend_false_i32", oldSelect);
+			Instruction* xorInst = BinaryOperator::Create(Instruction::Xor, cond_i32, mInfo->mConstVecSIMDInt32MinusOne, "blend_xor", oldSelect);
 			BinaryOperator* and1Inst = BinaryOperator::Create(Instruction::And, res2_i32, xorInst, "blend_and1", oldSelect);
 			BinaryOperator* and2Inst = BinaryOperator::Create(Instruction::And, cond_i32, res1_i32, "blend_and2", oldSelect);
 			BinaryOperator* orInst = BinaryOperator::Create(Instruction::Or, and2Inst, and1Inst, "blend_or", oldSelect);
@@ -3882,7 +3671,15 @@ private:
 #ifndef PACKETIZER_NO_PACKETIZED_CALLS
 		// if we have a 'native' packetized function in 'nativeMethods'
 		// which corresponds to 'f', generate a call to this function
-		Function* vecF = nativeMethods.getNativeFunction(fname, info.module, info.simdWidth);
+        // TODO: This is not conservative enough: We can only employ the
+        //       native method, if the parameters match. It is possible
+        //       that a native method with a uniform parameter is called
+        //       with a varying value. In this case, the call can not
+        //       be replaced by the native method but has to be split
+        //       into W calls to the scalar function (#20).
+		Function* vecF = mInfo->mNativeMethods->getNativeFunction(fname,
+                                                                  mInfo->mModule,
+                                                                  mInfo->mSimdWidth);
 
 		if (vecF) {
 			Instruction* newCall = generateNativePacketFunctionCall(oldCall, vecF, mask);
@@ -3905,10 +3702,10 @@ private:
 	// TODO: We might have to call packetizeConstantOperands() or so...
 	CallInst* generateNativePacketFunctionCall(CallInst* oldCall, Function* vecF, Value* mask) {
 		assert (oldCall && vecF);
-		Function* f = oldCall->getCalledFunction();
-		const std::string& fname = f->getNameStr();
+		Function* scalarF = oldCall->getCalledFunction();
+		const std::string& fname = scalarF->getNameStr();
 		DEBUG_PKT( outs() << "  found packetized function: '" << vecF->getNameStr() << "' (replacing call to '" << fname << "')\n"; );
-		const int natFnMaskIndex = nativeMethods.getNativeFunctionMaskIndex(fname);
+		const int natFnMaskIndex = mInfo->mNativeMethods->getNativeFunctionMaskIndex(fname);
 		DEBUG_PKT( outs() << "  mask-argument index: " << natFnMaskIndex << "\n"; );
 
 		DEBUG_PKT(
@@ -3919,24 +3716,6 @@ private:
 		);
 
 		std::vector<std::pair<Instruction*, Value*> > dummies;
-
-		// If the mask is UNIFORM, broadcast it, because native functions
-		// always expect a vector.
-		// Only do this if there is a mask parameter.
-		if (natFnMaskIndex != -1) {
-			if (analysisResults->isUniform(mask)) {
-				mask = broadcastValue(mask, oldCall);
-			} else {
-				// If the mask is VARYING but not yet packetized, create a dummy.
-				if (!isPacketizedType(mask->getType())) {
-					Instruction* dummy = createDummy(packetizeSIMDType(mask->getType()),
-													 mask,
-													 oldCall);
-					dummies.push_back(std::make_pair(dummy, mask));
-					mask = dummy;
-				}
-			}
-		}
 
 		//attributes cannot directly be copied due to the additional mask parameter
 		const AttrListPtr& oldAttrList = oldCall->getAttributes();
@@ -3963,6 +3742,22 @@ private:
 			// if this is the mask parameter index, add the mask to the arguments
 			if (argIndex == natFnMaskIndex) {
 
+                // If the mask is UNIFORM, broadcast it, because native functions
+                // always expect a vector.
+                if (analysisResults->isUniform(mask)) {
+                    mask = broadcastValue(mask, oldCall);
+                } else {
+                    // If the mask is VARYING but not yet packetized, create a dummy.
+                    if (!isPacketizedType(mask->getType())) {
+                        Instruction* dummy =
+                            createDummy(Packetizer::packetizeSIMDType(mask->getType(), *mInfo),
+                                        mask,
+                                        oldCall);
+                        dummies.push_back(std::make_pair(dummy, mask));
+                        mask = dummy;
+                    }
+                }
+
 				DEBUG_PKT( outs() << "    adding mask-argument: " << *mask << "\n"; );
 				Value* maskRef = mask;
 				Type* maskRefType = maskRef->getType();
@@ -3986,12 +3781,13 @@ private:
 						maskRef = generateAlignedAlloc(maskRefType, oldCall);
 						DEBUG_PKT( outs() << "    generated alloc: " << *maskRef << "\n"; );
 						//set pointer to point to correct value
-						StoreInst* store = new StoreInst(mask, maskRef, false, info.alignmentSIMD, oldCall);
+						StoreInst* store = new StoreInst(mask, maskRef, false, mInfo->mAlignmentSIMD, oldCall);
 						DEBUG_PKT( outs() << "    generated store: " << *store << "\n"; );
 						addFalseValueInfo(store); // TODO: really varying?
 					}
 
-					DEBUG_PKT( outs() << "    bitcast from " << *maskRefType << " to " << *paramType << " requested!\n"; );
+					DEBUG_PKT( outs() << "    bitcast from " << *maskRefType
+                            << " to " << *paramType << " requested!\n"; );
 					BitCastInst* bc = new BitCastInst(maskRef, paramType, "", oldCall);
 					args.push_back(bc);
 					addFalseValueInfo(bc); // TODO: really varying?
@@ -4006,73 +3802,131 @@ private:
 				continue;
 			}
 
-			// otherwise, add the old argument
+			// Otherwise, add the correct argument (broadcast/bitcast if necessary).
 			DEBUG_PKT( outs() << "    adding argument: " << **oldArg << "\n"; );
 
 			assert (isa<Value>(oldArg));
-			Value* argRef = cast<Value>(oldArg);
-			Type* argRefType = argRef->getType();
+			Value* argVal = cast<Value>(oldArg);
+			Type* argValType = argVal->getType();
 
-			// if types of parameter and value match, simly add the old argument
-			if (argRefType == paramType) {
-				args.push_back(argRef);
+            // If the argument is uniform but the native function
+            // expects a vector, broadcast it.
+            const bool uniformExpected = mInfo->mNativeMethods->isUniformArg(scalarF, argIndex, *mInfo);
+            const bool uniformValue    = analysisResults->isUniform(argVal);
 
-				++oldArg;
-				// save attribute and increment read index
-				// (start reading at 1, 0 is return attribute)
-				attrs.push_back(oldAttrList.getParamAttributes(++attrIdx));
-				continue;
-			}
+            if (uniformExpected) {
+                if (uniformValue) {
+                    // UNIFORM/UNIFORM -> Do nothing.
+                } else {
+                    // UNIFORM/VARYING -> Ouch.
+                    // The target type is a scalar, but we have a vector,
+                    // we assume the vector to be uniform and simply extract the first element
+                    // NOTE: this is likely to produce wrong results!
+                    errs() << "WARNING: native function '" << vecF->getName()
+                            << "' expects UNIFORM argument, but a VARYING value is passed!\n"
+                            << "  Assuming implicitly uniform vector, attempting to extract"
+                            << " first element of value: " << *argVal << "\n";
+                    if (Packetizer::isPacketizableInstructionType(paramType) &&
+                            Packetizer::packetizeSIMDType(paramType, *mInfo) == argValType)
+                    {
+                        // TODO: set alloc position to somewhere else?
+                        argVal = generateHorizontalExtract(argVal,
+                                                           mInfo->mConstInt32Zero,
+                                                           "", oldCall, oldCall);
+                    } else {
+                        errs() << "ERROR: argument and parameter type of call to native function"
+                                << " '" << vecF->getName() << "' do not match: "
+                                << *paramType << " != " << *argValType << "\n";
+                    }
+                }
+            } else {
+                if (uniformValue) {
+                    // VARYING/UNIFORM -> Broadcast.
+                    argVal = broadcastValue(argVal, oldCall);
+                } else {
+                    // VARYING/VARYING -> Do nothing unless the value is
+                    // not yet packetized. In this case, create a dummy.
+                    if (!isPacketizedType(argValType)) {
+                        Instruction* dummy =
+                            createDummy(Packetizer::packetizeSIMDType(argValType, *mInfo),
+                                        argVal,
+                                        oldCall);
+                        dummies.push_back(std::make_pair(dummy, argVal));
+                        argVal = dummy;
+                    }
+                }
+            }
 
-			// if types do not match, generate correct argument
+            // From here on, use the most recent type (possibly changed by dummy)!
+            Type* newArgValType = argVal->getType();
 
-			//first, generate dummy of correct type
-			if (argRef->getType() != Type::getVoidTy(getGlobalContext()) &&
-					!isa<Function>(argRef) &&
-					!isPacketizedType(argRefType)) {
-				Instruction* dummyI = createDummy(packetizeSIMDType(argRefType), argRef, oldCall);
-				dummies.push_back(std::make_pair(dummyI, argRef));
-				Packetizer::uncheckedReplaceAllUsesWith(argRef, dummyI);
-				argRef = dummyI;
-			}
+            // In case the function requires a pointer, we have to allocate memory,
+			// store the value to this pointer and supply it to the function.
+			if (paramType->isPointerTy() && !newArgValType->isPointerTy()) {
+                assert (Packetizer::typesMatch(paramType, newArgValType->getContainedType(0), *mInfo) &&
+                        "parameter type does not match underlying argument pointer type");
 
-			// in case the function requires a pointer, we have to allocate memory,
-			// store the value to this pointer and supply it to the function
-			if (paramType->isPointerTy() && !argRefType->isPointerTy()) {
 				//allocate memory for the reference
-				argRef = generateAlignedAlloc(argRefType, oldCall);
-				DEBUG_PKT( outs() << "    generated alloc: " << *argRef << "\n"; );
+				argVal = generateAlignedAlloc(newArgValType, oldCall);
+				DEBUG_PKT( outs() << "    generated alloc: " << *argVal << "\n"; );
+
 				//set pointer to point to correct value
-				StoreInst* store = new StoreInst(cast<Value>(oldArg), argRef, false, info.alignmentSIMD, oldCall);
+				StoreInst* store = new StoreInst(cast<Value>(oldArg),
+                                                 argVal,
+                                                 false,
+                                                 mInfo->mAlignmentSIMD,
+                                                 oldCall);
+
 				DEBUG_PKT( outs() << "    generated store: " << *store << "\n"; );
 				addFalseValueInfo(store); // TODO: really varying?
 			}
 
-			DEBUG_PKT( outs() << "    bitcast from " << *argRef->getType() << " to " << *paramType << " requested!\n"; );
+//            // If types still do not match, generate correct argument by a bitcast.
+//            // TODO: This is really dangerous and should be removed!
+//            if (!Packetizer::typesMatch(newArgValType, paramType, *mInfo)) {
+//
+//                // First, generate dummy of correct type.
+//                if (argValType != Type::getVoidTy(*mInfo->mContext) &&
+//                        !isa<Function>(argVal) &&
+//                        !isPacketizedType(argValType))
+//                {
+//                    Instruction* dummyI =
+//                        createDummy(Packetizer::packetizeSIMDType(argValType, *mInfo), argVal, oldCall);
+//                    dummies.push_back(std::make_pair(dummyI, argVal));
+//                    Packetizer::uncheckedReplaceAllUsesWith(argVal, dummyI);
+//                    argVal = dummyI;
+//                }
+//
+//                DEBUG_PKT( outs() << "    bitcast from " << *newArgRefType
+//                        << " to " << *paramType << " requested!\n"; );
+//
+//                BitCastInst* bcInst = new BitCastInst(argVal, paramType, "", oldCall);
+//                args.push_back(bcInst);
+//                addFalseValueInfo(bcInst); // TODO: really varying?
+//            }
 
-			// if the target type is a scalar, but we have a vector,
-			// we assume the vector to be uniform and simply extract the first element
-			// NOTE: this is likely to produce wrong results!
-			if (Packetizer::isPacketizableInstructionType(paramType) && packetizeSIMDType(paramType) == argRef->getType()) {
-				errs() << "      WARNING: assuming uniform vector, extracting first element!\n";
-				// TODO: set alloc position to somewhere else?
-				argRef = generateHorizontalExtract(argRef, ConstantInt::get(getGlobalContext(), APInt(32, 0)), "", oldCall, oldCall);
-			}
+			// Types of parameter and value should match now.
+            if (!Packetizer::typesMatch(newArgValType, paramType, *mInfo)) {
+                errs() << "ERROR: native function '" << vecF->getName()
+                        << "' expects UNIFORM argument, but a VARYING value is passed!\n"
+                        << "  Assuming implicitly uniform vector, attempting to extract"
+                        << " first element of value: " << *argVal << "\n";
+                throw new std::logic_error("Type of argument passed to native function does not match");
+            }
 
-			BitCastInst* bcInst = new BitCastInst(argRef, paramType, "", oldCall);
-			args.push_back(bcInst);
-			addFalseValueInfo(bcInst); // TODO: really varying?
+            // Store value as argument.
+            args.push_back(argVal);
+            ++oldArg;
 
-			++oldArg;
-			// save attribute and increment read index
-			// (start reading at 1, 0 is return attribute)
-			attrs.push_back(oldAttrList.getParamAttributes(++attrIdx));
+            // save attribute and increment read index
+            // (start reading at 1, 0 is return attribute)
+            attrs.push_back(oldAttrList.getParamAttributes(++attrIdx));
 		}
 
 		// SSE round requires additional unsigned to determine rounding mode
-		if (fname == "roundf") args.push_back(ConstantInt::get(getGlobalContext(), APInt(32, 0)));
-		else if (fname == "floorf") args.push_back(ConstantInt::get(getGlobalContext(), APInt(32, 1)));
-		else if (fname == "ceilf") args.push_back(ConstantInt::get(getGlobalContext(), APInt(32, 2)));
+		if (fname == "roundf") args.push_back(mInfo->mConstInt32Zero);
+		else if (fname == "floorf") args.push_back(mInfo->mConstInt32One);
+        else if (fname == "ceilf") args.push_back(mInfo->mConstInt32Two);
 
 		DEBUG_PKT(
 			outs() << "  arguments:\n";
@@ -4154,28 +4008,28 @@ private:
 										   analysisResults->hasFullyUniformExit(parentBB));
 
 		// create blocks
-		for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
+		for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
 			if (i>0) {
 				std::stringstream sstr;
 				sstr << "casc.if" << i;
-				ifBlocks[i] = BasicBlock::Create(getGlobalContext(), sstr.str(), parentF, endBB);
+				ifBlocks[i] = BasicBlock::Create(*mInfo->mContext, sstr.str(), parentF, endBB);
 				analysisResults->addBlockInfo(ifBlocks[i], true, true, true, true);
 			}
 			std::stringstream sstr;
 			sstr << "casc.exec" << i;
-			targetBlocks[i] = BasicBlock::Create(getGlobalContext(), sstr.str(), parentF, endBB);
+			targetBlocks[i] = BasicBlock::Create(*mInfo->mContext, sstr.str(), parentF, endBB);
 			analysisResults->addBlockInfo(targetBlocks[i], true, true, true, true);
 		}
 		// those are not really if-blocks but this simplifies iteration
 		// - iterate until i<simdWidth and use i -> first 4 blocks (includes parent)
 		// - iterate until i<simdWidth and use i+1 -> last 4 blocks (includes end)
 		ifBlocks[0] = parentBB;
-		ifBlocks[info.simdWidth] = endBB;
+		ifBlocks[mInfo->mSimdWidth] = endBB;
 
 		DEBUG_PKT( outs() << "done.\n    generating unconditional branch statements... "; );
 
 		//generate unconditional jump from each exec-block to next if-block
-		for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
+		for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
 			BranchInst* br = BranchInst::Create(ifBlocks[i+1], targetBlocks[i]);
 			addFalseValueInfo(br); // TODO: really varying?
 		}
@@ -4183,29 +4037,29 @@ private:
 		DEBUG_PKT( outs() << "done.\n    generating extract statements of mask values... "; );
 
 		// be sure that mask has correct type before extracting
-		if (mask->getType() != info.vectorTy_intSIMD) {
+		if (mask->getType() != mInfo->mVectorTyIntSIMD) {
 			DEBUG_PKT( outs() << "done.\n      generating bitcast for mask... "; );
-			mask = new BitCastInst(mask, info.vectorTy_intSIMD, "", parentBB);
+			mask = new BitCastInst(mask, mInfo->mVectorTyIntSIMD, "", parentBB);
 			addFalseValueInfo(mask);
 		}
 
 		//extract scalar values from entry-mask of exec-block
-		Value** masks = new Value*[info.simdWidth]();
-		for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
-			masks[i] = ExtractElementInst::Create(mask, ConstantInt::get(getGlobalContext(), APInt(32, i)), "", ifBlocks[i]);
+		Value** masks = new Value*[mInfo->mSimdWidth]();
+		for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
+			masks[i] = ExtractElementInst::Create(mask, ConstantInt::get(*mInfo->mContext, APInt(32, i)), "", ifBlocks[i]);
 			addFalseValueInfo(masks[i]);
 		}
 		DEBUG_PKT( outs() << "done.\n    generating NEQ 0 comparisons... "; );
 
 		//bitcasting i32 -> i1 is illegal :(
-		for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
-			masks[i] = CmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_NE, masks[i], info.const_int32_0, "", ifBlocks[i]);
+		for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
+			masks[i] = CmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_NE, masks[i], mInfo->mConstInt32Zero, "", ifBlocks[i]);
 			addFalseValueInfo(masks[i]);
 		}
 		DEBUG_PKT( outs() << "done.\n    generating conditional branch statements... "; );
 
 		//generate conditional jump from each if-block to next exec-block/next if-block
-		for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
+		for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
 			BranchInst* br = BranchInst::Create(targetBlocks[i], ifBlocks[i+1], masks[i], ifBlocks[i]);
 			addFalseValueInfo(br);
 		}
@@ -4234,7 +4088,7 @@ private:
 
 		// Add mask information to mask graph to retain a complete graph.
 		// Ignore adding entry mask information for now.
-		for (unsigned i=1; i<info.simdWidth; ++i) {
+		for (unsigned i=1; i<mInfo->mSimdWidth; ++i) {
 			BasicBlock* ifBB = ifBlocks[i];
 			assert (maskGraph->find(ifBB) == maskGraph->end());
 			// Exit masks are wrong: should be negation of masks[i-1] and masks[i-1]
@@ -4244,15 +4098,15 @@ private:
 			maskGraph->setSuccessorTrue(ifBB, ifBlocks[i+1]);
 			maskGraph->setSuccessorFalse(ifBB, targetBlocks[i]);
 		}
-		for (unsigned i=0; i<info.simdWidth; ++i) {
+		for (unsigned i=0; i<mInfo->mSimdWidth; ++i) {
 			BasicBlock* targetBB = targetBlocks[i];
 			assert (maskGraph->find(targetBB) == maskGraph->end());
 			maskGraph->insert(targetBB, masks[i], masks[i]);
 			maskGraph->addPredecessor(targetBB, ifBlocks[i]);
 			maskGraph->setSuccessorTrue(targetBB, ifBlocks[i+1]);
 		}
-		newNode->addPredecessor(maskGraph->findMaskNode(ifBlocks[info.simdWidth-1]));
-		newNode->addPredecessor(maskGraph->findMaskNode(targetBlocks[info.simdWidth-1]));
+		newNode->addPredecessor(maskGraph->findMaskNode(ifBlocks[mInfo->mSimdWidth-1]));
+		newNode->addPredecessor(maskGraph->findMaskNode(targetBlocks[mInfo->mSimdWidth-1]));
 		if (parentBBNode->hasExitEdge()) newNode->setSuccessorTrue(parentBBNode->getSuccessorTrue());
 		if (parentBBNode->hasConditionalExit()) newNode->setSuccessorFalse(parentBBNode->getSuccessorFalse());
 		parentBBNode->setExitMaskTrue(masks[0]); // wrong, see above
@@ -4296,7 +4150,7 @@ private:
 										   analysisResults->hasFullyUniformExit(parentBB));
 
 		// create target-block
-		BasicBlock* targetBlock = BasicBlock::Create(getGlobalContext(), parentBB->getNameStr()+".if.exec", parentF, endBB);
+		BasicBlock* targetBlock = BasicBlock::Create(*mInfo->mContext, parentBB->getNameStr()+".if.exec", parentF, endBB);
 		analysisResults->addBlockInfo(targetBlock, true, true, true, true);
 
 		DEBUG_PKT( outs() << "done.\n    generating unconditional branch statement... "; );
@@ -4310,12 +4164,12 @@ private:
 			Instruction* insertBefore = createDummy(mask->getType(), mask, parentBB);
 
 			//insert sse-movemask (could probably be changed to bitcast+x)
-			Function* movmskps = info.use_avx ? Intrinsic::getDeclaration(&info.module, Intrinsic::x86_avx_movmsk_ps_256)
-				: Intrinsic::getDeclaration(&info.module, Intrinsic::x86_sse_movmsk_ps);
+			Function* movmskps = mInfo->mUseAVX ? Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_avx_movmsk_ps_256)
+				: Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_sse_movmsk_ps);
 			std::vector<Value* > params;
 			Value* movmskVal = mask;
-			if (mask->getType() != info.vectorTy_floatSIMD) {
-				movmskVal = new BitCastInst(mask, info.vectorTy_floatSIMD, "", insertBefore);
+			if (mask->getType() != mInfo->mVectorTyFloatSIMD) {
+				movmskVal = new BitCastInst(mask, mInfo->mVectorTyFloatSIMD, "", insertBefore);
 				addFalseValueInfo(movmskVal);
 			}
 			params.push_back(movmskVal);
@@ -4323,7 +4177,7 @@ private:
 			addFalseValueInfo(movmskI);
 
 			//insert 'allfalse'-comparison (jump to targetBB if movmsk is not 0)
-			Instruction* cmp = CmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_NE, movmskI, info.const_int32_0, "cmp0", insertBefore);
+			Instruction* cmp = CmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_NE, movmskI, mInfo->mConstInt32Zero, "cmp0", insertBefore);
 			addFalseValueInfo(cmp); // TODO: really varying?
 
 			// remove dummy (only required for placement of instructions)
@@ -4422,11 +4276,11 @@ private:
 										   analysisResults->hasFullyUniformExit(parentBB));
 
 		// create then-block
-		BasicBlock* thenBlock = BasicBlock::Create(getGlobalContext(), parentBB->getNameStr()+".then", parentF, endBlock);
+		BasicBlock* thenBlock = BasicBlock::Create(*mInfo->mContext, parentBB->getNameStr()+".then", parentF, endBlock);
 		analysisResults->addBlockInfo(thenBlock, true, true, true, true);
 
 		// create else-block
-		BasicBlock* elseBlock = BasicBlock::Create(getGlobalContext(), parentBB->getNameStr()+".else", parentF, endBlock);
+		BasicBlock* elseBlock = BasicBlock::Create(*mInfo->mContext, parentBB->getNameStr()+".else", parentF, endBlock);
 		analysisResults->addBlockInfo(elseBlock, true, true, true, true);
 
 		DEBUG_PKT( outs() << "done.\n    generating conditional branch statement... "; );
@@ -4492,8 +4346,8 @@ private:
 
 
 	Instruction* packetizeICmpInst(ICmpInst* icmp) {
-		assert (icmp->getOperand(0)->getType() == info.vectorTy_intSIMD);
-		assert (icmp->getOperand(1)->getType() == info.vectorTy_intSIMD);
+		assert (icmp->getOperand(0)->getType() == mInfo->mVectorTyIntSIMD);
+		assert (icmp->getOperand(1)->getType() == mInfo->mVectorTyIntSIMD);
 
 		Value* op0 = icmp->getOperand(0);
 		Value* op1 = icmp->getOperand(1);
@@ -4506,7 +4360,7 @@ private:
 		switch (icmp->getPredicate()) {
 			case ICmpInst::ICMP_EQ:
 			{
-				cmpps = Intrinsic::getDeclaration(&info.module, Intrinsic::x86_sse2_pcmpeq_d);
+				cmpps = Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_sse2_pcmpeq_d);
 				//predCode = 0;
 				//cmpps = Intrinsic::getDeclaration(&info.module, Intrinsic::x86_sse_cmp_ps);
 				break;
@@ -4514,7 +4368,7 @@ private:
 			case ICmpInst::ICMP_NE:
 			{
 				neg = true;
-				cmpps = Intrinsic::getDeclaration(&info.module, Intrinsic::x86_sse2_pcmpeq_d);
+				cmpps = Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_sse2_pcmpeq_d);
 				//predCode = 4;
 				//cmpps = Intrinsic::getDeclaration(&info.module, Intrinsic::x86_sse_cmp_ps);
 				break;
@@ -4522,7 +4376,7 @@ private:
 			case ICmpInst::ICMP_UGT:
 			case ICmpInst::ICMP_SGT:
 			{
-				cmpps = Intrinsic::getDeclaration(&info.module, Intrinsic::x86_sse2_pcmpgt_d);
+				cmpps = Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_sse2_pcmpgt_d);
 				//predCode = 1;
 				//flip = true;
 				//cmpps = Intrinsic::getDeclaration(&info.module, Intrinsic::x86_sse_cmp_ps);
@@ -4533,21 +4387,21 @@ private:
 			{
 				predCode = 2;
 				flip = true;
-				cmpps = Intrinsic::getDeclaration(&info.module, Intrinsic::x86_sse_cmp_ps);
+				cmpps = Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_sse_cmp_ps);
 				break;
 			}
 			case ICmpInst::ICMP_ULT:
 			case ICmpInst::ICMP_SLT:
 			{
 				predCode = 1;
-				cmpps = Intrinsic::getDeclaration(&info.module, Intrinsic::x86_sse_cmp_ps);
+				cmpps = Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_sse_cmp_ps);
 				break;
 			}
 			case ICmpInst::ICMP_ULE:
 			case ICmpInst::ICMP_SLE:
 			{
 				flip = true;
-				cmpps = Intrinsic::getDeclaration(&info.module, Intrinsic::x86_sse2_pcmpgt_d);
+				cmpps = Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_sse2_pcmpgt_d);
 				//predCode = 2;
 				//cmpps = Intrinsic::getDeclaration(&info.module, Intrinsic::x86_sse_cmp_ps);
 				break;
@@ -4563,8 +4417,8 @@ private:
 
 		if (predCode >= 0) {
 			// This means we require an fcmp -> also fp values
-			BitCastInst* bc0 = new BitCastInst(op0, info.vectorTy_floatSIMD, "", icmp);
-			BitCastInst* bc1 = new BitCastInst(op1, info.vectorTy_floatSIMD, "", icmp);
+			BitCastInst* bc0 = new BitCastInst(op0, mInfo->mVectorTyFloatSIMD, "", icmp);
+			BitCastInst* bc1 = new BitCastInst(op1, mInfo->mVectorTyFloatSIMD, "", icmp);
 			addValueInfo(bc0, op0);
 			addValueInfo(bc1, op1);
 			op0 = bc0;
@@ -4581,7 +4435,7 @@ private:
 		}
 
 		if (predCode >= 0) {
-			Value* pred = ConstantInt::get(Type::getInt8Ty(getGlobalContext()), predCode);
+			Value* pred = ConstantInt::get(Type::getInt8Ty(*mInfo->mContext), predCode);
 			params.push_back(pred);
 		}
 
@@ -4589,7 +4443,7 @@ private:
 		addValueInfo(cmpCall, icmp);
 
 		if (predCode >= 0) {
-			cmpCall = new BitCastInst(cmpCall, info.vectorTy_intSIMD, "", icmp);
+			cmpCall = new BitCastInst(cmpCall, mInfo->mVectorTyIntSIMD, "", icmp);
 			addValueInfo(cmpCall, icmp);
 		}
 
@@ -4603,11 +4457,11 @@ private:
 
 
 	Instruction* packetizeFCmpInst(FCmpInst* fcmp) {
-		assert (fcmp->getOperand(0)->getType() == info.vectorTy_floatSIMD);
-		assert (fcmp->getOperand(1)->getType() == info.vectorTy_floatSIMD);
+		assert (fcmp->getOperand(0)->getType() == mInfo->mVectorTyFloatSIMD);
+		assert (fcmp->getOperand(1)->getType() == mInfo->mVectorTyFloatSIMD);
 
-		Function *cmpps = info.use_avx ? Intrinsic::getDeclaration(&info.module, Intrinsic::x86_avx_cmp_ps_256)
-			: Intrinsic::getDeclaration(&info.module, Intrinsic::x86_sse_cmp_ps);
+		Function *cmpps = mInfo->mUseAVX ? Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_avx_cmp_ps_256)
+			: Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_sse_cmp_ps);
 		bool flip = false;
 		unsigned predCode = 0;
 
@@ -4645,7 +4499,7 @@ private:
 				return NULL;
 			}
 		}
-		Value* pred = ConstantInt::get(Type::getInt8Ty(getGlobalContext()), predCode);
+		Value* pred = ConstantInt::get(Type::getInt8Ty(*mInfo->mContext), predCode);
 
 		std::vector<Value* > params;
 		if (flip) {
@@ -4661,9 +4515,9 @@ private:
 		// create comparison + movmask
 		CallInst* newCmp = createExternalIntrinsicCall(cmpps, params, fcmp->getNameStr(), fcmp);
 		addFalseValueInfo(newCmp);
-		assert (newCmp->getType() == info.vectorTy_floatSIMD);
-		Function* movmskps = info.use_avx ? Intrinsic::getDeclaration(&info.module, Intrinsic::x86_avx_movmsk_ps_256)
-			: Intrinsic::getDeclaration(&info.module, Intrinsic::x86_sse_movmsk_ps);
+		assert (newCmp->getType() == mInfo->mVectorTyFloatSIMD);
+		Function* movmskps = mInfo->mUseAVX ? Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_avx_movmsk_ps_256)
+			: Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_sse_movmsk_ps);
 		params.clear();
 		params.push_back(newCmp);
 		CallInst* movmskI = createExternalIntrinsicCall(movmskps, params, "", fcmp);
@@ -4702,7 +4556,7 @@ private:
 	//get integer constant of cmp predicate for intrinsic-generation
 	//returns an integer constant that corresponds to the correct predicate
 	Constant* getPredicateConstant(CmpInst::Predicate p) {
-		Constant* c = ConstantInt::get(getGlobalContext(), APInt(8, p));
+		Constant* c = ConstantInt::get(*mInfo->mContext, APInt(8, p));
 		DEBUG_PKT( outs() << "created constant " << *c << " from predicate: " << p << "\n"; );
 		return c;
 	}
@@ -4751,12 +4605,12 @@ private:
 			}
 
 			//insert sse-movemask (could probably be changed to bitcast+x)
-			Function* movmskps = info.use_avx ? Intrinsic::getDeclaration(&info.module, Intrinsic::x86_avx_movmsk_ps_256)
-				: Intrinsic::getDeclaration(&info.module, Intrinsic::x86_sse_movmsk_ps);
+			Function* movmskps = mInfo->mUseAVX ? Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_avx_movmsk_ps_256)
+				: Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_sse_movmsk_ps);
 			std::vector<Value* > params;
 			Value* movmskVal = cond;
-			if (cond->getType() != info.vectorTy_floatSIMD) {
-				movmskVal = new BitCastInst(cond, info.vectorTy_floatSIMD, "", brInst);
+			if (cond->getType() != mInfo->mVectorTyFloatSIMD) {
+				movmskVal = new BitCastInst(cond, mInfo->mVectorTyFloatSIMD, "", brInst);
 				addFalseValueInfo(movmskVal);
 			}
 			params.push_back(movmskVal);
@@ -4764,7 +4618,7 @@ private:
 			addFalseValueInfo(movmskI);
 
 			//insert 'allfalse'-comparison (jump back to header if movmsk is not 0)
-			Instruction* exitCmp = CmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_NE, movmskI, info.const_int32_0, "cmp0", brInst);
+			Instruction* exitCmp = CmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_NE, movmskI, mInfo->mConstInt32Zero, "cmp0", brInst);
 			addFalseValueInfo(exitCmp); // TODO: really varying?
 
 			brInst->setCondition(exitCmp);
@@ -4864,8 +4718,8 @@ private:
 
 			if (!dynCheckCreated) continue;
 
-			//Packetizer::insertPrintf("thenBB executed!", ConstantInt::getAllOnesValue(Type::getInt32Ty(getGlobalContext())), true, thenBB->getTerminator());
-			//Packetizer::insertPrintf("elseBB executed!", ConstantInt::getAllOnesValue(Type::getInt32Ty(getGlobalContext())), true, elseBB->getTerminator());
+			//Packetizer::insertPrintf("thenBB executed!", ConstantInt::getAllOnesValue(Type::getInt32Ty(info.context)), true, thenBB->getTerminator());
+			//Packetizer::insertPrintf("elseBB executed!", ConstantInt::getAllOnesValue(Type::getInt32Ty(info.context)), true, elseBB->getTerminator());
 
 			// now move original split instruction into else-block so that this
 			// block is split in the next steps.
@@ -4941,7 +4795,7 @@ private:
 			// ultimately puts all instructions to the right places because
 			// splitting then ensures that possible merge-operations are in
 			// the block *behind* the if.
-			Value* lastSplitVal = splitInfo->splitValues[info.simdWidth-1];
+			Value* lastSplitVal = splitInfo->splitValues[mInfo->mSimdWidth-1];
 			assert (isa<Instruction>(lastSplitVal));
 			Instruction* lastSplitValI = cast<Instruction>(lastSplitVal);
 
@@ -4963,7 +4817,7 @@ private:
 				DEBUG_PKT( maskGraph->verify(); );
 
 				// Move split values into the target block.
-				for (unsigned i=0; i<info.simdWidth; ++i) {
+				for (unsigned i=0; i<mInfo->mSimdWidth; ++i) {
 					Value* splitVal = splitInfo->splitValues[i];
 					assert (isa<Instruction>(splitVal));
 					Instruction* splitValI = cast<Instruction>(splitVal);
@@ -5000,14 +4854,14 @@ private:
 			// create if-cascade:
 			// each if-block holds mask extraction and scalar comparison if mask-instance is true
 			// each use-block holds scalar use (either load or store with operand extraction code)
-			BasicBlock** ifBlocks = new BasicBlock*[info.simdWidth+1]();
-			BasicBlock** targetBlocks = new BasicBlock*[info.simdWidth]();
+			BasicBlock** ifBlocks = new BasicBlock*[mInfo->mSimdWidth+1]();
+			BasicBlock** targetBlocks = new BasicBlock*[mInfo->mSimdWidth]();
 			generateIfCascade(valI, mask, ifBlocks, targetBlocks);
 			DEBUG_PKT( maskGraph->verify(); );
 
 			// Move split values into the correct target blocks
 			std::vector<Value*>& splitValues = splitInfo->splitValues;
-			for (unsigned i=0; i<info.simdWidth; ++i) {
+			for (unsigned i=0; i<mInfo->mSimdWidth; ++i) {
 				Value* splitValue = splitValues[i];
 				assert (isa<Instruction>(splitValue));
 				Instruction* splitValI = cast<Instruction>(splitValue);
@@ -5123,7 +4977,7 @@ private:
 			assert (!isPacketizedType(scalarType) ||
 					(isArgOrArgCast(oldValue) && oldValue->getType()->isPointerTy()));
 
-			for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
+			for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
 				splitInfo.splitValues.push_back(oldValue);
 			}
 
@@ -5157,19 +5011,19 @@ private:
 				cast<Instruction>(oldValue)->getParent()->getFirstNonPHI() :
 				getNextInstructionInList(cast<Instruction>(oldValue));
 			assert (insertBefore && "no following instruction found?!");
-			Value** splitInsts = new Value*[info.simdWidth]();
-			for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
+			Value** splitInsts = new Value*[mInfo->mSimdWidth]();
+			for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
 				Value* add = NULL;
 				if (oldValue->getType()->isIntegerTy()) {
-					add = BinaryOperator::Create(Instruction::Add, oldValue, ConstantInt::get(getGlobalContext(), APInt(32, i)), "", insertBefore);
+					add = BinaryOperator::Create(Instruction::Add, oldValue, ConstantInt::get(*mInfo->mContext, APInt(32, i)), "", insertBefore);
 				} else {
-					add = BinaryOperator::Create(Instruction::FAdd, oldValue, ConstantFP::get(Type::getFloatTy(getGlobalContext()), (double)i), "", insertBefore);
+					add = BinaryOperator::Create(Instruction::FAdd, oldValue, ConstantFP::get(Type::getFloatTy(*mInfo->mContext), (double)i), "", insertBefore);
 				}
 				splitInfo.splitValues.push_back(add);
 				splitInsts[i] = add;
 				addFalseValueInfo(add);
 			}
-			//Instruction* mergedRes = generateHorizontalMerge(splitInsts, packetizeSIMDType(scalarType), "mergedConsecSplit", insertBefore);
+			//Instruction* mergedRes = generateHorizontalMerge(splitInsts, Packetizer::packetizeSIMDType(scalarType), "mergedConsecSplit", insertBefore);
 			//splitInfo.mergedResult = mergedRes;
 			delete [] splitInsts;
 			return true;
@@ -5206,11 +5060,11 @@ private:
 				assert (isPacketizedType(pointer->getType()));
 
 				std::vector<Value*> indices;
-				indices.push_back(ConstantInt::get(getGlobalContext(), APInt(32, 0)));
+				indices.push_back(mInfo->mConstInt32Zero);
 
-				for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
+				for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
 					indices.push_back(
-							ConstantInt::get(getGlobalContext(), APInt(32, i)));
+							ConstantInt::get(*mInfo->mContext, APInt(32, i)));
 					GetElementPtrInst* gep =
 							GetElementPtrInst::Create(pointer,
 													  ArrayRef<Value*>(indices),
@@ -5224,8 +5078,8 @@ private:
 				return true;
 			}
 
-			for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
-				Instruction* scalarInst = generateHorizontalExtract(oldInst, ConstantInt::get(getGlobalContext(), APInt(32, i)), "", insertBefore, insertBefore);
+			for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
+				Instruction* scalarInst = generateHorizontalExtract(oldInst, ConstantInt::get(*mInfo->mContext, APInt(32, i)), "", insertBefore, insertBefore);
 				splitInfo.splitValues.push_back(scalarInst);
 			}
 
@@ -5266,12 +5120,12 @@ private:
 				splitInfo.dummies.push_back(dummy);
 
 				// Create scalar loads
-				Value** splitInsts = new Value*[info.simdWidth]();
-				for (unsigned i=0, e=info.simdWidth; i!=e; ++i) {
+				Value** splitInsts = new Value*[mInfo->mSimdWidth]();
+				for (unsigned i=0, e=mInfo->mSimdWidth; i!=e; ++i) {
 					LoadInst* newLoad = new LoadInst(dummy,
 													 "",
 													 oldLoad->isVolatile(),
-													 info.alignmentScalar,
+													 mInfo->mAlignmentScalar,
 													 oldLoad);
 					splitInfo.splitValues.push_back(newLoad);
 					splitInsts[i] = newLoad;
@@ -5282,7 +5136,7 @@ private:
 
 				// If the loaded value is no pointer, create a merged result value.
 				if (!scalarType->isPointerTy()) {
-					Instruction* mergedRes = generateHorizontalMerge(splitInsts, packetizeSIMDType(scalarType), "mergedLoad", oldLoad);
+					Instruction* mergedRes = generateHorizontalMerge(splitInsts, Packetizer::packetizeSIMDType(scalarType, *mInfo), "mergedLoad", oldLoad);
 					splitInfo.mergedResult = mergedRes;
 				}
 
@@ -5341,11 +5195,11 @@ private:
 				splitInfo.dummies.push_back(dummyP);
 
 				// Create scalar stores
-				for (unsigned i=0, e=info.simdWidth; i!=e; ++i) {
+				for (unsigned i=0, e=mInfo->mSimdWidth; i!=e; ++i) {
 					StoreInst* newStore = new StoreInst(dummyV,
 														dummyP,
 														oldStore->isVolatile(),
-														info.alignmentScalar,
+														mInfo->mAlignmentScalar,
 														oldStore);
 					splitInfo.splitValues.push_back(newStore);
 					addFalseValueInfo(newStore);
@@ -5414,19 +5268,19 @@ private:
 				//if (isPointerToPacket) {
 				//	Type* pointerType = pointer->getType();
 				//	Type* pktPointerType = isPacketizedType(pointerType) ?
-				//		pointerType : packetizeSIMDType(pointerType);
+				//		pointerType : Packetizer::packetizeSIMDType(pointerType);
 				//	Instruction* dummyP = createDummy(pktPointerType,
 				//									 pointer,
 				//									 oldGEP);
 				//	pointer = dummyP;
 				//}
 
-				GetElementPtrInst** geps = new GetElementPtrInst*[info.simdWidth]();
-				for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
+				GetElementPtrInst** geps = new GetElementPtrInst*[mInfo->mSimdWidth]();
+				for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
 					// If the GEP points to a packet, we have to add one index
 					// to access the correct scalar value of the ith instance.
 					if (isPointerToPacket) {
-						indexDummies.push_back(ConstantInt::get(getGlobalContext(), APInt(32, i)));
+						indexDummies.push_back(ConstantInt::get(*mInfo->mContext, APInt(32, i)));
 					}
 
 					//create GEP with scalar values
@@ -5471,8 +5325,8 @@ private:
 				}
 
 				// Create scalar phis
-				Value** splitInsts = new Value*[info.simdWidth]();
-				for (unsigned i=0, e=info.simdWidth; i!=e; ++i) {
+				Value** splitInsts = new Value*[mInfo->mSimdWidth]();
+				for (unsigned i=0, e=mInfo->mSimdWidth; i!=e; ++i) {
 					PHINode* newPhi = PHINode::Create(scalarType,
 													  2U,
 													  "",
@@ -5494,7 +5348,7 @@ private:
 				// If this is no pointer phi, create a merged result value.
 				if (!scalarType->isPointerTy()) {
 					Type* packetType = isPacketizedType(scalarType) ?
-						scalarType : packetizeSIMDType(scalarType);
+						scalarType : Packetizer::packetizeSIMDType(scalarType, *mInfo);
 					Instruction* mergedRes =
 							generateHorizontalMerge(splitInsts,
 													packetType,
@@ -5537,7 +5391,7 @@ private:
 				assert (condition->getType()->isIntegerTy() ||
 						(condition->getType()->isVectorTy() &&
 						 cast<VectorType>(condition->getType())->getContainedType(0)->isIntegerTy()));
-				Instruction* dummyC = createDummy(Type::getInt1Ty(getGlobalContext()), condition, oldSelect);
+				Instruction* dummyC = createDummy(Type::getInt1Ty(*mInfo->mContext), condition, oldSelect);
 				Instruction* dummyT = createDummy(scalarType, valueT, oldSelect);
 				Instruction* dummyF = createDummy(scalarType, valueF, oldSelect);
 				splitInfo.dummies.push_back(dummyC);
@@ -5545,8 +5399,8 @@ private:
 				splitInfo.dummies.push_back(dummyF);
 
 				// Create scalar selects
-				Value** splitInsts = new Value*[info.simdWidth]();
-				for (unsigned i=0, e=info.simdWidth; i!=e; ++i) {
+				Value** splitInsts = new Value*[mInfo->mSimdWidth]();
+				for (unsigned i=0, e=mInfo->mSimdWidth; i!=e; ++i) {
 					SelectInst* newSelect = SelectInst::Create(dummyC,
 															   dummyT,
 															   dummyF,
@@ -5563,7 +5417,7 @@ private:
 				if (!scalarType->isPointerTy()) {
 					Instruction* mergedRes =
 							generateHorizontalMerge(splitInsts,
-													packetizeSIMDType(scalarType),
+													Packetizer::packetizeSIMDType(scalarType, *mInfo),
 													"mergedSelect",
 													oldSelect);
 					splitInfo.mergedResult = mergedRes;
@@ -5607,8 +5461,8 @@ private:
 				}
 
 				// Create scalar calls
-				Value** splitInsts = new Value*[info.simdWidth]();
-				for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
+				Value** splitInsts = new Value*[mInfo->mSimdWidth]();
+				for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
 					//call function with scalar values
 					CallInst* newCall = CallInst::Create(callee, ArrayRef<Value*>(args), "", oldCall);
 					newCall->setAttributes(oldCall->getAttributes());
@@ -5622,10 +5476,10 @@ private:
 
 				// If the return type is non-void and not a pointer type, create
 				// a merged result value.
-				Value* result = splitInsts[info.simdWidth-1];
+				Value* result = splitInsts[mInfo->mSimdWidth-1];
 				const bool returnsNonVoid = !callee->getReturnType()->isVoidTy();
 				if (returnsNonVoid && !scalarType->isPointerTy()) {
-					result = generateHorizontalMerge(splitInsts, packetizeSIMDType(scalarType), "", oldCall);
+					result = generateHorizontalMerge(splitInsts, Packetizer::packetizeSIMDType(scalarType, *mInfo), "", oldCall);
 					assert (isa<Instruction>(result));
 					splitInfo.mergedResult = cast<Instruction>(result);
 				}
@@ -5633,9 +5487,9 @@ private:
 				// if the function received any pointer arguments
 				// we have to store back the results of the "subtype"-pointers.
 				// (the value to be stored in the pointer was also "split" by extraction)
-				for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
+				for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
 					generateStoreBackForSplitting(cast<CallInst>(splitInsts[i]),
-												  ConstantInt::get(getGlobalContext(), APInt(32, i)),
+												  ConstantInt::get(*mInfo->mContext, APInt(32, i)),
 												  oldCallArgs,
 												  oldCall);
 				}
@@ -5696,8 +5550,8 @@ private:
 			insertBefore = cast<Instruction>(oldValue);
 		}
 
-		for (unsigned i=0, e=info.simdWidth; i<e; ++i) {
-			Instruction* scalarInst = generateHorizontalExtract(oldValue, ConstantInt::get(getGlobalContext(), APInt(32, i)), "", insertBefore, insertBefore);
+		for (unsigned i=0, e=mInfo->mSimdWidth; i<e; ++i) {
+			Instruction* scalarInst = generateHorizontalExtract(oldValue, ConstantInt::get(*mInfo->mContext, APInt(32, i)), "", insertBefore, insertBefore);
 			splitInfo.splitValues.push_back(scalarInst);
 		}
 
@@ -5725,7 +5579,7 @@ private:
 
 		// It is required for all splitting values to provide info.simdWidth
 		// scalar values, no matter what kind of splitting is performed.
-		assert (splitInfo.splitValues.size() == info.simdWidth);
+		assert (splitInfo.splitValues.size() == mInfo->mSimdWidth);
 
 		if (isa<Constant>(oldValue) || isArgOrArgCast(oldValue)) {
 			DEBUG_PKT( outs() << "  is constant or argument - nothing to do!\n"; );
@@ -5786,12 +5640,12 @@ private:
 				assert (splitInfoMap.find(pointer) != splitInfoMap.end());
 				SplitInfo* ptrSplitInfo = splitInfoMap.find(pointer)->second;
 				assert (ptrSplitInfo);
-				assert (ptrSplitInfo->splitValues.size() == info.simdWidth);
+				assert (ptrSplitInfo->splitValues.size() == mInfo->mSimdWidth);
 
 				// replace dummy pointer with scalar pointers
 				assert (splitInfo.dummies.size() == 1);
 				Instruction* dummyPointer = splitInfo.dummies[0];
-				for (unsigned i=0, e=info.simdWidth; i!=e; ++i) {
+				for (unsigned i=0, e=mInfo->mSimdWidth; i!=e; ++i) {
 					LoadInst* scalarLoad = cast<LoadInst>(splitInfo.splitValues[i]);
 
 					Value* scalarPointer = ptrSplitInfo->splitValues[i];
@@ -5814,12 +5668,12 @@ private:
 				SplitInfoMapType::iterator it = splitInfoMap.find(value);
 				SplitInfo* valueSplitInfo = it == splitInfoMap.end() ?
 					NULL : it->second;
-				assert (!valueSplitInfo || valueSplitInfo->splitValues.size() == info.simdWidth);
+				assert (!valueSplitInfo || valueSplitInfo->splitValues.size() == mInfo->mSimdWidth);
 
 				assert (splitInfoMap.find(pointer) != splitInfoMap.end());
 				SplitInfo* ptrSplitInfo = splitInfoMap.find(pointer)->second;
 				assert (ptrSplitInfo);
-				assert (ptrSplitInfo->splitValues.size() == info.simdWidth);
+				assert (ptrSplitInfo->splitValues.size() == mInfo->mSimdWidth);
 
 				// Replace dummy pointer and value with scalar pointers and
 				// either values that were also split or W times the same value.
@@ -5827,7 +5681,7 @@ private:
 				Instruction* dummyValue = splitInfo.dummies[0];
 				Instruction* dummyPointer = splitInfo.dummies[1];
 
-				for (unsigned i=0, e=info.simdWidth; i!=e; ++i) {
+				for (unsigned i=0, e=mInfo->mSimdWidth; i!=e; ++i) {
 					StoreInst* scalarStore = cast<StoreInst>(splitInfo.splitValues[i]);
 
 					Value* scalarValue = valueSplitInfo ?
@@ -5854,14 +5708,14 @@ private:
 					Value* pointer = oldGEP->getPointerOperand();
 					SplitInfoMapType::iterator it = splitInfoMap.find(pointer);
 					SplitInfo* ptrSplitInfo = it == splitInfoMap.end() ? NULL : it->second;
-					assert (!ptrSplitInfo || ptrSplitInfo->splitValues.size() == info.simdWidth);
+					assert (!ptrSplitInfo || ptrSplitInfo->splitValues.size() == mInfo->mSimdWidth);
 				);
 
 				// Replace dummy indices with scalar indices and either pointers
 				// that were also split or W times the same pointer.
 				assert (splitInfo.dummies.size() == oldGEP->getNumIndices());
 
-				for (unsigned i=0, e=info.simdWidth; i!=e; ++i) {
+				for (unsigned i=0, e=mInfo->mSimdWidth; i!=e; ++i) {
 					GetElementPtrInst* scalarGEP = cast<GetElementPtrInst>(splitInfo.splitValues[i]);
 
 					// replace indices either by scalar indices given by other
@@ -5879,7 +5733,7 @@ private:
 						SplitInfoMapType::iterator it2 = splitInfoMap.find(origIndexVal);
 						SplitInfo* indexSplitInfo = it2 == splitInfoMap.end() ?
 							NULL : it2->second;
-						assert (!indexSplitInfo || indexSplitInfo->splitValues.size() == info.simdWidth);
+						assert (!indexSplitInfo || indexSplitInfo->splitValues.size() == mInfo->mSimdWidth);
 
 						Value* scalarIndex = indexSplitInfo ?
 							indexSplitInfo->splitValues[i] : origIndexVal;
@@ -5900,7 +5754,7 @@ private:
 
 				assert (splitInfo.dummies.size() == oldPhi->getNumIncomingValues());
 
-				for (unsigned i=0, e=info.simdWidth; i!=e; ++i) {
+				for (unsigned i=0, e=mInfo->mSimdWidth; i!=e; ++i) {
 					PHINode* scalarPhi = cast<PHINode>(splitInfo.splitValues[i]);
 
 					for (unsigned j=0, ej=oldPhi->getNumIncomingValues(); j!=ej; ++j) {
@@ -5911,7 +5765,7 @@ private:
 						SplitInfoMapType::iterator it = splitInfoMap.find(origIncVal);
 						SplitInfo* incValSplitInfo = it == splitInfoMap.end() ?
 							NULL : it->second;
-						assert (!incValSplitInfo || incValSplitInfo->splitValues.size() == info.simdWidth);
+						assert (!incValSplitInfo || incValSplitInfo->splitValues.size() == mInfo->mSimdWidth);
 
 						Value* scalarIncVal = incValSplitInfo ?
 							incValSplitInfo->splitValues[i] : origIncVal;
@@ -5943,9 +5797,9 @@ private:
 				it = splitInfoMap.find(valueF);
 				SplitInfo* valueFSplitInfo = it == splitInfoMap.end() ?
 					NULL : it->second;
-				assert (!conditionSplitInfo || conditionSplitInfo->splitValues.size() == info.simdWidth);
-				assert (!valueTSplitInfo || valueTSplitInfo->splitValues.size() == info.simdWidth);
-				assert (!valueFSplitInfo || valueFSplitInfo->splitValues.size() == info.simdWidth);
+				assert (!conditionSplitInfo || conditionSplitInfo->splitValues.size() == mInfo->mSimdWidth);
+				assert (!valueTSplitInfo || valueTSplitInfo->splitValues.size() == mInfo->mSimdWidth);
+				assert (!valueFSplitInfo || valueFSplitInfo->splitValues.size() == mInfo->mSimdWidth);
 
 				// Replace dummy values with values that were also split or W
 				// times the same value.
@@ -5954,7 +5808,7 @@ private:
 				Instruction* dummyValueT = splitInfo.dummies[1];
 				Instruction* dummyValueF = splitInfo.dummies[2];
 
-				for (unsigned i=0, e=info.simdWidth; i!=e; ++i) {
+				for (unsigned i=0, e=mInfo->mSimdWidth; i!=e; ++i) {
 					Value* scalarCondition = conditionSplitInfo ?
 						conditionSplitInfo->splitValues[i] : condition;
 					Value* scalarValueT = valueTSplitInfo ?
@@ -5971,7 +5825,7 @@ private:
 					scalarCondition = CmpInst::Create(Instruction::ICmp,
 													  ICmpInst::ICMP_NE,
 													  scalarCondition,
-													  info.const_int32_0,
+													  mInfo->mConstInt32Zero,
 													  "",
 													  scalarSelect);
 					addFalseValueInfo(scalarCondition); // TODO: really varying?
@@ -5992,7 +5846,7 @@ private:
 				CallInst* oldCall = cast<CallInst>(oldInst);
 				Function* callee = oldCall->getCalledFunction();
 
-				for (unsigned i=0, e=info.simdWidth; i!=e; ++i) {
+				for (unsigned i=0, e=mInfo->mSimdWidth; i!=e; ++i) {
 					CallInst* scalarCall = cast<CallInst>(splitInfo.splitValues[i]);
 
 					// replace parameters
@@ -6006,7 +5860,7 @@ private:
 						SplitInfoMapType::iterator it = splitInfoMap.find(A);
 						SplitInfo* argSplitInfo = it == splitInfoMap.end() ?
 							NULL : it->second;
-						assert (!argSplitInfo || argSplitInfo->splitValues.size() == info.simdWidth);
+						assert (!argSplitInfo || argSplitInfo->splitValues.size() == mInfo->mSimdWidth);
 
 						Value* scalarArg = argSplitInfo ?
 							argSplitInfo->splitValues[i] : A;
@@ -6093,7 +5947,7 @@ private:
 		Type* oldType = pointer->getType();
 		if (isPacketizedType(oldType)) return pointer;
 
-		Type* newType = packetizeSIMDType(oldType);
+		Type* newType = Packetizer::packetizeSIMDType(oldType, *mInfo);
 
 		BitCastInst* pktPtrCast = new BitCastInst(pointer,
 												  newType,
@@ -6173,8 +6027,8 @@ private:
 #ifndef PACKETIZER_DISABLE_MEMOP_VECTORIZATION
 		assert (analysisResults->isRandom(pointerIdx));
 #endif
-		Instruction* dummy = createDummy(info.vectorTy_intSIMD, pointerIdx, insertBefore);
-		Value* firstIdx = ExtractElementInst::Create(dummy, Constant::getNullValue(Type::getInt32Ty(getGlobalContext())), "", insertBefore);
+		Instruction* dummy = createDummy(mInfo->mVectorTyIntSIMD, pointerIdx, insertBefore);
+		Value* firstIdx = ExtractElementInst::Create(dummy, Constant::getNullValue(Type::getInt32Ty(*mInfo->mContext)), "", insertBefore);
 		addFalseValueInfo(firstIdx); // TODO: really varying?
 
 		removeFromInstructionInfo(dummy);
@@ -6223,7 +6077,7 @@ private:
 			Instruction* newLoad = new LoadInst(pktPtrCast,
 												clonedLoad->getName(),
 												clonedLoad->isVolatile(),
-												info.alignmentSIMD,
+												mInfo->mAlignmentSIMD,
 												clonedLoad);
 			addValueInfo(newLoad, clonedLoad);
 
@@ -6265,12 +6119,12 @@ private:
 			// create vectorized dummy-value
 			Type* oldValueType = value->getType();
 			Instruction* dummy = isPacketizedType(oldValueType) ? NULL :
-				createDummy(packetizeSIMDType(oldValueType), value, clonedStore);
+				createDummy(Packetizer::packetizeSIMDType(oldValueType, *mInfo), value, clonedStore);
 
 			StoreInst* newStore = new StoreInst(dummy ? dummy : value,
 												newPointer,
 												clonedStore->isVolatile(),
-												info.alignmentSIMD,
+												mInfo->mAlignmentSIMD,
 												clonedStore);
 			addValueInfo(newStore, clonedStore);
 
@@ -6359,15 +6213,15 @@ private:
 	//       these cover both m256 and m256i.
 	Value* createDynamicConsecutivenessCheck(Value* value, Instruction* insertBefore) {
 		assert (value && insertBefore);
-		assert (info.use_sse41 || info.use_avx);
+		assert (mInfo->mUseSSE41 || mInfo->mUseAVX);
 		assert (!analysisResults->isUniform(value));
 
 		DEBUG_PKT( outs() << "    creating dynamic consecutiveness check "
 				<< "of value: " << *value << "\n"; );
 
-		assert (!info.use_avx && "NOT IMPLEMENTED ON AVX!");
+		assert (!mInfo->mUseAVX && "NOT IMPLEMENTED ON AVX!");
 
-		VectorType* vectorTy_longSIMD = VectorType::get(Type::getInt64Ty(getGlobalContext()), 2);
+		VectorType* vectorTy_longSIMD = VectorType::get(Type::getInt64Ty(*mInfo->mContext), 2);
 		Instruction* dummy = createDummy(vectorTy_longSIMD, value, insertBefore);
 
 		Value* bc = new BitCastInst(dummy, vectorTy_longSIMD, "", insertBefore); // PSLLDQ requires <2 x i64>
@@ -6377,12 +6231,12 @@ private:
 		Packetizer::uncheckedReplaceAllUsesWith(dummy, value);
 		dummy->eraseFromParent();
 
-		ConstantInt* int32Const32 = ConstantInt::get(getGlobalContext(), APInt(32, 32)); // PSLLDQ takes bytes, but LLVM intrinsic wants bits
+		ConstantInt* int32Const32 = ConstantInt::get(*mInfo->mContext, APInt(32, 32)); // PSLLDQ takes bytes, but LLVM intrinsic wants bits
 
 		// create shift
 		//Value* shift = BinaryOperator::Create(Instruction::Shl, bc, intConst32, "", insertBefore);
-		Function* shiftFn = info.use_avx ? NULL // there is no byte shift left on ymm-registers in AVX
-				: Intrinsic::getDeclaration(&info.module, Intrinsic::x86_sse2_psll_dq);
+		Function* shiftFn = mInfo->mUseAVX ? NULL // there is no byte shift left on ymm-registers in AVX
+				: Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_sse2_psll_dq);
 		std::vector<Value* > params;
 		params.push_back(bc);
 		params.push_back(int32Const32);
@@ -6395,9 +6249,9 @@ private:
 
 #if 1
 		// create sub -> also works, but no idea which version is faster
-		shift = new BitCastInst(shift, info.vectorTy_intSIMD, "", insertBefore);
+		shift = new BitCastInst(shift, mInfo->mVectorTyIntSIMD, "", insertBefore);
 		addFalseValueInfo(shift);
-		bc = new BitCastInst(bc, info.vectorTy_intSIMD, "", insertBefore);
+		bc = new BitCastInst(bc, mInfo->mVectorTyIntSIMD, "", insertBefore);
 		addFalseValueInfo(bc);
 		Value* sub = BinaryOperator::Create(Instruction::Sub, shift, bc, "", insertBefore);
 		addFalseValueInfo(sub);
@@ -6406,13 +6260,13 @@ private:
 		//Packetizer::insertPrintf("sub:", sub, true, insertBefore);
 #else
 		// This is slower (uses floating point subtraction)!
-		shift = new BitCastInst(shift, info.vectorTy_intSIMD, "", insertBefore);
+		shift = new BitCastInst(shift, mInfo->mVectorTyIntSIMD, "", insertBefore);
 		addFalseValueInfo(shift);
 		//Packetizer::insertPrintf("shiftbc:", shift, true, insertBefore);
-		bc = new BitCastInst(bc, info.vectorTy_intSIMD, "", insertBefore);
+		bc = new BitCastInst(bc, mInfo->mVectorTyIntSIMD, "", insertBefore);
 		addFalseValueInfo(bc);
-		Function* cvtdq2psFn = info.use_avx ? Intrinsic::getDeclaration(&info.module, Intrinsic::x86_avx_cvtdq2_ps_256)
-				: Intrinsic::getDeclaration(&info.module, Intrinsic::x86_sse2_cvtdq2ps);
+		Function* cvtdq2psFn = mInfo->mUseAVX ? Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_avx_cvtdq2_ps_256)
+				: Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_sse2_cvtdq2ps);
 		params.clear();
 		params.push_back(shift);
 		shift = createExternalIntrinsicCall(cvtdq2psFn, params, "", insertBefore);
@@ -6434,8 +6288,8 @@ private:
 		// create constant shift (first operand of ptest)
 		//Value* shift2 = BinaryOperator::Create(Instruction::Shl, info.const_vec_SIMD_int32_neg1, intConst32, "", insertBefore);
 		std::vector<Constant*> cVec;
-		ConstantInt* int64ConstNeg1 = ConstantInt::get(getGlobalContext(), APInt(64, -1));
-		for (unsigned i=0; i<info.simdWidth/2; ++i) {
+		ConstantInt* int64ConstNeg1 = ConstantInt::get(*mInfo->mContext, APInt(64, -1));
+		for (unsigned i=0; i<mInfo->mSimdWidth/2; ++i) {
 			cVec.push_back(int64ConstNeg1);
 		}
 		params.clear();
@@ -6445,10 +6299,10 @@ private:
 		addFalseValueInfo(shift2);
 
 		// create ptest
-		Function* ptestFn = info.use_avx ? Intrinsic::getDeclaration(&info.module, Intrinsic::x86_avx_ptestc_256)
-				: Intrinsic::getDeclaration(&info.module, Intrinsic::x86_sse41_ptestc);
-		BitCastInst* bcSub = new BitCastInst(sub, info.vectorTy_floatSIMD, "", insertBefore); // cast back to <W x float> ...
-		BitCastInst* bcShift2 = new BitCastInst(shift2, info.vectorTy_floatSIMD, "", insertBefore); // cast back to <W x float> ...
+		Function* ptestFn = mInfo->mUseAVX ? Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_avx_ptestc_256)
+				: Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_sse41_ptestc);
+		BitCastInst* bcSub = new BitCastInst(sub, mInfo->mVectorTyFloatSIMD, "", insertBefore); // cast back to <W x float> ...
+		BitCastInst* bcShift2 = new BitCastInst(shift2, mInfo->mVectorTyFloatSIMD, "", insertBefore); // cast back to <W x float> ...
 		params.clear();
 		params.push_back(bcSub);
 		params.push_back(bcShift2);
@@ -6458,7 +6312,7 @@ private:
 		addFalseValueInfo(ptest);
 
 		//insert 'allfalse'-comparison (jump to vector load/store if ptest is not 0)
-		Instruction* consecCmp = CmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_NE, ptest, info.const_int32_0, "", insertBefore);
+		Instruction* consecCmp = CmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_NE, ptest, mInfo->mConstInt32Zero, "", insertBefore);
 		addValueInfo(consecCmp, true, true, false, false, false, false, false, false); // UNIFORM required for generateIfThenElse()
 
 		//Packetizer::insertPrintf("subbc:", bcSub, true, insertBefore);
@@ -6490,15 +6344,13 @@ INITIALIZE_PASS_END(FunctionPacketizer, "function packetizer", "function packeti
 
 // Public interface to the FunctionPacketizer pass
 namespace llvm {
-	FunctionPass* createFunctionPacketizerPass(const Packetizer::PacketizerInfo& info,
+	FunctionPass* createFunctionPacketizerPass(const Packetizer::PacketizerInfo* info,
 											 Function* sourceFn,
 											 Function* targetFn,
-											 const WholeFunctionVectorizer::NativeFunctionMapType& varyingNativeFuns,
-											 const NativeMethods& nativeMethods,
 											 bool* failed,
 											 const bool verbose)
 	{
-		return new FunctionPacketizer(info, sourceFn, targetFn, varyingNativeFuns, nativeMethods, failed, verbose);
+		return new FunctionPacketizer(info, sourceFn, targetFn, failed, verbose);
 	}
 }
 

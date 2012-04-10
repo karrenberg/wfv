@@ -38,6 +38,7 @@
 #include "llvm/Target/TargetLibraryInfo.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/Timer.h"
+#include "packetizerInfo.hpp"
 
 using namespace llvm;
 
@@ -57,31 +58,103 @@ uncheckedReplaceAllUsesWith(Value* value, Value* with)
 	assert (value->use_empty());
 }
 
+
+// This function defines what we consider matching types
+// in terms of uniform/varying.
+// TODO: add special cases
+// e.g. <2 x i64> matches <4 x i32>
+inline static bool
+typesMatch(Type* t1, Type* t2, const PacketizerInfo& info)
+{
+    assert (t1 && t2);
+    if (t1 == t2) return true;
+
+    if (t1->getTypeID() != t2->getTypeID()) return false;
+
+    // check additional possibilities:
+    // - structurally equivalent struct types
+    // - i8* -> arbitrary pointer
+    // - vector types of same element type and same bit size, e.g.:
+	// - <16 x i8> == <2 x i64>
+	// - <4 x float> == <2 x double>
+	// - structs with mixed uniform/varying elements (TODO: should we disallow these?)
+	switch (t1->getTypeID()) {
+		case Type::VectorTyID:
+        {
+            VectorType* vType1 = cast<VectorType>(t1);
+            VectorType* vType2 = cast<VectorType>(t2);
+            const unsigned elems1 = vType1->getNumElements();
+            const unsigned elems2 = vType2->getNumElements();
+            const unsigned bitSize1 = vType1->getElementType()->getScalarSizeInBits() * elems1;
+            const unsigned bitSize2 = vType2->getElementType()->getScalarSizeInBits() * elems2;
+            if (t1->getScalarType()->isFloatingPointTy()) {
+                return t2->getScalarType()->isFloatingPointTy() && bitSize1 == bitSize2;
+            } else {
+                assert (t1->getScalarType()->isIntegerTy());
+                return t2->getScalarType()->isIntegerTy() && bitSize1 == bitSize2;
+            }
+            return false;
+        }
+		case Type::PointerTyID:
+        {
+            // if one of the types is a void pointer, any pointer is allowed to match.
+            if (t1->getContainedType(0)->isIntegerTy(8)) return true;
+            if (t2->getContainedType(0)->isIntegerTy(8)) return true;
+            return typesMatch(t1->getContainedType(0), t2->getContainedType(0), info);
+        }
+		case Type::StructTyID:
+        {
+            StructType* sType1 = cast<StructType>(t1);
+            StructType* sType2 = cast<StructType>(t2);
+            if (sType1->isLayoutIdentical(sType2)) return true;
+            if (sType1->getNumContainedTypes() != sType2->getNumContainedTypes()) return false;
+            for (unsigned i=0; i<sType1->getNumContainedTypes(); ++i) {
+                const bool elemVerified =
+                    typesMatch(sType1->getElementType(i), sType2->getElementType(i), info);
+                if (!elemVerified) return false;
+            }
+            return true;
+        }
+        case Type::ArrayTyID:
+        {
+            ArrayType* aType1 = cast<ArrayType>(t1);
+            ArrayType* aType2 = cast<ArrayType>(t2);
+            if (aType1->getNumElements() != aType2->getNumElements()) return false;
+            return typesMatch(aType1->getElementType(), aType2->getElementType(), info);
+        }
+		default: return false;
+	}
+
+    return false;
+}
+
+
 /**
  * method for SIMD width packetization
  * -> only 32bit-float, integers <= 32bit, pointers, arrays and structs allowed
  * -> no scalar datatypes allowed
  * -> no pointers to pointers allowed
+ * TODO: i8* should not be transformed to <4 x i32>* !
  **/
 Type* packetizeSIMDType(Type* oldType, const PacketizerInfo& info) {
 	Type::TypeID oldTypeID = oldType->getTypeID();
 	switch (oldTypeID) {
-		//case Type::getVoidTy(getGlobalContext())ID : return Type::getVoidTy(getGlobalContext()); //not allowed
+		//case Type::VoidTyID : return Type::getVoidTy(info.context); //not allowed
 		case Type::FloatTyID:
 		case Type::DoubleTyID:
 		{
-			return info.vectorTy_floatSIMD;
+			return info.mVectorTyFloatSIMD;
 		}
 		case Type::IntegerTyID:
 		{
 			// TODO: Support arbitrary types < 32bit. #11
 #if 1
-			return info.vectorTy_intSIMD;
+			return info.mVectorTyIntSIMD;
 #else
 			if (oldType->getPrimitiveSizeInBits() >= 32U) {
-				return info.vectorTy_intSIMD;
+				return info.mVectorTyIntSIMD;
 			}
-			return VectorType::get(oldType, info.simdWidth);
+			return VectorType::get(oldType, info.mSimdWidth);
 #endif
 		}
 		//case Type::VectorTyID: return NULL;  //not allowed!
@@ -106,7 +179,7 @@ Type* packetizeSIMDType(Type* oldType, const PacketizerInfo& info) {
 			for (unsigned i=0; i<sType->getNumContainedTypes(); ++i) {
 				newParams.push_back(packetizeSIMDType(sType->getElementType(i), info));
 			}
-			return StructType::get(getGlobalContext(), newParams, sType->isPacked());
+			return StructType::get(*info.mContext, newParams, sType->isPacked());
 		}
 
 		default:
@@ -125,10 +198,10 @@ Type* packetizeSIMDType(Type* oldType, const PacketizerInfo& info) {
  * -> no pointers to pointers allowed
  **/
 Type* packetizeSIMDWrapperType(Type* oldType, const PacketizerInfo& info) {
-	if (info.totalSIMDIterations == 1) return oldType;
+	if (info.mTotalSIMDIterations == 1) return oldType;
 	Type::TypeID oldTypeID = oldType->getTypeID();
 	switch (oldTypeID) {
-		//case Type::VoidTyID: return Type::getVoidTy(getGlobalContext());     //not allowed
+		//case Type::VoidTyID: return Type::getVoidTy(info.context);     //not allowed
 		//case Type::FloatTyID: return info.vectorTy_float4; //not allowed
 		//case Type::IntegerTyID: return info.vectorTy_int4; //not allowed
 		case Type::VectorTyID:
@@ -141,20 +214,26 @@ Type* packetizeSIMDWrapperType(Type* oldType, const PacketizerInfo& info) {
 			PointerType* pType = cast<PointerType>(oldType);
 			Type* elType = pType->getElementType();
 			//if (elType->isPointerTy()) {
-				//throw std::logic_error("INTERNAL ERROR: packetization can not handle multiple indirection!");
+				//throw std::logic_error(
+                        //"INTERNAL ERROR: packetization can not handle multiple indirection!");
 			//}
 			if (elType->isVectorTy()) {
-				Type* newElType = elType == info.vectorTy_floatSIMD ? ArrayType::get(info.vectorTy_floatSIMD, info.totalSIMDIterations)
-					: elType == info.vectorTy_intSIMD ? ArrayType::get(info.vectorTy_intSIMD, info.totalSIMDIterations) : NULL;
+				Type* newElType = elType == info.mVectorTyFloatSIMD ?
+                    ArrayType::get(info.mVectorTyFloatSIMD, info.mTotalSIMDIterations) :
+                        elType == info.mVectorTyIntSIMD ?
+                            ArrayType::get(info.mVectorTyIntSIMD, info.mTotalSIMDIterations) :
+                            NULL;
 				assert (newElType && "bad vector type found (should never fire)!");
-				return PointerType::get(packetizeSIMDWrapperType(newElType, info), pType->getAddressSpace());
+				return PointerType::get(packetizeSIMDWrapperType(newElType, info),
+                                        pType->getAddressSpace());
 			} else {
-				return PointerType::get(packetizeSIMDWrapperType(pType->getElementType(), info), pType->getAddressSpace());
+				return PointerType::get(packetizeSIMDWrapperType(pType->getElementType(), info),
+                                        pType->getAddressSpace());
 			}
 		}
 		case Type::ArrayTyID:
 		{
-			return ArrayType::get(oldType, info.totalSIMDIterations);
+			return ArrayType::get(oldType, info.mTotalSIMDIterations);
 		}
 		case Type::StructTyID:
 		{
@@ -163,7 +242,7 @@ Type* packetizeSIMDWrapperType(Type* oldType, const PacketizerInfo& info) {
 			for (unsigned i=0; i<sType->getNumContainedTypes(); ++i) {
 				newParams.push_back(packetizeSIMDWrapperType(sType->getElementType(i), info));
 			}
-			return StructType::get(getGlobalContext(), newParams, sType->isPacked());
+			return StructType::get(*info.mContext, newParams, sType->isPacked());
 		}
 
 		default :
@@ -174,7 +253,7 @@ Type* packetizeSIMDWrapperType(Type* oldType, const PacketizerInfo& info) {
 	}
 }
 
-Constant* getMax32BitConstant(Constant* c) {
+Constant* getMax32BitConstant(Constant* c, LLVMContext& context) {
 	assert (c);
 	Type* type = c->getType();
 
@@ -185,8 +264,8 @@ Constant* getMax32BitConstant(Constant* c) {
 		if (type->isIntegerTy()) {
 			ConstantInt* opC = cast<ConstantInt>(c);
 			const uint64_t intValue = *opC->getValue().getRawData();
-			assert (ConstantInt::isValueValidForType(Type::getInt32Ty(getGlobalContext()), intValue));
-			return ConstantInt::get(getGlobalContext(), APInt(32, intValue));
+			assert (ConstantInt::isValueValidForType(Type::getInt32Ty(context), intValue));
+			return ConstantInt::get(context, APInt(32, intValue));
 		}
 		assert (false && "NOT IMPLEMENTED");
 #else
@@ -196,30 +275,30 @@ Constant* getMax32BitConstant(Constant* c) {
 
 	Constant* newC = NULL;
 
-	if (type == Type::getInt64Ty(getGlobalContext())) {
+	if (type == Type::getInt64Ty(context)) {
 		if (isa<UndefValue>(c)) {
-			newC = UndefValue::get(Type::getInt32Ty(getGlobalContext()));
+			newC = UndefValue::get(Type::getInt32Ty(context));
 		} else {
 			ConstantInt* opC = cast<ConstantInt>(c);
 			const uint64_t intValue = *opC->getValue().getRawData();
-			if (!ConstantInt::isValueValidForType(Type::getInt32Ty(getGlobalContext()), intValue)) {
+			if (!ConstantInt::isValueValidForType(Type::getInt32Ty(context), intValue)) {
 				errs() << "WARNING: Integer constant is too large to fit into 32bit "
 					<< "- cannot vectorize: " << intValue << "\n";
 				throw new std::logic_error("ERROR: Integer constant is too large to fit into 32bit!");
 			}
-			newC = ConstantInt::get(getGlobalContext(), APInt(32, intValue));
+			newC = ConstantInt::get(context, APInt(32, intValue));
 		}
-	} else if (type == Type::getDoubleTy(getGlobalContext())) {
+	} else if (type == Type::getDoubleTy(context)) {
 		if (isa<UndefValue>(c)) {
-			newC = UndefValue::get(Type::getFloatTy(getGlobalContext()));
+			newC = UndefValue::get(Type::getFloatTy(context));
 		} else {
 			ConstantFP* opC = cast<ConstantFP>(c);
-			if (!ConstantFP::isValueValidForType(Type::getFloatTy(getGlobalContext()), opC->getValueAPF())) {
+			if (!ConstantFP::isValueValidForType(Type::getFloatTy(context), opC->getValueAPF())) {
 				errs() << "WARNING: Floating point constant is too large to fit into 32bit "
 					<< "- cannot vectorize: " << opC->getValueAPF().convertToDouble() << "\n";
 				throw new std::logic_error("ERROR: Floating point constant is too large to fit into 32bit!");
 			}
-			newC = ConstantFP::get(Type::getFloatTy(getGlobalContext()), opC->getValueAPF().convertToDouble());
+			newC = ConstantFP::get(Type::getFloatTy(context), opC->getValueAPF().convertToDouble());
 		}
 	} else {
 		errs() << "ERROR: bad type found for constant creation: " << *type << "\n";

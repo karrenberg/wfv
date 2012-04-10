@@ -292,41 +292,41 @@ public:
 
 class MaskGraphNode {
 private:
-	bool verbose;
-	BasicBlock* block;
-	MaskOperation* entryMask;
-	MaskOperation* exitMaskTrue;
-	MaskOperation* exitMaskFalse;
+	bool mVerbose;
+	BasicBlock* mBlock;
+	MaskOperation* mEntryMask;
+	MaskOperation* mExitMaskTrue;
+	MaskOperation* mExitMaskFalse;
 
 	typedef SmallVector<MaskGraphNode*, 2> PredVectorType;
-	PredVectorType preds;
+	PredVectorType mPreds;
 
-	MaskGraphNode* succTrue;
-	MaskGraphNode* succFalse;
+	MaskGraphNode* mSuccTrue;
+	MaskGraphNode* mSuccFalse;
 
-	Constant* boolOneConst;
-	Constant* boolZeroConst;
-	unsigned MaskOperationCounter; //TODO: use!
+	Constant* mConstBoolTrue;
+	Constant* mConstBoolFalse;
+	unsigned mMaskOperationCounter; //TODO: use!
 
-	inline void init() {
-		MaskOperationCounter = 0;
-		boolOneConst = Constant::getAllOnesValue(Type::getInt1Ty(getGlobalContext()));
-		boolZeroConst = Constant::getNullValue(Type::getInt1Ty(getGlobalContext()));
+	inline void init(LLVMContext& context) {
+		mMaskOperationCounter = 0;
+		mConstBoolTrue = Constant::getAllOnesValue(Type::getInt1Ty(context));
+		mConstBoolFalse = Constant::getNullValue(Type::getInt1Ty(context));
 	}
 
 	Value* createMaskAnd(Value* mask1, Value* mask2, const std::string& name,
 			Instruction* insertBefore, AnalysisResults& analysisResults)
 	{
-		assert (mask1->getType() == Type::getInt1Ty(getGlobalContext()) && "trying to create bit-operation on non-boolean type!");
-		assert (mask2->getType() == Type::getInt1Ty(getGlobalContext()) && "trying to create bit-operation on non-boolean type!");
-		if (mask1 == boolZeroConst) return boolZeroConst;
-		if (mask2 == boolZeroConst) return boolZeroConst;
-		if (mask1 == boolOneConst && mask2 == boolOneConst) return boolOneConst;
-		if (mask1 == boolOneConst) return mask2;
-		if (mask2 == boolOneConst) return mask1;
+		assert (mask1->getType() == Type::getInt1Ty(mask1->getContext()) && "trying to create bit-operation on non-boolean type!");
+		assert (mask2->getType() == Type::getInt1Ty(mask1->getContext()) && "trying to create bit-operation on non-boolean type!");
+		if (mask1 == mConstBoolFalse) return mConstBoolFalse;
+		if (mask2 == mConstBoolFalse) return mConstBoolFalse;
+		if (mask1 == mConstBoolTrue && mask2 == mConstBoolTrue) return mConstBoolTrue;
+		if (mask1 == mConstBoolTrue) return mask2;
+		if (mask2 == mConstBoolTrue) return mask1;
 		if (mask1 == mask2) return mask1;
 
-		++MaskOperationCounter;
+		++mMaskOperationCounter;
 		Value* mask = BinaryOperator::Create(Instruction::And, mask1, mask2, name, insertBefore);
 
 		std::set<Value*> tmp;
@@ -352,16 +352,16 @@ private:
 	Value* createMaskOr(Value* mask1, Value* mask2, const std::string& name,
 			Instruction* insertBefore, AnalysisResults& analysisResults)
 	{
-		assert (mask1->getType() == Type::getInt1Ty(getGlobalContext()) && "trying to create bit-operation on non-boolean type!");
-		assert (mask2->getType() == Type::getInt1Ty(getGlobalContext()) && "trying to create bit-operation on non-boolean type!");
-		if (mask1 == boolOneConst) return boolOneConst;
-		if (mask2 == boolOneConst) return boolOneConst;
-		if (mask1 == boolZeroConst && mask2 == boolZeroConst) return boolZeroConst;
-		if (mask1 == boolZeroConst) return mask1;
-		if (mask2 == boolZeroConst) return mask2;
+		assert (mask1->getType() == Type::getInt1Ty(mask1->getContext()) && "trying to create bit-operation on non-boolean type!");
+		assert (mask2->getType() == Type::getInt1Ty(mask1->getContext()) && "trying to create bit-operation on non-boolean type!");
+		if (mask1 == mConstBoolTrue) return mConstBoolTrue;
+		if (mask2 == mConstBoolTrue) return mConstBoolTrue;
+		if (mask1 == mConstBoolFalse && mask2 == mConstBoolFalse) return mConstBoolFalse;
+		if (mask1 == mConstBoolFalse) return mask1;
+		if (mask2 == mConstBoolFalse) return mask2;
 		if (mask1 == mask2) return mask1;
 
-		++MaskOperationCounter;
+		++mMaskOperationCounter;
 		Value* mask = BinaryOperator::Create(Instruction::Or, mask1, mask2, name, insertBefore);
 
 		std::set<Value*> tmp;
@@ -387,26 +387,26 @@ private:
 	Value* createMaskNot(Value* mask, const std::string& name,
 			Instruction* insertBefore, AnalysisResults& analysisResults)
 	{
-		assert (mask->getType() == Type::getInt1Ty(getGlobalContext()) && "trying to create bit-operation on non-boolean type!");
-		if (mask == boolOneConst) return boolZeroConst;
-		if (mask == boolZeroConst) return boolOneConst;
+		assert (mask->getType() == Type::getInt1Ty(mask->getContext()) && "trying to create bit-operation on non-boolean type!");
+		if (mask == mConstBoolTrue) return mConstBoolFalse;
+		if (mask == mConstBoolFalse) return mConstBoolTrue;
 		if (Instruction* maskInstr = dyn_cast<Instruction>(mask)) {
 			if (maskInstr->isBinaryOp(Instruction::Xor)) {
 				Value* op0 = maskInstr->getOperand(0);
 				Value* op1 = maskInstr->getOperand(1);
-				if (op0 == boolOneConst) {
+				if (op0 == mConstBoolTrue) {
 					return op1; //found not, return op
 				}
-				if (op1 == boolOneConst) {
+				if (op1 == mConstBoolTrue) {
 					return op0; //found not, return op
 				}
 				if (op0 == op1) {
-					return boolOneConst; //found 'zero', return 'one'
+					return mConstBoolTrue; //found 'zero', return 'one'
 				}
 			}
 		}
 
-		++MaskOperationCounter;
+		++mMaskOperationCounter;
 		Value* notInst = BinaryOperator::CreateNot(mask, name, insertBefore);
 
 		// Storing the uniform info is a little more complicated here,
@@ -433,26 +433,26 @@ private:
 	}
 
 public:
-	MaskGraphNode(BasicBlock* b, bool verbose_flag=false)
-		: verbose(verbose_flag), block(b), entryMask(NULL), exitMaskTrue(NULL), exitMaskFalse(NULL),
-		succTrue(NULL), succFalse(NULL)
-	{ assert(b); init(); }
-	MaskGraphNode(BasicBlock* b, MaskOperation* em, MaskOperation* exm, bool verbose_flag=false)
-		: verbose(verbose_flag), block(b), entryMask(em), exitMaskTrue(exm), exitMaskFalse(NULL),
-		succTrue(NULL), succFalse(NULL)
-	{ assert(b && em && exm); init(); }
-	MaskGraphNode(BasicBlock* b, MaskOperation* em, MaskOperation* exmT, MaskOperation* exmF, bool verbose_flag=false)
-		: verbose(verbose_flag), block(b), entryMask(em), exitMaskTrue(exmT), exitMaskFalse(exmF),
-		succTrue(NULL), succFalse(NULL)
-	{ assert(b && em && exmT && exmF); init(); }
-	MaskGraphNode(BasicBlock* b, Value* em, Value* exm, bool verbose_flag=false)
-		: verbose(verbose_flag), block(b), entryMask(new MaskValue(em)), exitMaskTrue(new MaskValue(exm)),
-		exitMaskFalse(NULL), succTrue(NULL), succFalse(NULL)
-	{ assert(b && em && exm); init(); }
-	MaskGraphNode(BasicBlock* b, Value* em, Value* exmT, Value* exmF, bool verbose_flag=false)
-		: verbose(verbose_flag), block(b), entryMask(new MaskValue(em)), exitMaskTrue(new MaskValue(exmT)),
-		exitMaskFalse(new MaskValue(exmF)), succTrue(NULL), succFalse(NULL)
-	{ assert(b && em && exmT && exmF); init(); }
+	MaskGraphNode(BasicBlock* b, LLVMContext& context, bool verbose_flag=false)
+		: mVerbose(verbose_flag), mBlock(b), mEntryMask(NULL), mExitMaskTrue(NULL), mExitMaskFalse(NULL),
+		mSuccTrue(NULL), mSuccFalse(NULL)
+	{ assert(b); init(context); }
+	MaskGraphNode(BasicBlock* b, MaskOperation* em, MaskOperation* exm, LLVMContext& context, bool verbose_flag=false)
+		: mVerbose(verbose_flag), mBlock(b), mEntryMask(em), mExitMaskTrue(exm), mExitMaskFalse(NULL),
+		mSuccTrue(NULL), mSuccFalse(NULL)
+	{ assert(b && em && exm); init(context); }
+	MaskGraphNode(BasicBlock* b, MaskOperation* em, MaskOperation* exmT, MaskOperation* exmF, LLVMContext& context, bool verbose_flag=false)
+		: mVerbose(verbose_flag), mBlock(b), mEntryMask(em), mExitMaskTrue(exmT), mExitMaskFalse(exmF),
+		mSuccTrue(NULL), mSuccFalse(NULL)
+	{ assert(b && em && exmT && exmF); init(context); }
+	MaskGraphNode(BasicBlock* b, Value* em, Value* exm, LLVMContext& context, bool verbose_flag=false)
+		: mVerbose(verbose_flag), mBlock(b), mEntryMask(new MaskValue(em)), mExitMaskTrue(new MaskValue(exm)),
+		mExitMaskFalse(NULL), mSuccTrue(NULL), mSuccFalse(NULL)
+	{ assert(b && em && exm); init(context); }
+	MaskGraphNode(BasicBlock* b, Value* em, Value* exmT, Value* exmF, LLVMContext& context, bool verbose_flag=false)
+		: mVerbose(verbose_flag), mBlock(b), mEntryMask(new MaskValue(em)), mExitMaskTrue(new MaskValue(exmT)),
+		mExitMaskFalse(new MaskValue(exmF)), mSuccTrue(NULL), mSuccFalse(NULL)
+	{ assert(b && em && exmT && exmF); init(context); }
 
 	Value* createMask(MaskOperation* mask, Instruction* pos, AnalysisResults& ar) {
 		assert (!mask->isMaskPhi() && "phis not allowed in nested mask operation");
@@ -490,7 +490,7 @@ public:
 			if (mnr->referencesEntryMask()) {
 				//found reference to entry mask
 				assert (mnr->getNode() == this);
-				assert (mnr->getNode()->getEntryMask() == entryMask);
+				assert (mnr->getNode()->getEntryMask() == mEntryMask);
 				return createEntryMask(ar);
 			} else if (mnr->referencesExitMaskTrue()) {
 				return mnr->getNode()->createExitMaskTrue(ar);
@@ -505,21 +505,21 @@ public:
 	}
 
 	inline Value* createEntryMask(AnalysisResults& ar) {
-		assert (entryMask);
-		assert (typeid(*entryMask) == typeid(MaskValue) ||
-				typeid(*entryMask) == typeid(MaskDisjunction) ||
-				typeid(*entryMask) == typeid(MaskPhiOperation) ||
-				typeid(*entryMask) == typeid(MaskNodeReference));
+		assert (mEntryMask);
+		assert (typeid(*mEntryMask) == typeid(MaskValue) ||
+				typeid(*mEntryMask) == typeid(MaskDisjunction) ||
+				typeid(*mEntryMask) == typeid(MaskPhiOperation) ||
+				typeid(*mEntryMask) == typeid(MaskNodeReference));
 
 		DEBUG_PKT ( outs() << "createEntryMask() for node: "; print(outs()); );
 
-		Instruction* pos = block->getFirstNonPHI();
+		Instruction* pos = mBlock->getFirstNonPHI();
 		Value* mask = NULL;
 
-		if (entryMask->isMaskValue()) {
-			assert (typeid(*entryMask) == typeid(MaskValue));
+		if (mEntryMask->isMaskValue()) {
+			assert (typeid(*mEntryMask) == typeid(MaskValue));
 
-			mask = static_cast<MaskValue*>(entryMask)->getMask();
+			mask = static_cast<MaskValue*>(mEntryMask)->getMask();
 
 //			//make sure we don't miss any blocks if mask is 'true'
 //			//if we encounter a phi instruction, this means we followed a backedge
@@ -530,22 +530,22 @@ public:
 //				}
 //			}
 		}
-		else if (entryMask->isMaskDisjunction()) {
-			assert (preds[0] && preds[1]);
-			assert (typeid(*entryMask) == typeid(MaskDisjunction));
-			MaskDisjunction* md = static_cast<MaskDisjunction*>(entryMask);
+		else if (mEntryMask->isMaskDisjunction()) {
+			assert (mPreds[0] && mPreds[1]);
+			assert (typeid(*mEntryMask) == typeid(MaskDisjunction));
+			MaskDisjunction* md = static_cast<MaskDisjunction*>(mEntryMask);
 			Value* maskLeft = createMask(md->getMaskLeft(), pos, ar);
 			Value* maskRight = createMask(md->getMaskRight(), pos, ar);
 			mask = createMaskOr(maskLeft, maskRight, "", pos, ar);
 		}
-		else if (entryMask->isMaskPhi()) {
-			assert (preds[0] && preds[1]);
-			assert (typeid(*entryMask) == typeid(MaskPhiOperation));
-			MaskPhiOperation* mpo = static_cast<MaskPhiOperation*>(entryMask);
+		else if (mEntryMask->isMaskPhi()) {
+			assert (mPreds[0] && mPreds[1]);
+			assert (typeid(*mEntryMask) == typeid(MaskPhiOperation));
+			MaskPhiOperation* mpo = static_cast<MaskPhiOperation*>(mEntryMask);
 			assert (mpo->getNumIncomingMasks() == 2);
 
 			PHINode* phi = PHINode::Create(
-					Type::getInt1Ty(getGlobalContext()),
+					Type::getInt1Ty(pos->getContext()),
 					2U,
 					"loop.mask.phi", pos);
 
@@ -571,10 +571,10 @@ public:
 			//       in all cases: operations using the phi were not updated.
 			// If the loop is VARYING, the loop mask phi also has to be VARYING.
 			ar.addValueInfo(phi,
-				ar.isUniformLoopBlock(block) ?
+				ar.isUniformLoopBlock(mBlock) ?
 					AnalysisResults::UNIFORM :
 					AnalysisResults::VARYING,
-				ar.isUniformLoopBlock(block) ?
+				ar.isUniformLoopBlock(mBlock) ?
 					AnalysisResults::INDEX_SAME :
 					AnalysisResults::INDEX_RANDOM,
 				AnalysisResults::ALIGN_FALSE,
@@ -590,7 +590,7 @@ public:
 
 			//update graph to break loops (replace mask by phi)
 			//if (entryMask) delete entryMask;
-			entryMask = new MaskValue(phi);
+			mEntryMask = new MaskValue(phi);
 
 			Value* maskLeft = createMask(mpo->getIncomingMask(0), pos, ar);
 			Value* maskRight = createMask(mpo->getIncomingMask(1), pos, ar);
@@ -603,13 +603,13 @@ public:
 					//<< AnalysisResults::getUniformInfoString(ar.getValueInfo(phi)->uniformInfo)
 					//<< ": " << *phi << " (createEntryMask)\n"; );
 
-			++MaskOperationCounter;
+			++mMaskOperationCounter;
 			mask = phi;
 		}
-		else if (entryMask->isMaskNodeRef()) {
-			assert (preds[0]);
-			assert (typeid(*entryMask) == typeid(MaskNodeReference));
-			MaskNodeReference* mnr = static_cast<MaskNodeReference*>(entryMask);
+		else if (mEntryMask->isMaskNodeRef()) {
+			assert (mPreds[0]);
+			assert (typeid(*mEntryMask) == typeid(MaskNodeReference));
+			MaskNodeReference* mnr = static_cast<MaskNodeReference*>(mEntryMask);
 			assert (mnr->getNode());
 			assert (mnr->hasReference());
 			// This assertion is not true anymore since masks can refer e.g. to entry masks
@@ -636,49 +636,49 @@ public:
 
 		//store generated value in map
 		//if (entryMask) delete entryMask;
-		entryMask = new MaskValue(mask);
+		mEntryMask = new MaskValue(mask);
 
 		return mask;
 	}
 
 	inline Value* createExitMaskTrue(AnalysisResults& ar) {
-		assert (exitMaskTrue);
-		assert (typeid(*exitMaskTrue) != typeid(MaskPhiOperation));
+		assert (mExitMaskTrue);
+		assert (typeid(*mExitMaskTrue) != typeid(MaskPhiOperation));
 		
 		DEBUG_PKT ( outs() << "createExitMaskTrue() for node: "; print(outs()); );
 
-		Instruction* pos = block->getTerminator();
+		Instruction* pos = mBlock->getTerminator();
 		Value* mask = NULL;
 
-		if (exitMaskTrue->isMaskValue()) {
-			assert (typeid(*exitMaskTrue) == typeid(MaskValue));
-			mask = static_cast<MaskValue*>(exitMaskTrue)->getMask();
+		if (mExitMaskTrue->isMaskValue()) {
+			assert (typeid(*mExitMaskTrue) == typeid(MaskValue));
+			mask = static_cast<MaskValue*>(mExitMaskTrue)->getMask();
 		}
-		else if (exitMaskTrue->isMaskNegation()) {
-			assert (typeid(*exitMaskTrue) == typeid(MaskNegation));
-			MaskNegation* mn = static_cast<MaskNegation*>(exitMaskTrue);
+		else if (mExitMaskTrue->isMaskNegation()) {
+			assert (typeid(*mExitMaskTrue) == typeid(MaskNegation));
+			MaskNegation* mn = static_cast<MaskNegation*>(mExitMaskTrue);
 			mask = createMaskNot(createMask(mn->getMask(), pos, ar), "", pos, ar);
 		}
-		else if (exitMaskTrue->isMaskConjunction()) {
-			assert (typeid(*exitMaskTrue) == typeid(MaskConjunction));
-			MaskConjunction* mc = static_cast<MaskConjunction*>(exitMaskTrue);
+		else if (mExitMaskTrue->isMaskConjunction()) {
+			assert (typeid(*mExitMaskTrue) == typeid(MaskConjunction));
+			MaskConjunction* mc = static_cast<MaskConjunction*>(mExitMaskTrue);
 			Value* maskLeft = createMask(mc->getMaskLeft(), pos, ar);
 			Value* maskRight = createMask(mc->getMaskRight(), pos, ar);
 			mask = createMaskAnd(maskLeft, maskRight, "", pos, ar);
 		}
-		else if (exitMaskTrue->isMaskDisjunction()) {
-			assert (typeid(*exitMaskTrue) == typeid(MaskDisjunction));
-			MaskDisjunction* md = static_cast<MaskDisjunction*>(exitMaskTrue);
+		else if (mExitMaskTrue->isMaskDisjunction()) {
+			assert (typeid(*mExitMaskTrue) == typeid(MaskDisjunction));
+			MaskDisjunction* md = static_cast<MaskDisjunction*>(mExitMaskTrue);
 			Value* maskLeft = createMask(md->getMaskLeft(), pos, ar);
 			Value* maskRight = createMask(md->getMaskRight(), pos, ar);
 			mask = createMaskOr(maskLeft, maskRight, "", pos, ar);
 		}
-		else if (exitMaskTrue->isMaskNodeRef()) {
-			assert (typeid(*exitMaskTrue) == typeid(MaskNodeReference));
-			assert (static_cast<MaskNodeReference*>(exitMaskTrue)->getNode());
-			assert (static_cast<MaskNodeReference*>(exitMaskTrue)->referencesEntryMask() && "exit mask can only reference to entry mask of same block!");
-			assert (static_cast<MaskNodeReference*>(exitMaskTrue)->getNode() == this); //exit mask can only reference to entry mask of same block
-			assert (static_cast<MaskNodeReference*>(exitMaskTrue)->getNode()->getEntryMask() == entryMask);
+		else if (mExitMaskTrue->isMaskNodeRef()) {
+			assert (typeid(*mExitMaskTrue) == typeid(MaskNodeReference));
+			assert (static_cast<MaskNodeReference*>(mExitMaskTrue)->getNode());
+			assert (static_cast<MaskNodeReference*>(mExitMaskTrue)->referencesEntryMask() && "exit mask can only reference to entry mask of same block!");
+			assert (static_cast<MaskNodeReference*>(mExitMaskTrue)->getNode() == this); //exit mask can only reference to entry mask of same block
+			assert (static_cast<MaskNodeReference*>(mExitMaskTrue)->getNode()->getEntryMask() == mEntryMask);
 			mask = createEntryMask(ar);
 		}
 		else assert (!"bad mask operation found!");
@@ -687,49 +687,49 @@ public:
 
 		//store generated value in map
 		//if (exitMaskTrue) delete exitMaskTrue;
-		exitMaskTrue = new MaskValue(mask);
+		mExitMaskTrue = new MaskValue(mask);
 
 		return mask;
 	}
 
 	inline Value* createExitMaskFalse(AnalysisResults& ar) {
-		assert (exitMaskFalse);
-		assert (typeid(*exitMaskFalse) != typeid(MaskPhiOperation));
+		assert (mExitMaskFalse);
+		assert (typeid(*mExitMaskFalse) != typeid(MaskPhiOperation));
 
 		DEBUG_PKT ( outs() << "createExitMaskFalse() for node: "; print(outs()); );
 
-		Instruction* pos = block->getTerminator();
+		Instruction* pos = mBlock->getTerminator();
 		Value* mask = NULL;
 
-		if (exitMaskFalse->isMaskValue()) {
-			assert (typeid(*exitMaskFalse) == typeid(MaskValue));
-			mask = static_cast<MaskValue*>(exitMaskFalse)->getMask();
+		if (mExitMaskFalse->isMaskValue()) {
+			assert (typeid(*mExitMaskFalse) == typeid(MaskValue));
+			mask = static_cast<MaskValue*>(mExitMaskFalse)->getMask();
 		}
-		else if (exitMaskFalse->isMaskNegation()) {
-			assert (typeid(*exitMaskFalse) == typeid(MaskNegation));
-			MaskNegation* mn = static_cast<MaskNegation*>(exitMaskFalse);
+		else if (mExitMaskFalse->isMaskNegation()) {
+			assert (typeid(*mExitMaskFalse) == typeid(MaskNegation));
+			MaskNegation* mn = static_cast<MaskNegation*>(mExitMaskFalse);
 			mask = createMaskNot(createMask(mn->getMask(), pos, ar), "", pos, ar);
 		}
-		else if (exitMaskFalse->isMaskConjunction()) {
-			assert (typeid(*exitMaskFalse) == typeid(MaskConjunction));
-			MaskConjunction* mc = static_cast<MaskConjunction*>(exitMaskFalse);
+		else if (mExitMaskFalse->isMaskConjunction()) {
+			assert (typeid(*mExitMaskFalse) == typeid(MaskConjunction));
+			MaskConjunction* mc = static_cast<MaskConjunction*>(mExitMaskFalse);
 			Value* maskLeft = createMask(mc->getMaskLeft(), pos, ar);
 			Value* maskRight = createMask(mc->getMaskRight(), pos, ar);
 			mask = createMaskAnd(maskLeft, maskRight, "", pos, ar);
 		}
-		else if (exitMaskFalse->isMaskDisjunction()) {
-			assert (typeid(*exitMaskFalse) == typeid(MaskDisjunction));
-			MaskDisjunction* md = static_cast<MaskDisjunction*>(exitMaskFalse);
+		else if (mExitMaskFalse->isMaskDisjunction()) {
+			assert (typeid(*mExitMaskFalse) == typeid(MaskDisjunction));
+			MaskDisjunction* md = static_cast<MaskDisjunction*>(mExitMaskFalse);
 			Value* maskLeft = createMask(md->getMaskLeft(), pos, ar);
 			Value* maskRight = createMask(md->getMaskRight(), pos, ar);
 			mask = createMaskOr(maskLeft, maskRight, "", pos, ar);
 		}
-		else if (exitMaskFalse->isMaskNodeRef()) {
-			assert (typeid(*exitMaskFalse) == typeid(MaskNodeReference));
-			assert (static_cast<MaskNodeReference*>(exitMaskFalse)->getNode());
-			assert (static_cast<MaskNodeReference*>(exitMaskFalse)->referencesEntryMask() && "exit mask can only reference to entry mask of same block!");
-			assert (static_cast<MaskNodeReference*>(exitMaskFalse)->getNode() == this); //exit mask can only reference to entry mask of same block
-			assert (static_cast<MaskNodeReference*>(exitMaskFalse)->getNode()->getEntryMask() == entryMask);
+		else if (mExitMaskFalse->isMaskNodeRef()) {
+			assert (typeid(*mExitMaskFalse) == typeid(MaskNodeReference));
+			assert (static_cast<MaskNodeReference*>(mExitMaskFalse)->getNode());
+			assert (static_cast<MaskNodeReference*>(mExitMaskFalse)->referencesEntryMask() && "exit mask can only reference to entry mask of same block!");
+			assert (static_cast<MaskNodeReference*>(mExitMaskFalse)->getNode() == this); //exit mask can only reference to entry mask of same block
+			assert (static_cast<MaskNodeReference*>(mExitMaskFalse)->getNode()->getEntryMask() == mEntryMask);
 			mask = createEntryMask(ar);
 		}
 		else assert (!"bad mask operation found!");
@@ -738,36 +738,36 @@ public:
 
 		//store generated value in map
 		//if (exitMaskFalse) delete exitMaskFalse;
-		exitMaskFalse = new MaskValue(mask);
+		mExitMaskFalse = new MaskValue(mask);
 
 		return mask;
 	}
 
 	inline Value* createExitMaskInDir(const MaskGraphNode* node, AnalysisResults& ar) {
 		assert (node);
-		if (succTrue && succTrue == node) return createExitMaskTrue(ar);
-		if (succFalse && succFalse == node) return createExitMaskFalse(ar);
+		if (mSuccTrue && mSuccTrue == node) return createExitMaskTrue(ar);
+		if (mSuccFalse && mSuccFalse == node) return createExitMaskFalse(ar);
 		assert (!"could not find successor in this direction!");
 		return NULL;
 	}
 
 	typedef PredVectorType::iterator pred_iterator;
 	typedef PredVectorType::const_iterator pred_const_iterator;
-	pred_iterator pred_begin() { return preds.begin(); }
-	pred_iterator pred_end() { return preds.end(); }
-	pred_const_iterator pred_begin() const { return preds.begin(); }
-	pred_const_iterator pred_end() const { return preds.end(); }
+	pred_iterator pred_begin() { return mPreds.begin(); }
+	pred_iterator pred_end() { return mPreds.end(); }
+	pred_const_iterator pred_begin() const { return mPreds.begin(); }
+	pred_const_iterator pred_end() const { return mPreds.end(); }
 
 	inline void setPredecessor(MaskGraphNode* node, unsigned index) {
 		assert (node);
-		assert (index < preds.size() && "wrong index specified!");
-		preds[index] = node;
+		assert (index < mPreds.size() && "wrong index specified!");
+		mPreds[index] = node;
 	}
 	inline bool updatePredecessor(MaskGraphNode* oldNode, MaskGraphNode* newNode) {
 		assert (oldNode && newNode);
 		assert (isPredecessor(oldNode));
-		for (SmallVector<MaskGraphNode*, 2>::iterator it=preds.begin();
-				it!=preds.end(); ++it) {
+		for (SmallVector<MaskGraphNode*, 2>::iterator it=mPreds.begin();
+				it!=mPreds.end(); ++it) {
 			if (oldNode == *it) {
 				*it = newNode;
 				return true;
@@ -777,25 +777,25 @@ public:
 	}
 	inline void addPredecessor(MaskGraphNode* node) {
 		assert (node);
-		for (PredVectorType::iterator it=preds.begin(), E=preds.end(); it!=E; ++it) {
+		for (PredVectorType::iterator it=mPreds.begin(), E=mPreds.end(); it!=E; ++it) {
 			if (node == *it) return; //predecessor already exists
 		}
-		preds.push_back(node);
+		mPreds.push_back(node);
 	}
 	inline bool addSuccessor(MaskGraphNode* node) {
 		//this method automatically derives which successor the node is
 		assert (node);
 		assert (node->getBlock());
-		assert (isa<BranchInst>(block->getTerminator()));
-		if (node == succTrue || node == succFalse) return false;
+		assert (isa<BranchInst>(mBlock->getTerminator()));
+		if (node == mSuccTrue || node == mSuccFalse) return false;
 
 		if (isTrueSuccessor(node)) {
-			assert (!succTrue);
+			assert (!mSuccTrue);
 			setSuccessorTrue(node);
 			return true;
 		}
 		if (isFalseSuccessor(node)) {
-			assert (!succFalse);
+			assert (!mSuccFalse);
 			setSuccessorFalse(node);
 			return true;
 		}
@@ -803,95 +803,95 @@ public:
 	}
 	inline void setSuccessorTrue(MaskGraphNode* node) {
 		assert (node);
-		succTrue = node;
+		mSuccTrue = node;
 	}
 	inline void setSuccessorFalse(MaskGraphNode* node) {
 		assert (node);
-		succFalse = node;
+		mSuccFalse = node;
 	}
 
 	inline void removePredecessor(unsigned index) {
-		assert (index < preds.size() && "wrong index specified!");
-		PredVectorType::iterator it=preds.begin()+index;
-		assert (it != preds.end());
-		assert (*it == preds[index]);
-		preds.erase(it);
+		assert (index < mPreds.size() && "wrong index specified!");
+		PredVectorType::iterator it=mPreds.begin()+index;
+		assert (it != mPreds.end());
+		assert (*it == mPreds[index]);
+		mPreds.erase(it);
 	}
 	inline bool removePredecessor(MaskGraphNode* pred) {
 		assert (pred);
-		for (PredVectorType::iterator it=preds.begin(), E=preds.end(); it!=E; ++it) {
+		for (PredVectorType::iterator it=mPreds.begin(), E=mPreds.end(); it!=E; ++it) {
 			if (pred == *it) {
-				preds.erase(it);
+				mPreds.erase(it);
 				return true;
 			}
 		}
 		return false;
 	}
 	inline void removeSuccessorTrue() {
-		succTrue = NULL;
+		mSuccTrue = NULL;
 	}
 	inline void removeSuccessorFalse() {
-		succFalse = NULL;
+		mSuccFalse = NULL;
 	}
 
 	inline bool isTrueSuccessor(MaskGraphNode* node) const {
 		assert (node);
-		assert (block);
-		assert (isa<BranchInst>(block->getTerminator()));
-		BranchInst* br = cast<BranchInst>(block->getTerminator());
+		assert (mBlock);
+		assert (isa<BranchInst>(mBlock->getTerminator()));
+		BranchInst* br = cast<BranchInst>(mBlock->getTerminator());
 		return br->getSuccessor(0) == node->getBlock();
 	}
 	inline bool isFalseSuccessor(MaskGraphNode* node) const {
 		assert (node);
-		assert (block);
-		assert (isa<BranchInst>(block->getTerminator()));
-		BranchInst* br = cast<BranchInst>(block->getTerminator());
+		assert (mBlock);
+		assert (isa<BranchInst>(mBlock->getTerminator()));
+		BranchInst* br = cast<BranchInst>(mBlock->getTerminator());
 		if (br->isUnconditional()) return false;
 		return br->getSuccessor(1) == node->getBlock();
 	}
 
-	inline BasicBlock* getBlock() const { assert (block); return block; }
+	inline BasicBlock* getBlock() const { assert (mBlock); return mBlock; }
 
-	inline MaskOperation* getEntryMask() const { assert (entryMask); return entryMask; }
-	inline MaskOperation* getExitMaskTrue() const { assert (exitMaskTrue); return exitMaskTrue; }
+	inline MaskOperation* getEntryMask() const { assert (mEntryMask); return mEntryMask; }
+	inline MaskOperation* getExitMaskTrue() const { assert (mExitMaskTrue); return mExitMaskTrue; }
 	inline MaskOperation* getExitMaskFalse() const {
 		assert (hasConditionalExit() && "getExitMaskFalse() called for mask-map-entry that only has one exit mask!");
-		assert (exitMaskFalse);
-		return exitMaskFalse;
+		assert (mExitMaskFalse);
+		return mExitMaskFalse;
 	}
 
 	inline Value* getEntryMaskVal() const {
-		assert (entryMask);
-		assert (entryMask->isMaskValue() && "must not ask for explicit mask of type Value* for compound mask!");
-		MaskValue* maskOp = static_cast<MaskValue*>(entryMask);
+		assert (mEntryMask);
+		assert (mEntryMask->isMaskValue() && "must not ask for explicit mask of type Value* for compound mask!");
+		MaskValue* maskOp = static_cast<MaskValue*>(mEntryMask);
 		assert (maskOp->getMask());
 		return maskOp->getMask();
 	}
 	inline Value* getExitMaskTrueVal() const {
-		assert (exitMaskTrue);
-		assert (exitMaskTrue->isMaskValue() && "must not ask for explicit mask of type Value* for compound mask!");
-		MaskValue* maskOp = static_cast<MaskValue*>(exitMaskTrue);
+		assert (mExitMaskTrue);
+		assert (mExitMaskTrue->isMaskValue() && "must not ask for explicit mask of type Value* for compound mask!");
+		MaskValue* maskOp = static_cast<MaskValue*>(mExitMaskTrue);
 		assert (maskOp->getMask());
 		return maskOp->getMask();
 	}
 	inline Value* getExitMaskFalseVal() const {
-		assert (exitMaskFalse);
-		assert (exitMaskFalse->isMaskValue() && "must not ask for explicit mask of type Value* for compound mask!");
-		MaskValue* maskOp = static_cast<MaskValue*>(exitMaskFalse);
+		assert (mExitMaskFalse);
+		assert (mExitMaskFalse->isMaskValue() && "must not ask for explicit mask of type Value* for compound mask!");
+		MaskValue* maskOp = static_cast<MaskValue*>(mExitMaskFalse);
 		assert (maskOp->getMask());
 		return maskOp->getMask();
 	}
 
 	inline MaskGraphNode* getSinglePredecessor() const {
 		assert (hasSinglePredecessor() && "node has more than one predecessor!");
-		assert (preds[0]);
-		return preds[0];
+		assert (mPreds[0]);
+		return mPreds[0];
 	}
-	inline unsigned getNumPredecessors() const { return preds.size(); }
+	inline unsigned getNumPredecessors() const { return mPreds.size(); }
 	inline MaskGraphNode* getPredecessor(unsigned index) const {
-		assert (index < preds.size() && "wrong index specified!");
-		assert (preds[index]);
-		return preds[index];
+		assert (index < mPreds.size() && "wrong index specified!");
+		assert (mPreds[index]);
+		return mPreds[index];
 	}
 	inline unsigned getNumSuccessors() const {
 		if (!hasExitEdge()) return 0;
@@ -900,51 +900,51 @@ public:
 	}
 	inline MaskGraphNode* getSuccessorTrue() const {
 		assert (hasExitEdge() && "node does not have any outgoing edges!");
-		return succTrue;
+		return mSuccTrue;
 	}
 	inline MaskGraphNode* getSuccessorFalse() const {
 		assert (hasConditionalExit() && "node only has a single exit edge!");
-		return succFalse;
+		return mSuccFalse;
 	}
 
-	inline bool hasExitEdge() const { return succTrue != NULL; }
-	inline bool hasConditionalExit() const { return succFalse != NULL; }
-	inline bool hasPredecessors() const { return preds.size() > 0; }
-	inline bool hasSinglePredecessor() const { return preds.size() == 1; }
+	inline bool hasExitEdge() const { return mSuccTrue != NULL; }
+	inline bool hasConditionalExit() const { return mSuccFalse != NULL; }
+	inline bool hasPredecessors() const { return mPreds.size() > 0; }
+	inline bool hasSinglePredecessor() const { return mPreds.size() == 1; }
 	inline bool entryMaskIsSinglePredecessorExitMask() const {
-		assert (entryMask);
-		return hasSinglePredecessor() && entryMask == preds[0]->getExitMaskInDir(this);
+		assert (mEntryMask);
+		return hasSinglePredecessor() && mEntryMask == mPreds[0]->getExitMaskInDir(this);
 	}
 
 	inline bool isPredecessor(const MaskGraphNode* node) const {
 		assert (node);
-		for (SmallVector<MaskGraphNode*, 2>::const_iterator it=preds.begin();
-				it!=preds.end(); ++it) {
+		for (SmallVector<MaskGraphNode*, 2>::const_iterator it=mPreds.begin();
+				it!=mPreds.end(); ++it) {
 			if (node == *it) return true;
 		}
 		return false;
 	}
 	inline bool isSuccessor(const MaskGraphNode* node) const {
 		assert (node);
-		return node == succTrue || node == succFalse;
+		return node == mSuccTrue || node == mSuccFalse;
 	}
 
 	inline MaskOperation* getExitMaskInDir(const MaskGraphNode* dir) {
 		assert (dir);
-		if (succTrue && succTrue == dir) return exitMaskTrue;
-		else if (succFalse && succFalse == dir) return exitMaskFalse;
+		if (mSuccTrue && mSuccTrue == dir) return mExitMaskTrue;
+		else if (mSuccFalse && mSuccFalse == dir) return mExitMaskFalse;
 		else return NULL;
 	}
 	inline MaskOperation* getExitMaskInDir(const BasicBlock* dir) {
 		assert (dir);
-		if (succTrue && succTrue->getBlock() == dir) return exitMaskTrue;
-		else if (succFalse && succFalse->getBlock() == dir) return exitMaskFalse;
+		if (mSuccTrue && mSuccTrue->getBlock() == dir) return mExitMaskTrue;
+		else if (mSuccFalse && mSuccFalse->getBlock() == dir) return mExitMaskFalse;
 		else return NULL;
 	}
 	inline Value* getExitMaskValInDir(const MaskGraphNode* dir) {
 		assert (dir);
-		if (succTrue && succTrue == dir) return getExitMaskTrueVal();
-		else if (succFalse && succFalse == dir) return getExitMaskFalseVal();
+		if (mSuccTrue && mSuccTrue == dir) return getExitMaskTrueVal();
+		else if (mSuccFalse && mSuccFalse == dir) return getExitMaskFalseVal();
 		else return NULL;
 	}
 
@@ -952,100 +952,100 @@ public:
 	inline void setEntryMask(Value* mask) {
 		assert (mask);
 		//if (entryMask) delete entryMask; // breaks something...
-		entryMask = new MaskValue(mask);
+		mEntryMask = new MaskValue(mask);
 	}
 	inline void setExitMaskTrue(Value* mask) {
 		assert (mask);
 		//if (exitMaskTrue) delete exitMaskTrue;
-		exitMaskTrue = new MaskValue(mask);
+		mExitMaskTrue = new MaskValue(mask);
 	}
 	inline void setExitMaskFalse(Value* mask) {
 		assert (mask);
 		//if (exitMaskFalse) delete exitMaskFalse;
-		exitMaskFalse = new MaskValue(mask);
+		mExitMaskFalse = new MaskValue(mask);
 	}
 	inline void setEntryMask(MaskOperation* maskOp) {
 		assert (maskOp);
 		//if (entryMask) delete entryMask;
-		entryMask = maskOp;
+		mEntryMask = maskOp;
 	}
 	inline void setExitMaskTrue(MaskOperation* maskOp) {
 		assert (maskOp);
 		//if (exitMaskTrue) delete exitMaskTrue;
-		exitMaskTrue = maskOp;
+		mExitMaskTrue = maskOp;
 	}
 	inline void setExitMaskFalse(MaskOperation* maskOp) {
 		assert (maskOp);
 		//if (exitMaskFalse) delete exitMaskFalse;
-		exitMaskFalse = maskOp;
+		mExitMaskFalse = maskOp;
 	}
 
 	void print(raw_ostream& o) const {
-		assert (block);
-		o << "Node: " << block->getNameStr() << "\n";
-		if (!entryMask) o << "  entry mask: NULL\n";
+		assert (mBlock);
+		o << "Node: " << mBlock->getNameStr() << "\n";
+		if (!mEntryMask) o << "  entry mask: NULL\n";
 		else {
-			o << "  entry mask: "; entryMask->print(o); o << "\n";
+			o << "  entry mask: "; mEntryMask->print(o); o << "\n";
 		}
 		if (hasExitEdge()) {
-			if (!exitMaskTrue) o << "  exit mask T: NULL\n";
+			if (!mExitMaskTrue) o << "  exit mask T: NULL\n";
 			else {
-				o << "  exit mask T: "; exitMaskTrue->print(o); o << "\n";
+				o << "  exit mask T: "; mExitMaskTrue->print(o); o << "\n";
 			}
 		}
 		if (hasConditionalExit()) {
-			if (!exitMaskFalse) o << "  exit mask F: NULL\n";
+			if (!mExitMaskFalse) o << "  exit mask F: NULL\n";
 			else {
-				o << "  exit mask F: "; exitMaskFalse->print(o); o << "\n";
+				o << "  exit mask F: "; mExitMaskFalse->print(o); o << "\n";
 			}
 		}
 
-		if (preds.empty()) o << "  no predecessors!\n";
+		if (mPreds.empty()) o << "  no predecessors!\n";
 		else {
-			for (unsigned i=0, e=preds.size(); i<e; ++i) {
-				o << "  predecessor " << i << ": " << preds[i]->getBlock()->getNameStr() << "\n";
+			for (unsigned i=0, e=mPreds.size(); i<e; ++i) {
+				o << "  predecessor " << i << ": " << mPreds[i]->getBlock()->getNameStr() << "\n";
 			}
 		}
 
 		if (hasExitEdge()) {
-			if (!succTrue) o << "  successor T: NULL\n";
+			if (!mSuccTrue) o << "  successor T: NULL\n";
 			else {
-				o << "  successor T: " << succTrue->getBlock()->getNameStr() << "\n";
+				o << "  successor T: " << mSuccTrue->getBlock()->getNameStr() << "\n";
 			}
 		}
 		if (hasConditionalExit()) {
-			if (!succFalse) o << "  successor F: NULL\n";
+			if (!mSuccFalse) o << "  successor F: NULL\n";
 			else {
-				o << "  successor F: " << succFalse->getBlock()->getNameStr() << "\n";
+				o << "  successor F: " << mSuccFalse->getBlock()->getNameStr() << "\n";
 			}
 		}
 	}
 	bool verify() const {
-		assert (block);
-		assert (block->getParent());
-		assert (!block->getParent()->getBasicBlockList().empty());
-		const bool isEntryBlock = &block->getParent()->getEntryBlock() == block;
+		assert (mBlock);
+		assert (mBlock->getParent());
+		assert (!mBlock->getParent()->getBasicBlockList().empty());
+		const bool isEntryBlock = &mBlock->getParent()->getEntryBlock() == mBlock;
 		//const bool isReturnBlock = isa<ReturnInst>(block->getTerminator());
 		const bool isReturnBlock = !hasExitEdge();
-		const bool x = block && entryMask;
-		const bool a = isReturnBlock || exitMaskTrue;
-		const bool b = !hasConditionalExit() || exitMaskFalse;
+		const bool x = mBlock && mEntryMask;
+		const bool a = isReturnBlock || mExitMaskTrue;
+		const bool b = !hasConditionalExit() || mExitMaskFalse;
 		const bool c = isEntryBlock || hasPredecessors();
-		const bool d = isEntryBlock || (hasPredecessors() && preds[0]);
-		const bool e = isEntryBlock || hasSinglePredecessor() || (getNumPredecessors() > 1 && preds[1]);
-		const bool f = isReturnBlock || succTrue;
-		const bool g = !hasConditionalExit() || succFalse;
+		const bool d = isEntryBlock || (hasPredecessors() && mPreds[0]);
+		const bool e = isEntryBlock || hasSinglePredecessor() || (getNumPredecessors() > 1 && mPreds[1]);
+		const bool f = isReturnBlock || mSuccTrue;
+		const bool g = !hasConditionalExit() || mSuccFalse;
 		std::set<const MaskOperation*> visitedMaskOps;
-		const bool h = entryMask && entryMask->verify(visitedMaskOps);
+		const bool h = mEntryMask && mEntryMask->verify(visitedMaskOps);
 		visitedMaskOps.clear();
-		const bool i = isReturnBlock || (exitMaskTrue && exitMaskTrue->verify(visitedMaskOps));
+		const bool i = isReturnBlock || (mExitMaskTrue && mExitMaskTrue->verify(visitedMaskOps));
 		visitedMaskOps.clear();
-		const bool j = !hasConditionalExit() || (exitMaskFalse && exitMaskFalse->verify(visitedMaskOps));
+		const bool j = !hasConditionalExit() || (mExitMaskFalse && mExitMaskFalse->verify(visitedMaskOps));
 		const bool res = x && a && b && c && d && e && f && g && h && i && j;
 		if (!res) {
 			errs() << "\nERROR: verification of mask graph node failed!\n";
-			if (block) errs() << "block: " << block->getNameStr() << "\n";
-			if (!entryMask) errs() << "  entry mask is NULL!\n";
+			if (mBlock) errs() << "block: " << mBlock->getNameStr() << "\n";
+			if (!mEntryMask) errs() << "  entry mask is NULL!\n";
 			if (!a) errs() << "  exit mask true is NULL!\n";
 			if (!b) errs() << "  exit mask false is NULL!\n";
 			if (!c) errs() << "  non-entry block has no predecessors!\n";
@@ -1055,15 +1055,15 @@ public:
 			if (!g) errs() << "  false-successor of block with conditional exit is NULL!\n";
 			if (!h) {
 				errs() << "  verification of entry mask failed: ";
-				if (entryMask) { entryMask->print(errs()); errs() << "\n"; }
+				if (mEntryMask) { mEntryMask->print(errs()); errs() << "\n"; }
 			}
 			if (!i) {
 				errs() << "  verification of exit mask (true-edge) failed: ";
-				if (exitMaskTrue) { exitMaskTrue->print(errs()); errs() << "\n"; }
+				if (mExitMaskTrue) { mExitMaskTrue->print(errs()); errs() << "\n"; }
 			}
 			if (!j) {
 				errs() << "  verification of exit mask (false-edge) failed: ";
-				if (exitMaskFalse) { exitMaskFalse->print(errs()); errs() << "\n"; }
+				if (mExitMaskFalse) { mExitMaskFalse->print(errs()); errs() << "\n"; }
 			}
 
 			errs() << "\n";
@@ -1072,19 +1072,19 @@ public:
 		return res;
 	}
 	bool complete() const {
-		assert (block);
-		assert (block->getParent());
-		assert (!block->getParent()->getBasicBlockList().empty());
-		const bool isEntryBlock = &block->getParent()->getEntryBlock() == block;
+		assert (mBlock);
+		assert (mBlock->getParent());
+		assert (!mBlock->getParent()->getBasicBlockList().empty());
+		const bool isEntryBlock = &mBlock->getParent()->getEntryBlock() == mBlock;
 		const bool isReturnBlock = !hasExitEdge();
-		const bool x = block && entryMask;
-		const bool a = isReturnBlock || exitMaskTrue;
-		const bool b = !hasConditionalExit() || exitMaskFalse;
-		const bool c = isEntryBlock || !preds.empty();
-		const bool d = isEntryBlock || (!preds.empty() && preds[0]);
-		const bool e = isEntryBlock || hasSinglePredecessor() || (preds.size() > 1 && preds[1]);
-		const bool f = isReturnBlock || succTrue;
-		const bool g = !hasConditionalExit() || succFalse;
+		const bool x = mBlock && mEntryMask;
+		const bool a = isReturnBlock || mExitMaskTrue;
+		const bool b = !hasConditionalExit() || mExitMaskFalse;
+		const bool c = isEntryBlock || !mPreds.empty();
+		const bool d = isEntryBlock || (!mPreds.empty() && mPreds[0]);
+		const bool e = isEntryBlock || hasSinglePredecessor() || (mPreds.size() > 1 && mPreds[1]);
+		const bool f = isReturnBlock || mSuccTrue;
+		const bool g = !hasConditionalExit() || mSuccFalse;
 		const bool res = x && a && b && c && d && e && f && g;
 		return res;
 	}
@@ -1294,27 +1294,28 @@ public:
 //TODO: setExitMaskInDir() to replace exitEdgeOnTruePath .... stuff
 class MaskGraph {
 private:
-	bool verbose;
+	bool mVerbose;
 	typedef std::map<BasicBlock*, MaskGraphNode*> MaskGraphType;
 
-	MaskGraphType maskGraph;
-	MaskGraphNode* root;
-	MaskGraphNode* sink;
+	MaskGraphType mMaskGraph;
+	MaskGraphNode* mRoot;
+	MaskGraphNode* mSink;
 
-	Function& function;
+	Function& mFunction;
 
-	bool initialized;
-	bool complete;
+	bool mInitialized;
+	bool mComplete;
 
 	//Loop Mask Information
 	typedef std::map<const Loop*, LoopNode*> LoopMapType;
 	typedef std::map<BasicBlock*, LoopExitNode*> LoopExitMaskMapType;
-	LoopMapType loopMap;
-	LoopExitMaskMapType loopExitMaskMap;
-	const LoopInfo& loopInfo;
+	LoopMapType mLoopMap;
+	LoopExitMaskMapType mLoopExitMaskMap;
+	const LoopInfo& mLoopInfo;
+    LLVMContext& mContext;
 
-	Constant* boolOneConst;
-	Constant* boolZeroConst;
+	Constant* mConstBoolTrue;
+	Constant* mConstBoolFalse;
 
 	void buildGraph(MaskGraphNode* node) {
 		BasicBlock* block = node->getBlock();
@@ -1325,7 +1326,7 @@ private:
 			BasicBlock* predBB = *PI;
 			MaskGraphNode* predNode = findMaskNode(predBB);
 			if (!predNode) {
-				predNode = new MaskGraphNode(predBB, verbose);
+				predNode = new MaskGraphNode(predBB, mContext, mVerbose);
 				node->addPredecessor(predNode);
 				//predNode->addSuccessor(node);
 				insert(predNode);
@@ -1342,7 +1343,7 @@ private:
 			BasicBlock* succBB = *SI;
 			MaskGraphNode* succNode = findMaskNode(succBB);
 			if (!succNode) {
-				succNode = new MaskGraphNode(succBB, verbose);
+				succNode = new MaskGraphNode(succBB, mContext, mVerbose);
 				node->addSuccessor(succNode);
 				//succNode->addPredecessor(node);
 				insert(succNode);
@@ -1359,39 +1360,39 @@ private:
 	}
 	inline MaskGraphNode* insert(MaskGraphNode* mgn) {
 		assert (mgn);
-		assert (maskGraph.find(mgn->getBlock()) == maskGraph.end());
-		std::pair<MaskGraphType::iterator, bool> resPair = maskGraph.insert(std::make_pair(mgn->getBlock(), mgn));
+		assert (mMaskGraph.find(mgn->getBlock()) == mMaskGraph.end());
+		std::pair<MaskGraphType::iterator, bool> resPair = mMaskGraph.insert(std::make_pair(mgn->getBlock(), mgn));
 		assert (resPair.second && "insertion must not fail!");
 		assert (resPair.first->second && "insertion must return valid object!");
 		return resPair.first->second;
 	}
 
 	inline bool checkForCompletion() {
-		assert (initialized);
-		if (complete) return true;
+		assert (mInitialized);
+		if (mComplete) return true;
 
-		if (maskGraph.size() != function.getBasicBlockList().size()) {
-			complete = false;
+		if (mMaskGraph.size() != mFunction.getBasicBlockList().size()) {
+			mComplete = false;
 			DEBUG_PKT( errs() << "ERROR: mask graph has wrong size -> incomplete!\n"; );
 			return false;
 		}
-		complete = true;
-		for (MaskGraph::const_iterator it=maskGraph.begin(), E=maskGraph.end(); it!=E; ++it) {
-			complete &= it->second->complete();
+		mComplete = true;
+		for (MaskGraph::const_iterator it=mMaskGraph.begin(), E=mMaskGraph.end(); it!=E; ++it) {
+			mComplete &= it->second->complete();
 			if (!it->second->complete()) {
 				DEBUG_PKT( errs() << "ERROR: node is not complete: "; );
 				DEBUG_PKT( it->second->print(outs()); );
 			}
 		}
-		return complete;
+		return mComplete;
 	}
 
 	inline void buildLoopMaskGraph() {
-		for (LoopInfo::iterator L=loopInfo.begin(), LE=loopInfo.end(); L!=LE; ++L) {
+		for (LoopInfo::iterator L=mLoopInfo.begin(), LE=mLoopInfo.end(); L!=LE; ++L) {
 			LoopNode* loopNode = recBuildLoopMaskNode(*L, NULL);
 			assert (loopNode);
-			assert (loopMap.find(*L) == loopMap.end());
-			loopMap.insert(std::make_pair(*L, loopNode));
+			assert (mLoopMap.find(*L) == mLoopMap.end());
+			mLoopMap.insert(std::make_pair(*L, loopNode));
 		}
 	}
 	LoopNode* recBuildLoopMaskNode(const Loop* loop, LoopNode* parent) {
@@ -1399,8 +1400,8 @@ private:
 		SmallVector<LoopNode*, 4> subLoopVec;
 		for (Loop::iterator SL=loop->begin(), LE=loop->end(); SL!=LE; ++SL) {
 			LoopNode* subLoopNode = recBuildLoopMaskNode(*SL, loopNode);
-			assert (loopMap.find(*SL) == loopMap.end());
-			loopMap.insert(std::make_pair(*SL, subLoopNode));
+			assert (mLoopMap.find(*SL) == mLoopMap.end());
+			mLoopMap.insert(std::make_pair(*SL, subLoopNode));
 			subLoopVec.push_back(subLoopNode);
 		}
 		//add child loops
@@ -1414,13 +1415,13 @@ private:
 		for (SmallVector<BasicBlock*, 4>::const_iterator it=exitingBlocks->begin(), E=exitingBlocks->end(); it!=E;) {
 			BasicBlock* exitingBlock = *it++;
 			//check if there is already an associated loop exit node
-			LoopExitMaskMapType::const_iterator tmp = loopExitMaskMap.find(exitingBlock);
-			if (tmp != loopExitMaskMap.end()) {
+			LoopExitMaskMapType::const_iterator tmp = mLoopExitMaskMap.find(exitingBlock);
+			if (tmp != mLoopExitMaskMap.end()) {
 				//update existing loop exit node
 				tmp->second->addLoop(loop);
 			} else {
 				//create new loop exit node
-				loopExitMaskMap.insert(std::make_pair(exitingBlock, new LoopExitNode(exitingBlock, loopInfo)));
+				mLoopExitMaskMap.insert(std::make_pair(exitingBlock, new LoopExitNode(exitingBlock, mLoopInfo)));
 			}
 			//add info to loop node
 			loopNode->addLoopExit(exitingBlock);
@@ -1434,23 +1435,25 @@ private:
 	}
 
 public:
-	MaskGraph(Function& f, const LoopInfo& loopInfos, bool verbose_flag=false)
-		: verbose(verbose_flag), function(f), complete(false), loopInfo(loopInfos)
+	MaskGraph(Function& f, const LoopInfo& loopInfos, LLVMContext& context, bool verbose_flag=false)
+		: mVerbose(verbose_flag), mFunction(f), mComplete(false), mLoopInfo(loopInfos), mContext(context)
 	{
-		root = new MaskGraphNode(&f.getEntryBlock(), verbose);
-		insert(root);
-		buildGraph(root);
-		initialized = true;
-		sink = findMaskNode(Packetizer::findReturnBlock(f));
-		assert (sink);
+		mRoot = new MaskGraphNode(&f.getEntryBlock(), mContext, mVerbose);
+		insert(mRoot);
+		buildGraph(mRoot);
+		mInitialized = true;
+		mSink = findMaskNode(Packetizer::findReturnBlock(f));
+		assert (mSink);
 
-		if (!loopInfo.empty()) {
+		if (!mLoopInfo.empty()) {
 			//build loop mask graph
-			boolOneConst = Constant::getAllOnesValue(Type::getInt1Ty(getGlobalContext()));
-			boolZeroConst = Constant::getNullValue(Type::getInt1Ty(getGlobalContext()));
+			mConstBoolTrue = Constant::getAllOnesValue(Type::getInt1Ty(mContext));
+			mConstBoolFalse = Constant::getNullValue(Type::getInt1Ty(mContext));
 			buildLoopMaskGraph();
 		}
 	}
+
+    ~MaskGraph() {}
 
 	inline void clear() {
 		std::set<MaskValue*> uniqueMaskValues;
@@ -1462,32 +1465,32 @@ public:
 			delete *it;
 		}
 
-		for (MaskGraphType::iterator it=maskGraph.begin(), E=maskGraph.end(); it!=E; ++it) {
+		for (MaskGraphType::iterator it=mMaskGraph.begin(), E=mMaskGraph.end(); it!=E; ++it) {
 			//outs() << "deleting node of block '" << it->second->getBlock()->getName() << "'...\n";
 			delete it->second;
 		}
-		for (LoopMapType::iterator it=loopMap.begin(), E=loopMap.end(); it!=E; ++it) {
+		for (LoopMapType::iterator it=mLoopMap.begin(), E=mLoopMap.end(); it!=E; ++it) {
 			delete it->second;
 		}
-		for (LoopExitMaskMapType::iterator it=loopExitMaskMap.begin(), E=loopExitMaskMap.end(); it!=E; ++it) {
+		for (LoopExitMaskMapType::iterator it=mLoopExitMaskMap.begin(), E=mLoopExitMaskMap.end(); it!=E; ++it) {
 			delete it->second;
 		}
 
-		maskGraph.clear();
+		mMaskGraph.clear();
 
-		root = NULL;
-		sink = NULL;
-		initialized = false;
-		complete = false;
+		mRoot = NULL;
+		mSink = NULL;
+		mInitialized = false;
+		mComplete = false;
 		nextMaskOpID = 0;
 
-		loopMap.clear();
-		loopExitMaskMap.clear();
+		mLoopMap.clear();
+		mLoopExitMaskMap.clear();
 	}
 
 
 	void collectUniqueMaskValues(std::set<MaskValue*>& maskValues) {
-		for (MaskGraphType::iterator it=maskGraph.begin(), E=maskGraph.end(); it!=E; ++it) {
+		for (MaskGraphType::iterator it=mMaskGraph.begin(), E=mMaskGraph.end(); it!=E; ++it) {
 			MaskGraphNode* node = it->second;
 			MaskOperation* entry = node->hasPredecessors() ? node->getEntryMask() : NULL;
 			MaskOperation* exitT = node->hasExitEdge() ? node->getExitMaskTrue() : NULL;
@@ -1501,89 +1504,89 @@ public:
 	inline void finalize() {
 		//assert (checkForCompletion() && "must not call finalize() on incomplete graph!"); // this is dangerous, checkForCompletion() modifies state of maskGraph!
 		checkForCompletion();
-		assert (initialized);
-		assert (complete);
+		assert (mInitialized);
+		assert (mComplete);
 		assert (verify());
 	}
 
 	typedef MaskGraphType::iterator iterator;
 	typedef MaskGraphType::const_iterator const_iterator;
-	inline iterator begin() { assert (initialized); return maskGraph.begin(); }
-	inline iterator end() { assert (initialized); return maskGraph.end(); }
-	inline const_iterator begin() const { assert (initialized); return maskGraph.begin(); }
-	inline const_iterator end() const { assert (initialized); return maskGraph.end(); }
+	inline iterator begin() { assert (mInitialized); return mMaskGraph.begin(); }
+	inline iterator end() { assert (mInitialized); return mMaskGraph.end(); }
+	inline const_iterator begin() const { assert (mInitialized); return mMaskGraph.begin(); }
+	inline const_iterator end() const { assert (mInitialized); return mMaskGraph.end(); }
 
-	inline unsigned size() const { assert (initialized); return maskGraph.size(); }
-	inline bool empty() const { assert (initialized); return maskGraph.empty(); }
-	inline bool isInitialized() const { return initialized; }
+	inline unsigned size() const { assert (mInitialized); return mMaskGraph.size(); }
+	inline bool empty() const { assert (mInitialized); return mMaskGraph.empty(); }
+	inline bool isInitialized() const { return mInitialized; }
 
-	inline MaskGraphNode* getRoot() const { assert(initialized && root); return root; }
-	inline MaskGraphNode* getSink() const { assert(initialized && sink); return sink; }
+	inline MaskGraphNode* getRoot() const { assert(mInitialized && mRoot); return mRoot; }
+	inline MaskGraphNode* getSink() const { assert(mInitialized && mSink); return mSink; }
 
 	inline MaskGraphType::const_iterator find(BasicBlock* block) const {
-		assert (initialized && block);
-		return maskGraph.find(block);
+		assert (mInitialized && block);
+		return mMaskGraph.find(block);
 	}
 	// can be called during initialization
 	inline MaskGraphNode* findMaskNode(BasicBlock* block) const {
 		assert (block);
-		MaskGraphType::const_iterator tmp = maskGraph.find(block);
-		if (tmp == maskGraph.end()) return NULL;
+		MaskGraphType::const_iterator tmp = mMaskGraph.find(block);
+		if (tmp == mMaskGraph.end()) return NULL;
 		return tmp->second;
 	}
 
 	inline MaskGraphNode* insert(BasicBlock* block, Value* entryMask) {
-		assert (initialized && block);
+		assert (mInitialized && block);
 		MaskOperation* entry = new MaskValue(entryMask);
-		MaskGraphNode* mgn = new MaskGraphNode(block, verbose);
+		MaskGraphNode* mgn = new MaskGraphNode(block, mContext, mVerbose);
 		mgn->setEntryMask(entry);
-		assert (maskGraph.find(block) == maskGraph.end());
-		std::pair<MaskGraphType::iterator, bool> resPair = maskGraph.insert(std::make_pair(block, mgn));
+		assert (mMaskGraph.find(block) == mMaskGraph.end());
+		std::pair<MaskGraphType::iterator, bool> resPair = mMaskGraph.insert(std::make_pair(block, mgn));
 		assert (resPair.second && "insertion must not fail!");
 		assert (resPair.first->second && "insertion must return valid object!");
 		checkForCompletion();
 		return resPair.first->second;
 	}
 	inline MaskGraphNode* insert(BasicBlock* block, Value* entryMask, Value* exitMask) {
-		assert (initialized && block && entryMask && exitMask);
+		assert (mInitialized && block && entryMask && exitMask);
 		MaskOperation* entry = new MaskValue(entryMask);
 		MaskOperation* exit = new MaskValue(exitMask);
-		MaskGraphNode* mgn = new MaskGraphNode(block, entry, exit, verbose);
-		assert (maskGraph.find(block) == maskGraph.end());
-		std::pair<MaskGraphType::iterator, bool> resPair = maskGraph.insert(std::make_pair(block, mgn));
+		MaskGraphNode* mgn = new MaskGraphNode(block, entry, exit, mContext, mVerbose);
+		assert (mMaskGraph.find(block) == mMaskGraph.end());
+		std::pair<MaskGraphType::iterator, bool> resPair = mMaskGraph.insert(std::make_pair(block, mgn));
 		assert (resPair.second && "insertion must not fail!");
 		assert (resPair.first->second && "insertion must return valid object!");
 		checkForCompletion();
 		return resPair.first->second;
 	}
 	inline MaskGraphNode* insert(BasicBlock* block, Value* entryMask, Value* exitMaskTrue, Value* exitMaskFalse) {
-		assert (initialized && block && entryMask && exitMaskTrue && exitMaskFalse);
+		assert (mInitialized && block && entryMask && exitMaskTrue && exitMaskFalse);
 		MaskOperation* entry = new MaskValue(entryMask);
 		MaskOperation* exitT = new MaskValue(exitMaskTrue);
 		MaskOperation* exitF = new MaskValue(exitMaskFalse);
-		MaskGraphNode* mgn = new MaskGraphNode(block, entry, exitT, exitF, verbose);
-		assert (maskGraph.find(block) == maskGraph.end());
-		std::pair<MaskGraphType::iterator, bool> resPair = maskGraph.insert(std::make_pair(block, mgn));
+		MaskGraphNode* mgn = new MaskGraphNode(block, entry, exitT, exitF, mContext, mVerbose);
+		assert (mMaskGraph.find(block) == mMaskGraph.end());
+		std::pair<MaskGraphType::iterator, bool> resPair = mMaskGraph.insert(std::make_pair(block, mgn));
 		assert (resPair.second && "insertion must not fail!");
 		assert (resPair.first->second && "insertion must return valid object!");
 		checkForCompletion();
 		return resPair.first->second;
 	}
 	inline MaskGraphNode* insert(BasicBlock* block, MaskOperation* entryMask, MaskOperation* exitMask) {
-		assert (initialized && block && entryMask && exitMask);
-		MaskGraphNode* mgn = new MaskGraphNode(block, entryMask, exitMask, verbose);
-		assert (maskGraph.find(block) == maskGraph.end());
-		std::pair<MaskGraphType::iterator, bool> resPair = maskGraph.insert(std::make_pair(block, mgn));
+		assert (mInitialized && block && entryMask && exitMask);
+		MaskGraphNode* mgn = new MaskGraphNode(block, entryMask, exitMask, mContext, mVerbose);
+		assert (mMaskGraph.find(block) == mMaskGraph.end());
+		std::pair<MaskGraphType::iterator, bool> resPair = mMaskGraph.insert(std::make_pair(block, mgn));
 		assert (resPair.second && "insertion must not fail!");
 		assert (resPair.first->second && "insertion must return valid object!");
 		checkForCompletion();
 		return resPair.first->second;
 	}
 	inline MaskGraphNode* insert(BasicBlock* block, MaskOperation* entryMask, MaskOperation* exitMaskTrue, MaskOperation* exitMaskFalse) {
-		assert (initialized && block && entryMask && exitMaskTrue && exitMaskFalse);
-		MaskGraphNode* mgn = new MaskGraphNode(block, entryMask, exitMaskTrue, exitMaskFalse, verbose);
-		assert (maskGraph.find(block) == maskGraph.end());
-		std::pair<MaskGraphType::iterator, bool> resPair = maskGraph.insert(std::make_pair(block, mgn));
+		assert (mInitialized && block && entryMask && exitMaskTrue && exitMaskFalse);
+		MaskGraphNode* mgn = new MaskGraphNode(block, entryMask, exitMaskTrue, exitMaskFalse, mContext, mVerbose);
+		assert (mMaskGraph.find(block) == mMaskGraph.end());
+		std::pair<MaskGraphType::iterator, bool> resPair = mMaskGraph.insert(std::make_pair(block, mgn));
 		assert (resPair.second && "insertion must not fail!");
 		assert (resPair.first->second && "insertion must return valid object!");
 		checkForCompletion();
@@ -1591,36 +1594,36 @@ public:
 	}
 
 	inline bool updatePredecessor(BasicBlock* block, BasicBlock* oldPredBB, BasicBlock* newPredBB) {
-		assert (initialized && block && newPredBB && oldPredBB);
+		assert (mInitialized && block && newPredBB && oldPredBB);
 		MaskGraphType::const_iterator node = find(block);
-		if (node == maskGraph.end()) return false;
+		if (node == mMaskGraph.end()) return false;
 
 		MaskGraphType::const_iterator oldPredNode = find(oldPredBB);
-		if (oldPredNode == maskGraph.end()) return false;
+		if (oldPredNode == mMaskGraph.end()) return false;
 
 		MaskGraphType::const_iterator newPredNode = find(newPredBB);
-		if (newPredNode == maskGraph.end()) return false;
+		if (newPredNode == mMaskGraph.end()) return false;
 
 		return node->second->updatePredecessor(oldPredNode->second, newPredNode->second);
 	}
 	inline bool addPredecessor(BasicBlock* block, BasicBlock* newPredBB) {
-		assert (initialized && block && newPredBB);
+		assert (mInitialized && block && newPredBB);
 		MaskGraphType::const_iterator node = find(block);
-		if (node == maskGraph.end()) return false;
+		if (node == mMaskGraph.end()) return false;
 
 		MaskGraphType::const_iterator predNode = find(newPredBB);
-		if (predNode == maskGraph.end()) return false;
+		if (predNode == mMaskGraph.end()) return false;
 
 		node->second->addPredecessor(predNode->second);
 		return true;
 	}
 	inline bool setSuccessorTrue(BasicBlock* block, BasicBlock* newSuccBB) {
-		assert (initialized && block && newSuccBB);
+		assert (mInitialized && block && newSuccBB);
 		MaskGraphType::const_iterator node = find(block);
-		if (node == maskGraph.end()) return false;
+		if (node == mMaskGraph.end()) return false;
 
 		MaskGraphType::const_iterator succNode = find(newSuccBB);
-		if (succNode == maskGraph.end()) return false;
+		if (succNode == mMaskGraph.end()) return false;
 
 		//assert(node->second->hasExitEdge() && "trying to add successor to node that does not have any exit edge!");
 
@@ -1628,12 +1631,12 @@ public:
 		return true;
 	}
 	inline bool setSuccessorFalse(BasicBlock* block, BasicBlock* newSuccBB) {
-		assert (initialized && block && newSuccBB);
+		assert (mInitialized && block && newSuccBB);
 		MaskGraphType::const_iterator node = find(block);
-		if (node == maskGraph.end()) return false;
+		if (node == mMaskGraph.end()) return false;
 
 		MaskGraphType::const_iterator succNode = find(newSuccBB);
-		if (succNode == maskGraph.end()) return false;
+		if (succNode == mMaskGraph.end()) return false;
 
 		assert(node->second->hasConditionalExit() && "trying to add false-successor to node that only has one mask associated!");
 
@@ -1641,30 +1644,30 @@ public:
 		return true;
 	}
 	inline bool removePredecessor(BasicBlock* block, BasicBlock* oldPredBB) {
-		assert (initialized && block && oldPredBB);
+		assert (mInitialized && block && oldPredBB);
 		MaskGraphType::const_iterator node = find(block);
-		if (node == maskGraph.end()) return false;
+		if (node == mMaskGraph.end()) return false;
 
 		MaskGraphType::const_iterator predNode = find(oldPredBB);
-		if (predNode == maskGraph.end()) return false;
+		if (predNode == mMaskGraph.end()) return false;
 
 		return node->second->removePredecessor(predNode->second);
 	}
 	inline void setEntryMask(MaskGraphNode* node, MaskOperation* newMask) {
-		assert (initialized && node && newMask);
+		assert (mInitialized && node && newMask);
 		node->setEntryMask(newMask);
 	}
 	inline void setExitMaskTrue(MaskGraphNode* node, MaskOperation* newMask) {
-		assert (initialized && node && newMask);
+		assert (mInitialized && node && newMask);
 		node->setExitMaskTrue(newMask);
 	}
 	inline void setExitMaskFalse(MaskGraphNode* node, MaskOperation* newMask) {
-		assert (initialized && node && newMask);
+		assert (mInitialized && node && newMask);
 		node->setExitMaskFalse(newMask);
 	}
 
 	inline Value* getEntryMask(BasicBlock* block) const {
-		assert (initialized && block);
+		assert (mInitialized && block);
 		assert (!hasCompoundMasks() && "must not ask for explicit mask of type Value* if mask graph still holds compound masks!");
 		MaskGraphNode* node = findMaskNode(block);
 		assert (node); //if (!node) return NULL;
@@ -1676,7 +1679,7 @@ public:
 		return maskOp->getMask();
 	}
 	inline Value* getExitMaskTrue(BasicBlock* block) const {
-		assert (initialized && block);
+		assert (mInitialized && block);
 		assert (!hasCompoundMasks() && "must not ask for explicit mask of type Value* if mask graph still holds compound masks!");
 		MaskGraphNode* node = findMaskNode(block);
 		assert (node); //if (!node) return NULL;
@@ -1689,7 +1692,7 @@ public:
 		return maskOp->getMask();
 	}
 	inline Value* getExitMaskFalse(BasicBlock* block) const {
-		assert (initialized && block);
+		assert (mInitialized && block);
 		assert (!hasCompoundMasks() && "must not ask for explicit mask of type Value* if mask graph still holds compound masks!");
 		MaskGraphNode* node = findMaskNode(block);
 		assert (node); //if (!node) return NULL;
@@ -1702,7 +1705,7 @@ public:
 		return maskOp->getMask();
 	}
 	inline Value* getExitMaskInDir(BasicBlock* source, BasicBlock* dir) const {
-		assert (initialized && source && dir);
+		assert (mInitialized && source && dir);
 		assert (!hasCompoundMasks() && "must not ask for explicit mask of type Value* if mask graph still holds compound masks!");
 		MaskOperation* maskOp = getExitMaskOperationInDir(source, dir);
 		assert (maskOp); //if (!maskOp) return NULL;
@@ -1713,17 +1716,17 @@ public:
 	}
 
 	inline MaskOperation* getExitMaskTrue(MaskGraphNode* source) const {
-		assert (initialized && source);
+		assert (mInitialized && source);
 		return source->getExitMaskTrue();
 	}
 	inline MaskOperation* getExitMaskOperationInDir(MaskGraphNode* source, BasicBlock* dir) const {
-		assert (initialized && source && dir);
+		assert (mInitialized && source && dir);
 		return source->getExitMaskInDir(dir);
 	}
 	inline MaskOperation* getExitMaskOperationInDir(BasicBlock* source, BasicBlock* dir) const {
-		assert (initialized && source && dir);
+		assert (mInitialized && source && dir);
 		MaskGraphType::const_iterator node = find(source);
-		if (node == maskGraph.end()) {
+		if (node == mMaskGraph.end()) {
 			//errs() << "ERROR: getExitMaskInDir(): source block '" << source->getNameStr() << "'\n";
 			return NULL;
 		}
@@ -1732,16 +1735,16 @@ public:
 	}
 
 	inline void print(raw_ostream& o) const {
-		assert (initialized);
+		assert (mInitialized);
 		//	assert (initialized && checkForCompletion()); // this is dangerous, checkForCompletion() modifies state of maskGraph!
-		for (MaskGraphType::const_iterator it=maskGraph.begin(), E=maskGraph.end(); it!=E; ++it) {
+		for (MaskGraphType::const_iterator it=mMaskGraph.begin(), E=mMaskGraph.end(); it!=E; ++it) {
 			it->second->print(o);
 		}
 	}
 	inline bool verify() const {
 		bool verified = true;
 
-		if (!initialized) {
+		if (!mInitialized) {
 			errs() << "ERROR: mask graph was not initialized, can not verify!\n";
 			return false;
 		}
@@ -1751,12 +1754,12 @@ public:
 		//	errs() << "ERROR: graph was not completed! (finalize() not called?)\n";
 		//}
 
-		if (maskGraph.size() != function.getBasicBlockList().size()) {
+		if (mMaskGraph.size() != mFunction.getBasicBlockList().size()) {
 			verified = false;
 			errs() << "ERROR: size of mask graph does not match block list size of function!\n";
 		}
 
-		for (MaskGraphType::const_iterator it=maskGraph.begin(), E=maskGraph.end(); it!=E; ++it) {
+		for (MaskGraphType::const_iterator it=mMaskGraph.begin(), E=mMaskGraph.end(); it!=E; ++it) {
 			assert (it->first && "block must not be NULL!");
 			assert (it->second && "node must not be NULL!");
 			assert (it->first == it->second->getBlock() && "associated blocks have to match!");
@@ -1767,16 +1770,16 @@ public:
 
 			verified &= nodeVerified;
 		}
-		if (!root) {
+		if (!mRoot) {
 			verified = false;
 			errs() << "ERROR: verification of root of mask graph failed!\n";
 		}
 		return verified;
 	}
 	bool hasCompoundMasks() const {
-		assert (initialized);
+		assert (mInitialized);
 		//assert (checkForCompletion()); // this is dangerous, checkForCompletion() modifies state of maskGraph!
-		for (MaskGraphType::const_iterator it=maskGraph.begin(), E=maskGraph.end(); it!=E; ++it) {
+		for (MaskGraphType::const_iterator it=mMaskGraph.begin(), E=mMaskGraph.end(); it!=E; ++it) {
 			MaskGraphNode* node = it->second;
 			assert (node->complete());
 			if (node->hasPredecessors()) {
@@ -1796,10 +1799,10 @@ public:
 	}
 
 	inline void insertMasks(AnalysisResults& ar) {
-		assert (initialized);
+		assert (mInitialized);
 
 		// Create empty loop exit mask phis upfront.
-		for (LoopExitMaskMapType::iterator LM=loopExitMaskMap.begin(), LME=loopExitMaskMap.end(); LM!=LME; ++LM) {
+		for (LoopExitMaskMapType::iterator LM=mLoopExitMaskMap.begin(), LME=mLoopExitMaskMap.end(); LM!=LME; ++LM) {
 			LoopExitNode* loopExitNode = LM->second;
 
 			// Ignore uniform loops (do not require exit masks etc.).
@@ -1812,9 +1815,9 @@ public:
 			//if (analysisResults.hasUniformExit(loopExitNode->getExitingBlock()))
 			if (ar.isUniform(loopExitNode->getInnermostLoop())) {
 				assert (ar.isUniform(loopExitNode->getInnermostLoop()));
-				assert (ar.isUniform(loopInfo.getLoopFor(loopExitNode->getExitingBlock())));
+				assert (ar.isUniform(mLoopInfo.getLoopFor(loopExitNode->getExitingBlock())));
 				DEBUG_PKT( outs() << "ignoring generation of loop exit mask "
-						"phis for uniform loop: " << *loopInfo.getLoopFor(loopExitNode->getExitingBlock()); );
+						"phis for uniform loop: " << *mLoopInfo.getLoopFor(loopExitNode->getExitingBlock()); );
 				continue;
 			}
 
@@ -1823,7 +1826,7 @@ public:
 				const Loop* loop = it->first;
 
 				PHINode* phi = PHINode::Create(
-						Type::getInt1Ty(getGlobalContext()),
+						Type::getInt1Ty(mContext),
 						2U,
 						"loop.exit.mask.phi",
 						loop->getHeader()->getFirstNonPHI());
@@ -1863,24 +1866,24 @@ public:
 		}
 
 		// recursively create "normal" mask operations
-		assert (sink);
+		assert (mSink);
 		//sink->createEntryMask(analysisResults); // should not be necessary in addition to recInsertMasks
 		// Recursion over node graph only is not enough due to FULLY_UNIFORM blocks
 		// (entry mask = true). We need to iterate over the blocks' predecessors.
 		std::set<MaskGraphNode*> visitedSet;
-		recInsertMasks(sink, ar, visitedSet);
+		recInsertMasks(mSink, ar, visitedSet);
 
 		// set update operation of each exit mask to just generated exit mask value
-		for (LoopExitMaskMapType::iterator LM=loopExitMaskMap.begin(), LME=loopExitMaskMap.end(); LM!=LME; ++LM) {
+		for (LoopExitMaskMapType::iterator LM=mLoopExitMaskMap.begin(), LME=mLoopExitMaskMap.end(); LM!=LME; ++LM) {
 			LoopExitNode* loopExitNode = LM->second;
 			BasicBlock* exitingBlock = LM->first;
 
 			// Just like above, ignore uniform loops
 			if (ar.isUniform(loopExitNode->getInnermostLoop())) {
 				assert (ar.isUniform(loopExitNode->getInnermostLoop()));
-				assert (ar.isUniform(loopInfo.getLoopFor(loopExitNode->getExitingBlock())));
+				assert (ar.isUniform(mLoopInfo.getLoopFor(loopExitNode->getExitingBlock())));
 				DEBUG_PKT( outs() << "ignoring update of loop exit mask "
-						"phis for uniform loop: " << *loopInfo.getLoopFor(loopExitNode->getExitingBlock()); );
+						"phis for uniform loop: " << *mLoopInfo.getLoopFor(loopExitNode->getExitingBlock()); );
 				continue; // TODO: HERE! This was missing before, but test suite etc. were working!
 			}
 
@@ -1920,16 +1923,16 @@ public:
 	}
 
 	inline void insertLoopExitMasks(AnalysisResults& ar) {
-		assert (initialized);
-		for (LoopExitMaskMapType::iterator LM=loopExitMaskMap.begin(), LME=loopExitMaskMap.end(); LM!=LME; ++LM) {
+		assert (mInitialized);
+		for (LoopExitMaskMapType::iterator LM=mLoopExitMaskMap.begin(), LME=mLoopExitMaskMap.end(); LM!=LME; ++LM) {
 			LoopExitNode* loopExitNode = LM->second;
 
 			// Just like in 'insertMasks()', ignore uniform loops
 			if (ar.isUniform(loopExitNode->getInnermostLoop())) {
 				assert (ar.isUniform(loopExitNode->getInnermostLoop()));
-				assert (ar.isUniform(loopInfo.getLoopFor(loopExitNode->getExitingBlock())));
+				assert (ar.isUniform(mLoopInfo.getLoopFor(loopExitNode->getExitingBlock())));
 				DEBUG_PKT( outs() << "\nignoring update of loop exit mask "
-						"phis for uniform loop: " << *loopInfo.getLoopFor(loopExitNode->getExitingBlock()); );
+						"phis for uniform loop: " << *mLoopInfo.getLoopFor(loopExitNode->getExitingBlock()); );
 				continue;
 			}
 
@@ -1973,7 +1976,7 @@ public:
 					Value* parentMaskPhi = static_cast<MaskValue*>(parentMaskPhiOp)->getMask();
 					phi->addIncoming(parentMaskPhi, preheaderBB);
 				} else {
-					phi->addIncoming(Constant::getNullValue(Type::getInt1Ty(getGlobalContext())), preheaderBB);
+					phi->addIncoming(Constant::getNullValue(Type::getInt1Ty(mContext)), preheaderBB);
 				}
 
 				//wire latch
@@ -1997,95 +2000,95 @@ public:
 	//Loop Info stuff
 	//------------------------------------------------------------------------//
 	inline LoopNode* findLoopNode(const Loop* loop) const {
-		assert (initialized);
-		assert (!loopMap.empty() && "loop exit mask map is empty!");
-		LoopMapType::const_iterator tmp = loopMap.find(loop);
-		if (tmp == loopMap.end()) return NULL;
+		assert (mInitialized);
+		assert (!mLoopMap.empty() && "loop exit mask map is empty!");
+		LoopMapType::const_iterator tmp = mLoopMap.find(loop);
+		if (tmp == mLoopMap.end()) return NULL;
 		return tmp->second;
 	}
 	inline bool isTopLevelLoop(const Loop* loop) const {
-		assert (initialized);
-		LoopMapType::const_iterator tmp = loopMap.find(loop);
-		assert (tmp != loopMap.end() && "isTopLevelLoop() requested for unknown loop!");
+		assert (mInitialized);
+		LoopMapType::const_iterator tmp = mLoopMap.find(loop);
+		assert (tmp != mLoopMap.end() && "isTopLevelLoop() requested for unknown loop!");
 		const bool isNormalTopLevelLoop = tmp->second->isTopLevelLoop();
 		return isNormalTopLevelLoop;
 	}
 	inline bool hasNestedLoop(const Loop* loop) const {
-		assert (initialized);
-		LoopMapType::const_iterator tmp = loopMap.find(loop);
-		assert (tmp != loopMap.end() && "hasNestedLoop() requested for unknown loop!");
+		assert (mInitialized);
+		LoopMapType::const_iterator tmp = mLoopMap.find(loop);
+		assert (tmp != mLoopMap.end() && "hasNestedLoop() requested for unknown loop!");
 		return tmp->second->hasNestedLoop();
 	}
 	inline bool hasMultipleExits(const Loop* loop) const {
-		assert (initialized);
-		LoopMapType::const_iterator tmp = loopMap.find(loop);
-		assert (tmp != loopMap.end() && "hasMultipleExits() requested for unknown loop!");
+		assert (mInitialized);
+		LoopMapType::const_iterator tmp = mLoopMap.find(loop);
+		assert (tmp != mLoopMap.end() && "hasMultipleExits() requested for unknown loop!");
 		return tmp->second->hasMultipleExits();
 	}
 
 	//Loop Exit Info stuff
 	inline LoopExitNode* findLoopExitNode(BasicBlock* exitingBlock) const {
-		assert (initialized);
-		assert (!loopExitMaskMap.empty() && "loop exit mask map is empty!");
-		LoopExitMaskMapType::const_iterator tmp = loopExitMaskMap.find(exitingBlock);
-		if (tmp == loopExitMaskMap.end()) return NULL;
+		assert (mInitialized);
+		assert (!mLoopExitMaskMap.empty() && "loop exit mask map is empty!");
+		LoopExitMaskMapType::const_iterator tmp = mLoopExitMaskMap.find(exitingBlock);
+		if (tmp == mLoopExitMaskMap.end()) return NULL;
 		return tmp->second;
 	}
 	inline bool isInnermostLoopOfExit(BasicBlock* exitingBlock, const Loop* loop) const {
-		assert (initialized);
-		LoopExitMaskMapType::const_iterator tmp = loopExitMaskMap.find(exitingBlock);
-		assert (tmp != loopExitMaskMap.end());
+		assert (mInitialized);
+		LoopExitMaskMapType::const_iterator tmp = mLoopExitMaskMap.find(exitingBlock);
+		assert (tmp != mLoopExitMaskMap.end());
 		return tmp->second->isInnermostLoop(loop);
 	}
 	inline bool exitsMultipleLoops(BasicBlock* exitingBlock) const {
-		assert (initialized);
-		LoopExitMaskMapType::const_iterator tmp = loopExitMaskMap.find(exitingBlock);
-		assert (tmp != loopExitMaskMap.end());
+		assert (mInitialized);
+		LoopExitMaskMapType::const_iterator tmp = mLoopExitMaskMap.find(exitingBlock);
+		assert (tmp != mLoopExitMaskMap.end());
 		return tmp->second->exitsMultipleLoops();
 	}
 	inline bool getInnermostLoopOfExit(BasicBlock* exitingBlock) const {
-		assert (initialized);
-		LoopExitMaskMapType::const_iterator tmp = loopExitMaskMap.find(exitingBlock);
-		assert (tmp != loopExitMaskMap.end());
+		assert (mInitialized);
+		LoopExitMaskMapType::const_iterator tmp = mLoopExitMaskMap.find(exitingBlock);
+		assert (tmp != mLoopExitMaskMap.end());
 		return tmp->second->getInnermostLoop();
 	}
 
 	//returns the mask operations inside 'loop' that are related to the exit 'exitingBlock'
 	//NOTE: loop can be any loop that is exited by this exit
 	inline MaskOperation* getLoopExitMaskPhiOp(BasicBlock* exitingBlock, const Loop* loop) const {
-		assert (initialized);
-		assert (!loopExitMaskMap.empty() && "loop exit mask map is empty!");
-		LoopExitMaskMapType::const_iterator tmp = loopExitMaskMap.find(exitingBlock);
-		assert (tmp != loopExitMaskMap.end());
+		assert (mInitialized);
+		assert (!mLoopExitMaskMap.empty() && "loop exit mask map is empty!");
+		LoopExitMaskMapType::const_iterator tmp = mLoopExitMaskMap.find(exitingBlock);
+		assert (tmp != mLoopExitMaskMap.end());
 		return tmp->second->getMaskPhiOp(loop);
 	}
 	inline MaskOperation* getLoopExitMaskUpdateOp(BasicBlock* exitingBlock) const {
-		assert (initialized);
-		assert (!loopExitMaskMap.empty() && "loop exit mask map is empty!");
-		LoopExitMaskMapType::const_iterator tmp = loopExitMaskMap.find(exitingBlock);
-		assert (tmp != loopExitMaskMap.end());
+		assert (mInitialized);
+		assert (!mLoopExitMaskMap.empty() && "loop exit mask map is empty!");
+		LoopExitMaskMapType::const_iterator tmp = mLoopExitMaskMap.find(exitingBlock);
+		assert (tmp != mLoopExitMaskMap.end());
 		return tmp->second->getMaskUpdateOp();
 	}
 
 	inline void setLoopExitMaskPhi(BasicBlock* exitingBlock, const Loop* loop, MaskOperation* maskPhi) {
-		assert (initialized);
+		assert (mInitialized);
 		assert (exitingBlock && loop && maskPhi);
-		assert (!loopExitMaskMap.empty() && "loop exit mask map is empty!");
-		LoopExitMaskMapType::const_iterator tmp = loopExitMaskMap.find(exitingBlock);
-		assert (tmp != loopExitMaskMap.end());
+		assert (!mLoopExitMaskMap.empty() && "loop exit mask map is empty!");
+		LoopExitMaskMapType::const_iterator tmp = mLoopExitMaskMap.find(exitingBlock);
+		assert (tmp != mLoopExitMaskMap.end());
 		tmp->second->setMaskPhiOp(loop, maskPhi);
 	}
 	inline void setLoopExitMaskUpdateOp(BasicBlock* exitingBlock, MaskOperation* maskUpdateOp) {
-		assert (initialized);
-		assert (!loopExitMaskMap.empty() && "loop exit mask map is empty!");
-		LoopExitMaskMapType::const_iterator tmp = loopExitMaskMap.find(exitingBlock);
-		assert (tmp != loopExitMaskMap.end());
+		assert (mInitialized);
+		assert (!mLoopExitMaskMap.empty() && "loop exit mask map is empty!");
+		LoopExitMaskMapType::const_iterator tmp = mLoopExitMaskMap.find(exitingBlock);
+		assert (tmp != mLoopExitMaskMap.end());
 		tmp->second->setMaskUpdateOp(maskUpdateOp);
 	}
 
 	inline bool verifyLoopMasks(AnalysisResults& ar) const {
-		assert (initialized);
-		for (LoopMapType::const_iterator LN=loopMap.begin(), LNE=loopMap.end(); LN!=LNE; ++LN) {
+		assert (mInitialized);
+		for (LoopMapType::const_iterator LN=mLoopMap.begin(), LNE=mLoopMap.end(); LN!=LNE; ++LN) {
 			const bool verified = LN->second->verify();
 			if (!verified) {
 				errs() << "ERROR: verification of loop node failed!\n";
@@ -2093,7 +2096,7 @@ public:
 				return false;
 			}
 		}
-		for (LoopExitMaskMapType::const_iterator LN=loopExitMaskMap.begin(), LNE=loopExitMaskMap.end(); LN!=LNE; ++LN) {
+		for (LoopExitMaskMapType::const_iterator LN=mLoopExitMaskMap.begin(), LNE=mLoopExitMaskMap.end(); LN!=LNE; ++LN) {
 			const bool verified = LN->second->verify(ar);
 			if (!verified) {
 				errs() << "ERROR: verification of loop exit node failed!\n";
@@ -2104,18 +2107,18 @@ public:
 		return true;
 	}
 	inline void printLoopMap(raw_ostream& o) const {
-		assert (initialized);
+		assert (mInitialized);
 		o << "\nLoop Map:\n";
 		//recursively print loop hierarchy
-		for (LoopInfo::iterator it=loopInfo.begin(), E=loopInfo.end(); it!=E; ++it) {
+		for (LoopInfo::iterator it=mLoopInfo.begin(), E=mLoopInfo.end(); it!=E; ++it) {
 			assert (findLoopNode(*it) && "loop node must not be NULL!");
 			findLoopNode(*it)->print(o);
 		}
 	}
 	inline void printLoopExitMap(raw_ostream& o) const {
-		assert (initialized);
+		assert (mInitialized);
 		o << "\nLoop Exit Mask Map:\n";
-		for (LoopExitMaskMapType::const_iterator it=loopExitMaskMap.begin(), E=loopExitMaskMap.end(); it!=E; ++it) {
+		for (LoopExitMaskMapType::const_iterator it=mLoopExitMaskMap.begin(), E=mLoopExitMaskMap.end(); it!=E; ++it) {
 			it->second->print(o);
 		}
 	}

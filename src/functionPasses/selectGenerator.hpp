@@ -58,7 +58,7 @@ class SelectGenerator : public FunctionPass {
 public:
 	static char ID; // Pass identification, replacement for typeid
 	SelectGenerator(bool* failed_flag=NULL, const bool verbose_flag=false)
-			: FunctionPass(ID), failed(failed_flag), verbose(verbose_flag)
+			: FunctionPass(ID), failed(failed_flag), mVerbose(verbose_flag)
 	{
 		// initialize constants
 		boolOneConst = Constant::getAllOnesValue(Type::getInt1Ty(getGlobalContext()));
@@ -223,7 +223,7 @@ public:
 
 private:
 	bool* failed;
-	const bool verbose; // required for DEBUG mode
+	const bool mVerbose; // required for DEBUG mode
 	LoopInfo* loopInfo;
 	LoopLiveValueAnalysis* loopLiveValueAnalysis;
 	AnalysisResults* analysisResults;

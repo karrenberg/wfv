@@ -53,12 +53,8 @@ public:
 	typedef std::map<BasicBlock*, std::pair<unsigned, Value**> > MaskMapType;
 
 	MaskGenerator(bool* failed_flag=NULL, const bool verbose_flag=false)
-			: FunctionPass(ID), failed(failed_flag), verbose(verbose_flag)
+			: FunctionPass(ID), failed(failed_flag), mVerbose(verbose_flag)
 	{
-		// initialize constants
-		boolOneConst = Constant::getAllOnesValue(Type::getInt1Ty(getGlobalContext()));
-		boolZeroConst = Constant::getNullValue(Type::getInt1Ty(getGlobalContext()));
-
 		initializeMaskGeneratorPass(*PassRegistry::getPassRegistry());
 	}
 
@@ -92,12 +88,16 @@ public:
 
 		if (failed && *failed) return true;
 
+		// initialize constants
+		boolOneConst = Constant::getAllOnesValue(Type::getInt1Ty(F.getContext()));
+		boolZeroConst = Constant::getNullValue(Type::getInt1Ty(F.getContext()));
+
 		domTree               = &getAnalysis<DominatorTree>();
 		postDomTree           = &getAnalysis<PostDominatorTree>();
 		loopInfo              = &getAnalysis<LoopInfo>();
 		analysisResults       = getAnalysis<VectorizationAnalysis>().getAnalysisResults();
 
-		maskGraph             = new MaskGraph(F, *loopInfo, verbose);
+		maskGraph             = new MaskGraph(F, *loopInfo, F.getContext(), mVerbose);
 
 		DEBUG_PKT( outs() << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; );
 		DEBUG_PKT( outs() << "generating mask information for blocks of function " << F.getNameStr() << "...\n"; );
@@ -221,7 +221,7 @@ public:
 
 private:
 	bool* failed;
-	const bool verbose;
+	const bool mVerbose;
 	MaskGraph* maskGraph;
 	AnalysisResults* analysisResults;
 	LoopInfo* loopInfo;
@@ -626,7 +626,7 @@ private:
 			if (exitsMultipleLoops && !isTopLevelLoop) {
 				exitMaskPhi->addIncoming(new MaskNodeReference(exitNode, MaskNodeReference::LOOPEXITPHI), preheaderBB);
 			} else {
-				exitMaskPhi->addIncoming(new MaskValue(Constant::getNullValue(Type::getInt1Ty(getGlobalContext()))), preheaderBB);
+				exitMaskPhi->addIncoming(new MaskValue(boolZeroConst), preheaderBB);
 			}
 
 			//incoming value from latch is:

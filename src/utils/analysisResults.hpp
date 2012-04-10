@@ -244,23 +244,23 @@ public:
 
 
 private:
-	LoopInfo* loopInfo;
-	const bool verbose;
+	LoopInfo* mLoopInfo;
+	const bool mVerbose;
 
-	ValueInfoMapType valueInfoMap;
-	BlockInfoMapType blockInfoMap;
-	UniformLoopInfoMapType uniformLoopInfoMap;
-	VaryingTopLevelLoopSetType varyingTopLevelLoops;
-	InputIndependentInstructionMapType inputIndependentInstructions;
+	ValueInfoMapType mValueInfoMap;
+	BlockInfoMapType mBlockInfoMap;
+	UniformLoopInfoMapType mUniformLoopInfoMap;
+	VaryingTopLevelLoopSetType mVaryingTopLevelLoops;
+	InputIndependentInstructionMapType mInputIndependentInstructions;
 
-	std::set<const Instruction*> scalarSet;
+	std::set<const Instruction*> mScalarSet;
 
 public:
-	AnalysisResults(const bool verbose_flag=false) : verbose(verbose_flag) {}
-	void setLoopInfo(LoopInfo* li) { loopInfo = li; }
+	AnalysisResults(const bool verbose_flag=false) : mVerbose(verbose_flag) {}
+	void setLoopInfo(LoopInfo* li) { mLoopInfo = li; }
 
 	AnalysisResults(LoopInfo* li, const bool verbose_flag=false)
-			: loopInfo(li), verbose(verbose_flag)
+			: mLoopInfo(li), mVerbose(verbose_flag)
 	{
 		// add constants: true, false, 0, 0xffffffff, 1, 2, 3, ... info.simdWidth, undef
 		// NOTE: "SPLIT_NEVER" might be overwritten
@@ -313,28 +313,28 @@ public:
 
 	void print(raw_ostream &O, const Module* M=NULL) const
 	{
-		if (valueInfoMap.empty()) O << "\nvalue info map is empty!\n";
+		if (mValueInfoMap.empty()) O << "\nvalue info map is empty!\n";
 		else O << "\nvalue info map:\n";
-		for (ValueInfoMapType::const_iterator V=valueInfoMap.begin(),
-				VE=valueInfoMap.end(); V!=VE; ++V)
+		for (ValueInfoMapType::const_iterator V=mValueInfoMap.begin(),
+				VE=mValueInfoMap.end(); V!=VE; ++V)
 		{
 			V->second->print(O);
 		}
 		O << "\n";
 
-		if (blockInfoMap.empty()) O << "\nblock info map is empty!\n";
+		if (mBlockInfoMap.empty()) O << "\nblock info map is empty!\n";
 		else O << "\nblock info map:\n";
-		for (BlockInfoMapType::const_iterator B=blockInfoMap.begin(),
-				BE=blockInfoMap.end(); B!=BE; ++B)
+		for (BlockInfoMapType::const_iterator B=mBlockInfoMap.begin(),
+				BE=mBlockInfoMap.end(); B!=BE; ++B)
 		{
 			B->second->print(O);
 		}
 		O << "\n";
 
-		if (uniformLoopInfoMap.empty()) O << "\nloop info map is empty!\n";
+		if (mUniformLoopInfoMap.empty()) O << "\nloop info map is empty!\n";
 		else O << "\nloop info map:\n";
-		for (UniformLoopInfoMapType::const_iterator L=uniformLoopInfoMap.begin(),
-				LE=uniformLoopInfoMap.end(); L!=LE; ++L)
+		for (UniformLoopInfoMapType::const_iterator L=mUniformLoopInfoMap.begin(),
+				LE=mUniformLoopInfoMap.end(); L!=LE; ++L)
 		{
 			L->second->print(O);
 		}
@@ -363,9 +363,9 @@ public:
 			// TODO: not possible if passmanagers etc. are destroyed already
 			//       (which also destroys loopinfo). We need our own data
 			//       structure for this.
-			if (loopInfo) {
-				if (loopInfo->isLoopHeader(BB)) {
-					const Loop* loop = loopInfo->getLoopFor(BB);
+			if (mLoopInfo) {
+				if (mLoopInfo->isLoopHeader(BB)) {
+					const Loop* loop = mLoopInfo->getLoopFor(BB);
 					assert (loop);
 					if (!hasUniformLoopInfo(loop)) {
 						errs() << "ERROR: loop with header " << BB->getName() << " has not been marked properly!\n";
@@ -459,38 +459,38 @@ public:
 
 	typedef ValueInfoMapType::iterator       iterator;
 	typedef ValueInfoMapType::const_iterator const_iterator;
-	iterator		begin()       { return valueInfoMap.begin(); }
-	const_iterator	begin() const { return valueInfoMap.begin(); }
-	iterator		end  ()       { return valueInfoMap.end();   }
-	const_iterator	end  () const { return valueInfoMap.end();   }
+	iterator		begin()       { return mValueInfoMap.begin(); }
+	const_iterator	begin() const { return mValueInfoMap.begin(); }
+	iterator		end  ()       { return mValueInfoMap.end();   }
+	const_iterator	end  () const { return mValueInfoMap.end();   }
 
 	typedef BlockInfoMapType::iterator       block_iterator;
 	typedef BlockInfoMapType::const_iterator block_const_iterator;
-	block_iterator			block_begin()       { return blockInfoMap.begin(); }
-	block_const_iterator	block_begin() const { return blockInfoMap.begin(); }
-	block_iterator			block_end  ()       { return blockInfoMap.end();   }
-	block_const_iterator	block_end  () const { return blockInfoMap.end();   }
+	block_iterator			block_begin()       { return mBlockInfoMap.begin(); }
+	block_const_iterator	block_begin() const { return mBlockInfoMap.begin(); }
+	block_iterator			block_end  ()       { return mBlockInfoMap.end();   }
+	block_const_iterator	block_end  () const { return mBlockInfoMap.end();   }
 
 	typedef UniformLoopInfoMapType::iterator       uniformloop_iterator;
 	typedef UniformLoopInfoMapType::const_iterator uniformloop_const_iterator;
-	uniformloop_iterator		uniformloop_begin()       { return uniformLoopInfoMap.begin(); }
-	uniformloop_const_iterator	uniformloop_begin() const { return uniformLoopInfoMap.begin(); }
-	uniformloop_iterator		uniformloop_end  ()       { return uniformLoopInfoMap.end();   }
-	uniformloop_const_iterator	uniformloop_end  () const { return uniformLoopInfoMap.end();   }
+	uniformloop_iterator		uniformloop_begin()       { return mUniformLoopInfoMap.begin(); }
+	uniformloop_const_iterator	uniformloop_begin() const { return mUniformLoopInfoMap.begin(); }
+	uniformloop_iterator		uniformloop_end  ()       { return mUniformLoopInfoMap.end();   }
+	uniformloop_const_iterator	uniformloop_end  () const { return mUniformLoopInfoMap.end();   }
 
 	typedef VaryingTopLevelLoopSetType::iterator       varyingtoplevelloop_iterator;
 	typedef VaryingTopLevelLoopSetType::const_iterator varyingtoplevelloop_const_iterator;
-	varyingtoplevelloop_iterator		varyingtoplevelloop_begin()       { return varyingTopLevelLoops.begin(); }
-	varyingtoplevelloop_const_iterator	varyingtoplevelloop_begin() const { return varyingTopLevelLoops.begin(); }
-	varyingtoplevelloop_iterator		varyingtoplevelloop_end  ()       { return varyingTopLevelLoops.end();   }
-	varyingtoplevelloop_const_iterator	varyingtoplevelloop_end  () const { return varyingTopLevelLoops.end();   }
+	varyingtoplevelloop_iterator		varyingtoplevelloop_begin()       { return mVaryingTopLevelLoops.begin(); }
+	varyingtoplevelloop_const_iterator	varyingtoplevelloop_begin() const { return mVaryingTopLevelLoops.begin(); }
+	varyingtoplevelloop_iterator		varyingtoplevelloop_end  ()       { return mVaryingTopLevelLoops.end();   }
+	varyingtoplevelloop_const_iterator	varyingtoplevelloop_end  () const { return mVaryingTopLevelLoops.end();   }
 
 	typedef InputIndependentInstructionMapType::iterator       inputindependentvalue_iterator;
 	typedef InputIndependentInstructionMapType::const_iterator inputindependentvalue_const_iterator;
-	inputindependentvalue_iterator			inputindependentvalue_begin()       { return inputIndependentInstructions.begin(); }
-	inputindependentvalue_const_iterator	inputindependentvalue_begin() const { return inputIndependentInstructions.begin(); }
-	inputindependentvalue_iterator			inputindependentvalue_end  ()       { return inputIndependentInstructions.end();   }
-	inputindependentvalue_const_iterator	inputindependentvalue_end  () const { return inputIndependentInstructions.end();   }
+	inputindependentvalue_iterator			inputindependentvalue_begin()       { return mInputIndependentInstructions.begin(); }
+	inputindependentvalue_const_iterator	inputindependentvalue_begin() const { return mInputIndependentInstructions.begin(); }
+	inputindependentvalue_iterator			inputindependentvalue_end  ()       { return mInputIndependentInstructions.end();   }
+	inputindependentvalue_const_iterator	inputindependentvalue_end  () const { return mInputIndependentInstructions.end();   }
 
 	bool isUniform(const Value* value) const
 	{
@@ -711,12 +711,12 @@ public:
 	bool isUniformLoopBlock(const BasicBlock* block) const
 	{
 		assert (block);
-		if (!loopInfo) {
+		if (!mLoopInfo) {
 			outs() << "ERROR: isUniformLoopBlock() should not be called "
 					<< "after LoopInfo was destroyed!\n";
 			return false;
 		}
-		const Loop* loop = loopInfo->getLoopFor(block);
+		const Loop* loop = mLoopInfo->getLoopFor(block);
 		if (!loop) return false;
 		UniformLoopInfo* uli = getUniformLoopInfo(loop);
 		return uli->isNonDivergent;
@@ -724,12 +724,12 @@ public:
 	bool isFullyUniformLoopBlock(const BasicBlock* block) const
 	{
 		assert (block);
-		if (!loopInfo) {
+		if (!mLoopInfo) {
 			outs() << "ERROR: isUniformLoopBlock() should not be called "
 					<< "after LoopInfo was destroyed!\n";
 			return false;
 		}
-		const Loop* loop = loopInfo->getLoopFor(block);
+		const Loop* loop = mLoopInfo->getLoopFor(block);
 		UniformLoopInfo* uli = getUniformLoopInfo(loop);
 		return uli->isFullyNonDivergent;
 	}
@@ -783,9 +783,9 @@ public:
 
 		if (!isUniform(value) && ii == INDEX_SAME) {
 			DEBUG_PKT( errs() << "WARNING: attempted to mark VARYING value as "
-					<< "INDEX_SAME: " << *value << " - marking as INDEX_RANDOM "
+					<< "INDEX_SAME: " << *value << " - marking as INDEX_CONSECUTIVE "
 					<< "(possibly introducing some imprecision)\n"; );
-			vi->indexInfo = INDEX_RANDOM;
+			vi->indexInfo = INDEX_CONSECUTIVE;
 		} else {
 			vi->indexInfo = ii;
 		}
@@ -815,11 +815,11 @@ public:
 			assert (false && "attempting to overwrite SPLIT_REPLICATE, SPLIT_RESULT, SPLIT_FULL, or SPLIT_FULL_GUARDED with SPLIT_NEVER!");
 			return;
 		}
-		assert (forceUpdate ||
+		assert ((forceUpdate ||
 				(!isUniform(value) ||
 				(si != SPLIT_RESULT &&
 				 si != SPLIT_FULL &&
-				 si != SPLIT_FULL_GUARDED)) &&
+				 si != SPLIT_FULL_GUARDED))) &&
 				"attempting to mark UNIFORM value as SPLIT_RESULT, SPLIT_FULL, or SPLIT_FULL_GUARDED!");
 
 		vi->splitInfo = si;
@@ -832,18 +832,18 @@ public:
 
 
 	inline bool hasValueInfo() const {
-		return !valueInfoMap.empty();
+		return !mValueInfoMap.empty();
 	}
 
 	inline bool hasValueInfo(const Value* value) const {
 		assert (value);
-		return valueInfoMap.find(value) != valueInfoMap.end();
+		return mValueInfoMap.find(value) != mValueInfoMap.end();
 	}
 
 	ValueInfo* getValueInfo(const Value* value) const {
 		assert (value);
-		ValueInfoMapType::const_iterator it = valueInfoMap.find(value);
-		if (it == valueInfoMap.end()) return NULL;
+		ValueInfoMapType::const_iterator it = mValueInfoMap.find(value);
+		if (it == mValueInfoMap.end()) return NULL;
 		return it->second;
 	}
 
@@ -866,7 +866,7 @@ public:
 		vi->splitInfo = si;
 		vi->isMask = isMask;
 
-		valueInfoMap.insert(std::make_pair(value, vi));
+		mValueInfoMap.insert(std::make_pair(value, vi));
 		return true;
 	}
 
@@ -889,13 +889,13 @@ public:
 	}
 
 	bool removeValueInfo(Value* value) {
-		ValueInfoMapType::iterator it = valueInfoMap.find(value);
-		if (it == valueInfoMap.end()) {
+		ValueInfoMapType::iterator it = mValueInfoMap.find(value);
+		if (it == mValueInfoMap.end()) {
 			assert (false && "value is not in valueInfo map!");
 			return false;
 		}
 		delete it->second;
-		valueInfoMap.erase(it);
+		mValueInfoMap.erase(it);
 		return true;
 	}
 
@@ -903,13 +903,13 @@ public:
 
 	inline bool hasBlockInfo(BasicBlock* block) const {
 		assert (block);
-		return blockInfoMap.find(block) != blockInfoMap.end();
+		return mBlockInfoMap.find(block) != mBlockInfoMap.end();
 	}
 
 	inline BlockInfo* getBlockInfo(const BasicBlock* block) const {
 		assert (block);
-		BlockInfoMapType::const_iterator it = blockInfoMap.find(block);
-		if (it == blockInfoMap.end()) return NULL;
+		BlockInfoMapType::const_iterator it = mBlockInfoMap.find(block);
+		if (it == mBlockInfoMap.end()) return NULL;
 		return it->second;
 	}
 
@@ -930,7 +930,7 @@ public:
 									  fullyUniformExit);
 
 		std::pair<BlockInfoMapType::iterator, bool> res =
-			blockInfoMap.insert(std::make_pair(block, bi));
+			mBlockInfoMap.insert(std::make_pair(block, bi));
 
 		if (!res.second) {
 			assert (false && "insertion of block info failed!");
@@ -940,13 +940,13 @@ public:
 	}
 
 	bool removeBlockInfo(BasicBlock* block) {
-		BlockInfoMapType::iterator it = blockInfoMap.find(block);
-		if (it == blockInfoMap.end()) {
+		BlockInfoMapType::iterator it = mBlockInfoMap.find(block);
+		if (it == mBlockInfoMap.end()) {
 			assert (false && "block is not in blockInfo map!");
 			return false;
 		}
 		delete it->second;
-		blockInfoMap.erase(it);
+		mBlockInfoMap.erase(it);
 		return true;
 	}
 
@@ -954,13 +954,13 @@ public:
 
 	inline bool hasUniformLoopInfo(const Loop* loop) const {
 		assert (loop);
-		return uniformLoopInfoMap.find(loop) != uniformLoopInfoMap.end();
+		return mUniformLoopInfoMap.find(loop) != mUniformLoopInfoMap.end();
 	}
 
 	inline UniformLoopInfo* getUniformLoopInfo(const Loop* loop) const {
 		assert (loop);
-		UniformLoopInfoMapType::const_iterator it = uniformLoopInfoMap.find(loop);
-		assert (it != uniformLoopInfoMap.end());
+		UniformLoopInfoMapType::const_iterator it = mUniformLoopInfoMap.find(loop);
+		assert (it != mUniformLoopInfoMap.end());
 		return it->second;
 	}
 
@@ -976,19 +976,19 @@ public:
 		UniformLoopInfo* uli = new UniformLoopInfo(loop,
 									  isUniform,
 									  isFullyUniform);
-		uniformLoopInfoMap.insert(std::make_pair(loop, uli));
+		mUniformLoopInfoMap.insert(std::make_pair(loop, uli));
 		return true;
 	}
 
 	bool removeUniformLoopInfo(const Loop* loop) {
 		assert (loop);
-		UniformLoopInfoMapType::iterator it = uniformLoopInfoMap.find(loop);
-		if (it == uniformLoopInfoMap.end()) {
+		UniformLoopInfoMapType::iterator it = mUniformLoopInfoMap.find(loop);
+		if (it == mUniformLoopInfoMap.end()) {
 			assert (false && "loop is not in loopInfo map!");
 			return false;
 		}
 		delete it->second;
-		uniformLoopInfoMap.erase(it);
+		mUniformLoopInfoMap.erase(it);
 		return true;
 	}
 
@@ -1169,7 +1169,7 @@ public:
 	bool addVaryingTopLevelLoop(Loop* loop)
 	{
 		assert (loop);
-		return varyingTopLevelLoops.insert(loop).second;
+		return mVaryingTopLevelLoops.insert(loop).second;
 	}
 
 	//bool isVaryingTopLevelLoop(const Loop* loop) const
@@ -1180,12 +1180,12 @@ public:
 
 	bool removeVaryingTopLevelLoop(Loop* loop) {
 		assert (loop);
-		VaryingTopLevelLoopSetType::iterator it = varyingTopLevelLoops.find(loop);
-		if (it == varyingTopLevelLoops.end()) {
+		VaryingTopLevelLoopSetType::iterator it = mVaryingTopLevelLoops.find(loop);
+		if (it == mVaryingTopLevelLoops.end()) {
 			assert (false && "loop is not in loopInfo map!");
 			return false;
 		}
-		varyingTopLevelLoops.erase(it);
+		mVaryingTopLevelLoops.erase(it);
 		return true;
 	}
 
@@ -1193,20 +1193,20 @@ public:
 
 	bool isInputIndependent(const Instruction* value) const {
 		assert (value);
-		InputIndependentInstructionMapType::const_iterator it = inputIndependentInstructions.find(value);
-		return it != inputIndependentInstructions.end();
+		InputIndependentInstructionMapType::const_iterator it = mInputIndependentInstructions.find(value);
+		return it != mInputIndependentInstructions.end();
 	}
 
 	void addInputIndependentValue(const Instruction* value, const bool isVaryingDueToVaryingLoop) {
 		assert (value);
-		assert (inputIndependentInstructions.find(value) == inputIndependentInstructions.end());
-		inputIndependentInstructions.insert(std::make_pair(value, isVaryingDueToVaryingLoop));
+		assert (mInputIndependentInstructions.find(value) == mInputIndependentInstructions.end());
+		mInputIndependentInstructions.insert(std::make_pair(value, isVaryingDueToVaryingLoop));
 	}
 
 	void removeInputIndependentValue(const Instruction* value) {
 		assert (value);
-		assert (inputIndependentInstructions.find(value) != inputIndependentInstructions.end());
-		inputIndependentInstructions.erase(value);
+		assert (mInputIndependentInstructions.find(value) != mInputIndependentInstructions.end());
+		mInputIndependentInstructions.erase(value);
 	}
 
 	void updateInputIndependentValue(const Instruction* oldI, const Instruction* newI) {
@@ -1221,8 +1221,8 @@ public:
 
 		// This prevents calculating the information on updated loopInfo
 		// when called after CFG linearization.
-		InputIndependentInstructionMapType::const_iterator it = inputIndependentInstructions.find(value);
-		assert (it != inputIndependentInstructions.end());
+		InputIndependentInstructionMapType::const_iterator it = mInputIndependentInstructions.find(value);
+		assert (it != mInputIndependentInstructions.end());
 
 		return it->second;
 	}
@@ -1231,7 +1231,7 @@ public:
 		assert (value);
 		assert (isInputIndependent(value));
 
-		InputIndependentInstructionMapType::iterator it = inputIndependentInstructions.find(value);
+		InputIndependentInstructionMapType::iterator it = mInputIndependentInstructions.find(value);
 		it->second = isVarying;
 	}
 
@@ -1239,19 +1239,19 @@ public:
 
 	void addScalarInstruction(const Instruction* I) {
 		assert (I);
-		scalarSet.insert(I);
+		mScalarSet.insert(I);
 	}
 
 	inline bool instCanRemainScalar(const Instruction* I) const {
 		assert (I);
-		return scalarSet.find(I) != scalarSet.end();
+		return mScalarSet.find(I) != mScalarSet.end();
 	}
 
 	void updateRemainScalarInfo(const Instruction* oldI, const Instruction* newI) {
 		assert (oldI && newI);
 		if (!instCanRemainScalar(oldI)) return;
-		scalarSet.erase(oldI);
-		scalarSet.insert(newI);
+		mScalarSet.erase(oldI);
+		mScalarSet.insert(newI);
 	}
 
 

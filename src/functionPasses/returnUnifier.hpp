@@ -48,7 +48,7 @@ class ReturnUnifier : public FunctionPass {
 public:
 	static char ID; // Pass identification, replacement for typeid
 	ReturnUnifier(const bool verbose_flag = false)
-			: FunctionPass(ID), verbose(verbose_flag)
+			: FunctionPass(ID), mVerbose(verbose_flag)
 	{
 		initializeReturnUnifierPass(*PassRegistry::getPassRegistry());
 	}
@@ -185,7 +185,7 @@ public:
 	}
 
 private:
-	const bool verbose;
+	const bool mVerbose;
 };
 
 } // namespace

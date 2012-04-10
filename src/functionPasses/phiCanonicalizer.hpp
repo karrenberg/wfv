@@ -58,7 +58,7 @@ class PhiCanonicalizer : public FunctionPass {
 public:
 	static char ID; // Pass identification, replacement for typeid
 	PhiCanonicalizer(const bool verbose_flag = false)
-			: FunctionPass(ID), verbose(verbose_flag)
+			: FunctionPass(ID), mVerbose(verbose_flag)
 	{
 		initializePhiCanonicalizerPass(*PassRegistry::getPassRegistry());
 	}
@@ -150,7 +150,7 @@ private:
 	LoopInfo* loopInfo;
 	DominatorTree* idom;
 
-	const bool verbose;
+	const bool mVerbose;
 
 #ifdef PACKETIZER_USE_OLD_PHI_CANONICALIZATION //default: deactivated
 	//ensures that all phis inside a function that do not belong to a loop

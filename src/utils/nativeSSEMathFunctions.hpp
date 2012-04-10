@@ -76,98 +76,98 @@ using namespace llvm;
 
 class NativeSSEMathFunctions {
 public:
-    inline Function* getSinPS(Module& mod, const unsigned simdWidth) const { return generateSinPS(mod, simdWidth); }
-    inline Function* getCosPS(Module& mod, const unsigned simdWidth) const { return generateCosPS(mod, simdWidth); }
-    inline Function* getSinCosPS(Module& mod, const unsigned simdWidth) const { return generateSinCosPS(mod, simdWidth); }
-    inline Function* getLogPS(Module& mod, const unsigned simdWidth) const { return generateLogPS(mod, simdWidth); }
-    inline Function* getExpPS(Module& mod, const unsigned simdWidth) const { return generateExpPS(mod, simdWidth); }
-    inline Function* getRoundPS(Module& mod) const { return generateRoundPS(mod); }
+    inline Function* getSinPS(Module* mod, const unsigned simdWidth) const { return generateSinPS(mod, simdWidth); }
+    inline Function* getCosPS(Module* mod, const unsigned simdWidth) const { return generateCosPS(mod, simdWidth); }
+    inline Function* getSinCosPS(Module* mod, const unsigned simdWidth) const { return generateSinCosPS(mod, simdWidth); }
+    inline Function* getLogPS(Module* mod, const unsigned simdWidth) const { return generateLogPS(mod, simdWidth); }
+    inline Function* getExpPS(Module* mod, const unsigned simdWidth) const { return generateExpPS(mod, simdWidth); }
+    inline Function* getRoundPS(Module* mod) const { return generateRoundPS(mod); }
 
-    inline Function* getLog2PS(Module& mod, const unsigned simdWidth) const { return generateLog2PS(mod, simdWidth); }
-    inline Function* getExp2PS(Module& mod, const unsigned simdWidth) const { return generateExp2PS(mod, simdWidth); }
-    inline Function* getPowPS(Module& mod, const unsigned simdWidth) const { return generatePowPS(mod, simdWidth); }
+    inline Function* getLog2PS(Module* mod, const unsigned simdWidth) const { return generateLog2PS(mod, simdWidth); }
+    inline Function* getExp2PS(Module* mod, const unsigned simdWidth) const { return generateExp2PS(mod, simdWidth); }
+    inline Function* getPowPS(Module* mod, const unsigned simdWidth) const { return generatePowPS(mod, simdWidth); }
 
-	inline Function* getAbsPS(Module& mod, const unsigned simdWidth) const { return generateAbsPS(mod, simdWidth); }
+	inline Function* getAbsPS(Module* mod, const unsigned simdWidth) const { return generateAbsPS(mod, simdWidth); }
 
-    inline Function* getRsqrtPS(Module& mod) const { return generateRsqrtPS(mod); }
-    inline Function* getSqrtPS(Module& mod) const { return generateSqrtPS(mod); }
-    inline Function* getRcpPS(Module& mod) const { return generateRcpPS(mod); }
-    inline Function* getMinPS(Module& mod) const { return generateMinPS(mod); }
-    inline Function* getMaxPS(Module& mod) const { return generateMaxPS(mod); }
-    inline Function* getCmpPS(Module& mod) const { return generateCmpPS(mod); }
-    inline Function* getAddSubPS(Module& mod) const { return generateAddSubPS(mod); }
+    inline Function* getRsqrtPS(Module* mod) const { return generateRsqrtPS(mod); }
+    inline Function* getSqrtPS(Module* mod) const { return generateSqrtPS(mod); }
+    inline Function* getRcpPS(Module* mod) const { return generateRcpPS(mod); }
+    inline Function* getMinPS(Module* mod) const { return generateMinPS(mod); }
+    inline Function* getMaxPS(Module* mod) const { return generateMaxPS(mod); }
+    inline Function* getCmpPS(Module* mod) const { return generateCmpPS(mod); }
+    inline Function* getAddSubPS(Module* mod) const { return generateAddSubPS(mod); }
 
 private:
     /////////////////////////////
     // SSE function generation //
     /////////////////////////////
     //intrinsics have to be generated/declared BEFORE math functions!
-    inline Function* generateCvttps2dq(Module& mod) const {
-		return Intrinsic::getDeclaration(&mod, Intrinsic::x86_sse2_cvttps2dq);
+    inline Function* generateCvttps2dq(Module* mod) const {
+		return Intrinsic::getDeclaration(mod, Intrinsic::x86_sse2_cvttps2dq);
     }
-    inline Function* generateCvtdq2ps(Module& mod) const {
-		return Intrinsic::getDeclaration(&mod, Intrinsic::x86_sse2_cvtdq2ps);
+    inline Function* generateCvtdq2ps(Module* mod) const {
+		return Intrinsic::getDeclaration(mod, Intrinsic::x86_sse2_cvtdq2ps);
     }
-    inline Function* generatePcmpeq(Module& mod) const {
-		return Intrinsic::getDeclaration(&mod, Intrinsic::x86_sse2_pcmpeq_d);
+    inline Function* generatePcmpeq(Module* mod) const {
+		return Intrinsic::getDeclaration(mod, Intrinsic::x86_sse2_pcmpeq_d);
     }
-    inline Function* generatePsllid(Module& mod) const {
-		return Intrinsic::getDeclaration(&mod, Intrinsic::x86_sse2_pslli_d);
+    inline Function* generatePsllid(Module* mod) const {
+		return Intrinsic::getDeclaration(mod, Intrinsic::x86_sse2_pslli_d);
     }
-    inline Function* generatePsrlid(Module& mod) const {
-		return Intrinsic::getDeclaration(&mod, Intrinsic::x86_sse2_psrli_d);
-    }
-
-    inline Function* generateRsqrtPS(Module& mod) const {
-		return Intrinsic::getDeclaration(&mod, Intrinsic::x86_sse_rsqrt_ps);
-    }
-    inline Function* generateSqrtPS(Module& mod) const {
-		return Intrinsic::getDeclaration(&mod, Intrinsic::x86_sse_sqrt_ps);
-    }
-    inline Function* generateRcpPS(Module& mod) const {
-		return Intrinsic::getDeclaration(&mod, Intrinsic::x86_sse_rcp_ps);
-    }
-    inline Function* generateMaxPS(Module& mod) const {
-		return Intrinsic::getDeclaration(&mod, Intrinsic::x86_sse_max_ps);
-    }
-    inline Function* generateMinPS(Module& mod) const {
-		return Intrinsic::getDeclaration(&mod, Intrinsic::x86_sse_min_ps);
-    }
-    inline Function* generateCmpPS(Module& mod) const {
-		return Intrinsic::getDeclaration(&mod, Intrinsic::x86_sse_cmp_ps);
-    }
-    inline Function* generateAddSubPS(Module& mod) const {
-		return Intrinsic::getDeclaration(&mod, Intrinsic::x86_sse3_addsub_ps);
-    }
-    inline Function* generateRoundPS(Module& mod) const {
-		return Intrinsic::getDeclaration(&mod, Intrinsic::x86_sse41_round_ps);
+    inline Function* generatePsrlid(Module* mod) const {
+		return Intrinsic::getDeclaration(mod, Intrinsic::x86_sse2_psrli_d);
     }
 
-    Function* generateSinPS(Module& mod, const unsigned simdWidth) const {
-        if (Function* tmpF = mod.getFunction("sin_ps")) {
+    inline Function* generateRsqrtPS(Module* mod) const {
+		return Intrinsic::getDeclaration(mod, Intrinsic::x86_sse_rsqrt_ps);
+    }
+    inline Function* generateSqrtPS(Module* mod) const {
+		return Intrinsic::getDeclaration(mod, Intrinsic::x86_sse_sqrt_ps);
+    }
+    inline Function* generateRcpPS(Module* mod) const {
+		return Intrinsic::getDeclaration(mod, Intrinsic::x86_sse_rcp_ps);
+    }
+    inline Function* generateMaxPS(Module* mod) const {
+		return Intrinsic::getDeclaration(mod, Intrinsic::x86_sse_max_ps);
+    }
+    inline Function* generateMinPS(Module* mod) const {
+		return Intrinsic::getDeclaration(mod, Intrinsic::x86_sse_min_ps);
+    }
+    inline Function* generateCmpPS(Module* mod) const {
+		return Intrinsic::getDeclaration(mod, Intrinsic::x86_sse_cmp_ps);
+    }
+    inline Function* generateAddSubPS(Module* mod) const {
+		return Intrinsic::getDeclaration(mod, Intrinsic::x86_sse3_addsub_ps);
+    }
+    inline Function* generateRoundPS(Module* mod) const {
+		return Intrinsic::getDeclaration(mod, Intrinsic::x86_sse41_round_ps);
+    }
+
+    Function* generateSinPS(Module* mod, const unsigned simdWidth) const {
+        if (Function* tmpF = mod->getFunction("sin_ps")) {
             return tmpF;
         }
 
-        assert (!(mod.getFunction("_ZL17_ps_inv_sign_mask") ||
-                mod.getFunction("_ZL13_ps_sign_mask") ||
-                mod.getFunction("_ZL15_ps_cephes_FOPI") ||
-                mod.getFunction("_ZL7_pi32_1") ||
-                mod.getFunction("_ZL10_pi32_inv1") ||
-                mod.getFunction("_ZL7_pi32_4") ||
-                mod.getFunction("_ZL7_pi32_2") ||
-                mod.getFunction("_ZL20_ps_minus_cephes_DP1") ||
-                mod.getFunction("_ZL20_ps_minus_cephes_DP2") ||
-                mod.getFunction("_ZL20_ps_minus_cephes_DP3") ||
-                mod.getFunction("_ZL13_ps_coscof_p0") ||
-                mod.getFunction("_ZL13_ps_coscof_p1") ||
-                mod.getFunction("_ZL13_ps_coscof_p2") ||
-                mod.getFunction("_ZL7_ps_0p5") ||
-                mod.getFunction("_ZL5_ps_1") ||
-                mod.getFunction("_ZL13_ps_sincof_p0") ||
-                mod.getFunction("_ZL13_ps_sincof_p1") ||
-                mod.getFunction("_ZL13_ps_sincof_p2")) && "function to be generated is already declared in module!");
+        assert (!(mod->getFunction("_ZL17_ps_inv_sign_mask") ||
+                mod->getFunction("_ZL13_ps_sign_mask") ||
+                mod->getFunction("_ZL15_ps_cephes_FOPI") ||
+                mod->getFunction("_ZL7_pi32_1") ||
+                mod->getFunction("_ZL10_pi32_inv1") ||
+                mod->getFunction("_ZL7_pi32_4") ||
+                mod->getFunction("_ZL7_pi32_2") ||
+                mod->getFunction("_ZL20_ps_minus_cephes_DP1") ||
+                mod->getFunction("_ZL20_ps_minus_cephes_DP2") ||
+                mod->getFunction("_ZL20_ps_minus_cephes_DP3") ||
+                mod->getFunction("_ZL13_ps_coscof_p0") ||
+                mod->getFunction("_ZL13_ps_coscof_p1") ||
+                mod->getFunction("_ZL13_ps_coscof_p2") ||
+                mod->getFunction("_ZL7_ps_0p5") ||
+                mod->getFunction("_ZL5_ps_1") ||
+                mod->getFunction("_ZL13_ps_sincof_p0") ||
+                mod->getFunction("_ZL13_ps_sincof_p1") ||
+                mod->getFunction("_ZL13_ps_sincof_p2")) && "function to be generated is already declared in module!");
 
-		LLVMContext& context = mod.getContext();
+		LLVMContext& context = mod->getContext();
 
 		VectorType* vectorTy_float_SIMD = VectorType::get(Type::getFloatTy(context), simdWidth);
 		VectorType* vectorTy_int_SIMD = VectorType::get(Type::getInt32Ty(context), simdWidth);
@@ -191,7 +191,7 @@ private:
       Function* sin_ps = Function::Create(
         /*Type=*/FuncTy_5,
         /*Linkage=*/GlobalValue::ExternalLinkage,
-        /*Name=*/"sin_ps", &mod);
+        /*Name=*/"sin_ps", mod);
       sin_ps->setCallingConv(CallingConv::C);
       AttrListPtr sin_ps_PAL;
       {
@@ -208,7 +208,7 @@ private:
 
 
       GlobalVariable* gvar_array__ZL17_ps_inv_sign_mask = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -217,7 +217,7 @@ private:
       gvar_array__ZL17_ps_inv_sign_mask->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL13_ps_sign_mask = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -226,7 +226,7 @@ private:
       gvar_array__ZL13_ps_sign_mask->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL15_ps_cephes_FOPI = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -235,7 +235,7 @@ private:
       gvar_array__ZL15_ps_cephes_FOPI->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL7_pi32_1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -244,7 +244,7 @@ private:
       gvar_array__ZL7_pi32_1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL10_pi32_inv1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -253,7 +253,7 @@ private:
       gvar_array__ZL10_pi32_inv1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL7_pi32_4 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -262,7 +262,7 @@ private:
       gvar_array__ZL7_pi32_4->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL7_pi32_2 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -271,7 +271,7 @@ private:
       gvar_array__ZL7_pi32_2->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL20_ps_minus_cephes_DP1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -280,7 +280,7 @@ private:
       gvar_array__ZL20_ps_minus_cephes_DP1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL20_ps_minus_cephes_DP2 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -289,7 +289,7 @@ private:
       gvar_array__ZL20_ps_minus_cephes_DP2->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL20_ps_minus_cephes_DP3 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -298,7 +298,7 @@ private:
       gvar_array__ZL20_ps_minus_cephes_DP3->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL13_ps_coscof_p0 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -307,7 +307,7 @@ private:
       gvar_array__ZL13_ps_coscof_p0->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL13_ps_coscof_p1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -316,7 +316,7 @@ private:
       gvar_array__ZL13_ps_coscof_p1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL13_ps_coscof_p2 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -325,7 +325,7 @@ private:
       gvar_array__ZL13_ps_coscof_p2->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL7_ps_0p5 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -334,7 +334,7 @@ private:
       gvar_array__ZL7_ps_0p5->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL5_ps_1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -343,7 +343,7 @@ private:
       gvar_array__ZL5_ps_1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL13_ps_sincof_p0 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -352,7 +352,7 @@ private:
       gvar_array__ZL13_ps_sincof_p0->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL13_ps_sincof_p1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -361,7 +361,7 @@ private:
       gvar_array__ZL13_ps_sincof_p1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL13_ps_sincof_p2 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -687,30 +687,30 @@ private:
 
       return sin_ps;
     }
-    Function* generateCosPS(Module& mod, const unsigned simdWidth) const {
-        if (Function* tmpF = mod.getFunction("cos_ps")) {
+    Function* generateCosPS(Module* mod, const unsigned simdWidth) const {
+        if (Function* tmpF = mod->getFunction("cos_ps")) {
             return tmpF;
         }
 
-        assert (!(mod.getFunction("_ZL17_ps_inv_sign_mask") ||
-                mod.getFunction("_ZL15_ps_cephes_FOPI") ||
-                mod.getFunction("_ZL7_pi32_1") ||
-                mod.getFunction("_ZL10_pi32_inv1") ||
-                mod.getFunction("_ZL7_pi32_2") ||
-                mod.getFunction("_ZL7_pi32_4") ||
-                mod.getFunction("_ZL20_ps_minus_cephes_DP1") ||
-                mod.getFunction("_ZL20_ps_minus_cephes_DP2") ||
-                mod.getFunction("_ZL20_ps_minus_cephes_DP3") ||
-                mod.getFunction("_ZL13_ps_coscof_p0") ||
-                mod.getFunction("_ZL13_ps_coscof_p1") ||
-                mod.getFunction("_ZL13_ps_coscof_p2") ||
-                mod.getFunction("_ZL7_ps_0p5") ||
-                mod.getFunction("_ZL5_ps_1") ||
-                mod.getFunction("_ZL13_ps_sincof_p0") ||
-                mod.getFunction("_ZL13_ps_sincof_p1") ||
-                mod.getFunction("_ZL13_ps_sincof_p2")) && "function to be generated is already declared in module!");
+        assert (!(mod->getFunction("_ZL17_ps_inv_sign_mask") ||
+                mod->getFunction("_ZL15_ps_cephes_FOPI") ||
+                mod->getFunction("_ZL7_pi32_1") ||
+                mod->getFunction("_ZL10_pi32_inv1") ||
+                mod->getFunction("_ZL7_pi32_2") ||
+                mod->getFunction("_ZL7_pi32_4") ||
+                mod->getFunction("_ZL20_ps_minus_cephes_DP1") ||
+                mod->getFunction("_ZL20_ps_minus_cephes_DP2") ||
+                mod->getFunction("_ZL20_ps_minus_cephes_DP3") ||
+                mod->getFunction("_ZL13_ps_coscof_p0") ||
+                mod->getFunction("_ZL13_ps_coscof_p1") ||
+                mod->getFunction("_ZL13_ps_coscof_p2") ||
+                mod->getFunction("_ZL7_ps_0p5") ||
+                mod->getFunction("_ZL5_ps_1") ||
+                mod->getFunction("_ZL13_ps_sincof_p0") ||
+                mod->getFunction("_ZL13_ps_sincof_p1") ||
+                mod->getFunction("_ZL13_ps_sincof_p2")) && "function to be generated is already declared in module!");
 
-		LLVMContext& context = mod.getContext();
+		LLVMContext& context = mod->getContext();
 
 		VectorType* vectorTy_float_SIMD = VectorType::get(Type::getFloatTy(context), simdWidth);
 		VectorType* vectorTy_int_SIMD = VectorType::get(Type::getInt32Ty(context), simdWidth);
@@ -738,7 +738,7 @@ private:
       Function* cos_ps = Function::Create(
         /*Type=*/FuncTy_5,
         /*Linkage=*/GlobalValue::ExternalLinkage,
-        /*Name=*/"cos_ps", &mod);
+        /*Name=*/"cos_ps", mod);
       cos_ps->setCallingConv(CallingConv::C);
       AttrListPtr cos_ps_PAL;
       {
@@ -756,7 +756,7 @@ private:
 
 
       GlobalVariable* gvar_array__ZL17_ps_inv_sign_mask = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -765,7 +765,7 @@ private:
       gvar_array__ZL17_ps_inv_sign_mask->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL15_ps_cephes_FOPI = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -774,7 +774,7 @@ private:
       gvar_array__ZL15_ps_cephes_FOPI->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL7_pi32_1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -783,7 +783,7 @@ private:
       gvar_array__ZL7_pi32_1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL10_pi32_inv1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -792,7 +792,7 @@ private:
       gvar_array__ZL10_pi32_inv1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL7_pi32_2 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -801,7 +801,7 @@ private:
       gvar_array__ZL7_pi32_2->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL7_pi32_4 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -810,7 +810,7 @@ private:
       gvar_array__ZL7_pi32_4->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL20_ps_minus_cephes_DP1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -819,7 +819,7 @@ private:
       gvar_array__ZL20_ps_minus_cephes_DP1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL20_ps_minus_cephes_DP2 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -828,7 +828,7 @@ private:
       gvar_array__ZL20_ps_minus_cephes_DP2->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL20_ps_minus_cephes_DP3 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -837,7 +837,7 @@ private:
       gvar_array__ZL20_ps_minus_cephes_DP3->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL13_ps_coscof_p0 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -846,7 +846,7 @@ private:
       gvar_array__ZL13_ps_coscof_p0->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL13_ps_coscof_p1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -855,7 +855,7 @@ private:
       gvar_array__ZL13_ps_coscof_p1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL13_ps_coscof_p2 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -864,7 +864,7 @@ private:
       gvar_array__ZL13_ps_coscof_p2->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL7_ps_0p5 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -872,7 +872,7 @@ private:
       /*Name=*/"_ZL7_ps_0p5");
 
       GlobalVariable* gvar_array__ZL5_ps_1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -881,7 +881,7 @@ private:
       gvar_array__ZL5_ps_1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL13_ps_sincof_p0 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -890,7 +890,7 @@ private:
       gvar_array__ZL13_ps_sincof_p0->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL13_ps_sincof_p1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -899,7 +899,7 @@ private:
       gvar_array__ZL13_ps_sincof_p1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL13_ps_sincof_p2 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1223,31 +1223,31 @@ private:
 
       return cos_ps;
     }
-    Function* generateSinCosPS(Module& mod, const unsigned simdWidth) const {
-        if (Function* tmpF = mod.getFunction("sincos_ps")) {
+    Function* generateSinCosPS(Module* mod, const unsigned simdWidth) const {
+        if (Function* tmpF = mod->getFunction("sincos_ps")) {
             return tmpF;
         }
 
-        assert (!(mod.getFunction("_ZL17_ps_inv_sign_mask") ||
-                mod.getFunction("_ZL13_ps_sign_mask") ||
-                mod.getFunction("_ZL15_ps_cephes_FOPI") ||
-                mod.getFunction("_ZL7_pi32_1") ||
-                mod.getFunction("_ZL10_pi32_inv1") ||
-                mod.getFunction("_ZL7_pi32_2") ||
-                mod.getFunction("_ZL7_pi32_4") ||
-                mod.getFunction("_ZL20_ps_minus_cephes_DP1") ||
-                mod.getFunction("_ZL20_ps_minus_cephes_DP2") ||
-                mod.getFunction("_ZL20_ps_minus_cephes_DP3") ||
-                mod.getFunction("_ZL13_ps_coscof_p0") ||
-                mod.getFunction("_ZL13_ps_coscof_p1") ||
-                mod.getFunction("_ZL13_ps_coscof_p2") ||
-                mod.getFunction("_ZL7_ps_0p5") ||
-                mod.getFunction("_ZL5_ps_1") ||
-                mod.getFunction("_ZL13_ps_sincof_p0") ||
-                mod.getFunction("_ZL13_ps_sincof_p1") ||
-                mod.getFunction("_ZL13_ps_sincof_p2")) && "function to be generated is already declared in module!");
+        assert (!(mod->getFunction("_ZL17_ps_inv_sign_mask") ||
+                mod->getFunction("_ZL13_ps_sign_mask") ||
+                mod->getFunction("_ZL15_ps_cephes_FOPI") ||
+                mod->getFunction("_ZL7_pi32_1") ||
+                mod->getFunction("_ZL10_pi32_inv1") ||
+                mod->getFunction("_ZL7_pi32_2") ||
+                mod->getFunction("_ZL7_pi32_4") ||
+                mod->getFunction("_ZL20_ps_minus_cephes_DP1") ||
+                mod->getFunction("_ZL20_ps_minus_cephes_DP2") ||
+                mod->getFunction("_ZL20_ps_minus_cephes_DP3") ||
+                mod->getFunction("_ZL13_ps_coscof_p0") ||
+                mod->getFunction("_ZL13_ps_coscof_p1") ||
+                mod->getFunction("_ZL13_ps_coscof_p2") ||
+                mod->getFunction("_ZL7_ps_0p5") ||
+                mod->getFunction("_ZL5_ps_1") ||
+                mod->getFunction("_ZL13_ps_sincof_p0") ||
+                mod->getFunction("_ZL13_ps_sincof_p1") ||
+                mod->getFunction("_ZL13_ps_sincof_p2")) && "function to be generated is already declared in module!");
 
-		LLVMContext& context = mod.getContext();
+		LLVMContext& context = mod->getContext();
 
 		VectorType* vectorTy_float_SIMD = VectorType::get(Type::getFloatTy(context), simdWidth);
 		VectorType* vectorTy_int_SIMD = VectorType::get(Type::getInt32Ty(context), simdWidth);
@@ -1278,7 +1278,7 @@ private:
       Function* sincos_ps = Function::Create(
         /*Type=*/FuncTy_4,
         /*Linkage=*/GlobalValue::ExternalLinkage,
-        /*Name=*/"sincos_ps", &mod);
+        /*Name=*/"sincos_ps", mod);
       sincos_ps->setCallingConv(CallingConv::C);
       AttrListPtr sincos_ps_PAL;
       {
@@ -1300,7 +1300,7 @@ private:
 
 
       GlobalVariable* gvar_array__ZL17_ps_inv_sign_mask = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1309,7 +1309,7 @@ private:
       gvar_array__ZL17_ps_inv_sign_mask->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL13_ps_sign_mask = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1318,7 +1318,7 @@ private:
       gvar_array__ZL13_ps_sign_mask->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL15_ps_cephes_FOPI = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1327,7 +1327,7 @@ private:
       gvar_array__ZL15_ps_cephes_FOPI->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL7_pi32_1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1336,7 +1336,7 @@ private:
       gvar_array__ZL7_pi32_1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL10_pi32_inv1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1345,7 +1345,7 @@ private:
       gvar_array__ZL10_pi32_inv1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL7_pi32_4 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1354,7 +1354,7 @@ private:
       gvar_array__ZL7_pi32_4->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL7_pi32_2 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1363,7 +1363,7 @@ private:
       gvar_array__ZL7_pi32_2->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL20_ps_minus_cephes_DP1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1372,7 +1372,7 @@ private:
       gvar_array__ZL20_ps_minus_cephes_DP1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL20_ps_minus_cephes_DP2 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1381,7 +1381,7 @@ private:
       gvar_array__ZL20_ps_minus_cephes_DP2->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL20_ps_minus_cephes_DP3 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1390,7 +1390,7 @@ private:
       gvar_array__ZL20_ps_minus_cephes_DP3->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL13_ps_coscof_p0 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1399,7 +1399,7 @@ private:
       gvar_array__ZL13_ps_coscof_p0->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL13_ps_coscof_p1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1408,7 +1408,7 @@ private:
       gvar_array__ZL13_ps_coscof_p1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL13_ps_coscof_p2 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1417,7 +1417,7 @@ private:
       gvar_array__ZL13_ps_coscof_p2->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL7_ps_0p5 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1426,7 +1426,7 @@ private:
       gvar_array__ZL7_ps_0p5->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL5_ps_1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1435,7 +1435,7 @@ private:
       gvar_array__ZL5_ps_1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL13_ps_sincof_p0 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1444,7 +1444,7 @@ private:
       gvar_array__ZL13_ps_sincof_p0->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL13_ps_sincof_p1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1453,7 +1453,7 @@ private:
       gvar_array__ZL13_ps_sincof_p1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL13_ps_sincof_p2 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1819,30 +1819,30 @@ private:
 
       return sincos_ps;
     }
-    Function* generateLogPS(Module& mod, const unsigned simdWidth) const {
-        if (Function* tmpF = mod.getFunction("log_ps")) {
+    Function* generateLogPS(Module* mod, const unsigned simdWidth) const {
+        if (Function* tmpF = mod->getFunction("log_ps")) {
             return tmpF;
         }
 
-        assert (!(mod.getFunction("_ZL5_ps_1") ||
-                mod.getFunction("_ZL16_ps_min_norm_pos") ||
-                mod.getFunction("_ZL17_ps_inv_mant_mask") ||
-                mod.getFunction("_ZL7_ps_0p5") ||
-                mod.getFunction("_ZL10_pi32_0x7f") ||
-                mod.getFunction("_ZL17_ps_cephes_SQRTHF") ||
-                mod.getFunction("_ZL17_ps_cephes_log_p0") ||
-                mod.getFunction("_ZL17_ps_cephes_log_p1") ||
-                mod.getFunction("_ZL17_ps_cephes_log_p2") ||
-                mod.getFunction("_ZL17_ps_cephes_log_p3") ||
-                mod.getFunction("_ZL17_ps_cephes_log_p4") ||
-                mod.getFunction("_ZL17_ps_cephes_log_p5") ||
-                mod.getFunction("_ZL17_ps_cephes_log_p6") ||
-                mod.getFunction("_ZL17_ps_cephes_log_p7") ||
-                mod.getFunction("_ZL17_ps_cephes_log_p8") ||
-                mod.getFunction("_ZL17_ps_cephes_log_q1") ||
-                mod.getFunction("_ZL17_ps_cephes_log_q2")) && "function to be generated is already declared in module!");
+        assert (!(mod->getFunction("_ZL5_ps_1") ||
+                mod->getFunction("_ZL16_ps_min_norm_pos") ||
+                mod->getFunction("_ZL17_ps_inv_mant_mask") ||
+                mod->getFunction("_ZL7_ps_0p5") ||
+                mod->getFunction("_ZL10_pi32_0x7f") ||
+                mod->getFunction("_ZL17_ps_cephes_SQRTHF") ||
+                mod->getFunction("_ZL17_ps_cephes_log_p0") ||
+                mod->getFunction("_ZL17_ps_cephes_log_p1") ||
+                mod->getFunction("_ZL17_ps_cephes_log_p2") ||
+                mod->getFunction("_ZL17_ps_cephes_log_p3") ||
+                mod->getFunction("_ZL17_ps_cephes_log_p4") ||
+                mod->getFunction("_ZL17_ps_cephes_log_p5") ||
+                mod->getFunction("_ZL17_ps_cephes_log_p6") ||
+                mod->getFunction("_ZL17_ps_cephes_log_p7") ||
+                mod->getFunction("_ZL17_ps_cephes_log_p8") ||
+                mod->getFunction("_ZL17_ps_cephes_log_q1") ||
+                mod->getFunction("_ZL17_ps_cephes_log_q2")) && "function to be generated is already declared in module!");
 
-		LLVMContext& context = mod.getContext();
+		LLVMContext& context = mod->getContext();
 
 		VectorType* vectorTy_float_SIMD = VectorType::get(Type::getFloatTy(context), simdWidth);
 		VectorType* vectorTy_int_SIMD = VectorType::get(Type::getInt32Ty(context), simdWidth);
@@ -1869,7 +1869,7 @@ private:
       Function* log_ps = Function::Create(
         /*Type=*/FuncTy_5,
         /*Linkage=*/GlobalValue::ExternalLinkage,
-        /*Name=*/"log_ps", &mod);
+        /*Name=*/"log_ps", mod);
       log_ps->setCallingConv(CallingConv::C);
       AttrListPtr log_ps_PAL;
       {
@@ -1887,7 +1887,7 @@ private:
 
 
       GlobalVariable* gvar_array__ZL5_ps_1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1896,7 +1896,7 @@ private:
       gvar_array__ZL5_ps_1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL16_ps_min_norm_pos = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1905,7 +1905,7 @@ private:
       gvar_array__ZL16_ps_min_norm_pos->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL17_ps_inv_mant_mask = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1914,7 +1914,7 @@ private:
       gvar_array__ZL17_ps_inv_mant_mask->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL7_ps_0p5 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1923,7 +1923,7 @@ private:
       gvar_array__ZL7_ps_0p5->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL10_pi32_0x7f = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1932,7 +1932,7 @@ private:
       gvar_array__ZL10_pi32_0x7f->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL17_ps_cephes_SQRTHF = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1941,7 +1941,7 @@ private:
       gvar_array__ZL17_ps_cephes_SQRTHF->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL17_ps_cephes_log_p0 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1950,7 +1950,7 @@ private:
       gvar_array__ZL17_ps_cephes_log_p0->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL17_ps_cephes_log_p1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1959,7 +1959,7 @@ private:
       gvar_array__ZL17_ps_cephes_log_p1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL17_ps_cephes_log_p2 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1968,7 +1968,7 @@ private:
       gvar_array__ZL17_ps_cephes_log_p2->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL17_ps_cephes_log_p3 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1977,7 +1977,7 @@ private:
       gvar_array__ZL17_ps_cephes_log_p3->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL17_ps_cephes_log_p4 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1986,7 +1986,7 @@ private:
       gvar_array__ZL17_ps_cephes_log_p4->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL17_ps_cephes_log_p5 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -1995,7 +1995,7 @@ private:
       gvar_array__ZL17_ps_cephes_log_p5->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL17_ps_cephes_log_p6 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -2004,7 +2004,7 @@ private:
       gvar_array__ZL17_ps_cephes_log_p6->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL17_ps_cephes_log_p7 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -2013,7 +2013,7 @@ private:
       gvar_array__ZL17_ps_cephes_log_p7->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL17_ps_cephes_log_p8 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -2022,7 +2022,7 @@ private:
       gvar_array__ZL17_ps_cephes_log_p8->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL17_ps_cephes_log_q1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -2031,7 +2031,7 @@ private:
       gvar_array__ZL17_ps_cephes_log_q1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL17_ps_cephes_log_q2 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -2361,26 +2361,26 @@ private:
 
       return log_ps;
     }
-    Function* generateExpPS(Module& mod, const unsigned simdWidth) const {
-        if (Function* tmpF = mod.getFunction("exp_ps")) {
+    Function* generateExpPS(Module* mod, const unsigned simdWidth) const {
+        if (Function* tmpF = mod->getFunction("exp_ps")) {
             return tmpF;
         }
 
-		assert (!(mod.getFunction("_ZL5_ps_1") ||
-			mod.getFunction("_ZL10_ps_exp_hi") ||
-			mod.getFunction("_ZL10_ps_exp_lo") ||
-			mod.getFunction("_ZL17_ps_cephes_LOG2EF") ||
-			mod.getFunction("_ZL7_ps_0p5") ||
-			mod.getFunction("_ZL17_ps_cephes_exp_C1") ||
-			mod.getFunction("_ZL17_ps_cephes_exp_C2") ||
-			mod.getFunction("_ZL17_ps_cephes_exp_p0") ||
-			mod.getFunction("_ZL17_ps_cephes_exp_p1") ||
-			mod.getFunction("_ZL17_ps_cephes_exp_p2") ||
-			mod.getFunction("_ZL17_ps_cephes_exp_p3") ||
-			mod.getFunction("_ZL17_ps_cephes_exp_p4") ||
-			mod.getFunction("_ZL10_pi32_0x7f")) && "function to be generated is already declared in module!");
+		assert (!(mod->getFunction("_ZL5_ps_1") ||
+			mod->getFunction("_ZL10_ps_exp_hi") ||
+			mod->getFunction("_ZL10_ps_exp_lo") ||
+			mod->getFunction("_ZL17_ps_cephes_LOG2EF") ||
+			mod->getFunction("_ZL7_ps_0p5") ||
+			mod->getFunction("_ZL17_ps_cephes_exp_C1") ||
+			mod->getFunction("_ZL17_ps_cephes_exp_C2") ||
+			mod->getFunction("_ZL17_ps_cephes_exp_p0") ||
+			mod->getFunction("_ZL17_ps_cephes_exp_p1") ||
+			mod->getFunction("_ZL17_ps_cephes_exp_p2") ||
+			mod->getFunction("_ZL17_ps_cephes_exp_p3") ||
+			mod->getFunction("_ZL17_ps_cephes_exp_p4") ||
+			mod->getFunction("_ZL10_pi32_0x7f")) && "function to be generated is already declared in module!");
 
-		LLVMContext& context = mod.getContext();
+		LLVMContext& context = mod->getContext();
 
 		VectorType* vectorTy_float_SIMD = VectorType::get(Type::getFloatTy(context), simdWidth);
 		VectorType* vectorTy_int_SIMD = VectorType::get(Type::getInt32Ty(context), simdWidth);
@@ -2407,7 +2407,7 @@ private:
       Function* exp_ps = Function::Create(
         /*Type=*/FuncTy_5,
         /*Linkage=*/GlobalValue::ExternalLinkage,
-        /*Name=*/"exp_ps", &mod);
+        /*Name=*/"exp_ps", mod);
       exp_ps->setCallingConv(CallingConv::C);
       AttrListPtr exp_ps_PAL;
       {
@@ -2425,7 +2425,7 @@ private:
 
 
       GlobalVariable* gvar_array__ZL5_ps_1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -2434,7 +2434,7 @@ private:
       gvar_array__ZL5_ps_1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL10_ps_exp_hi = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -2443,7 +2443,7 @@ private:
       gvar_array__ZL10_ps_exp_hi->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL10_ps_exp_lo = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -2452,7 +2452,7 @@ private:
       gvar_array__ZL10_ps_exp_lo->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL17_ps_cephes_LOG2EF = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -2461,7 +2461,7 @@ private:
       gvar_array__ZL17_ps_cephes_LOG2EF->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL7_ps_0p5 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -2470,7 +2470,7 @@ private:
       gvar_array__ZL7_ps_0p5->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL17_ps_cephes_exp_C1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -2479,7 +2479,7 @@ private:
       gvar_array__ZL17_ps_cephes_exp_C1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL17_ps_cephes_exp_C2 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -2488,7 +2488,7 @@ private:
       gvar_array__ZL17_ps_cephes_exp_C2->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL17_ps_cephes_exp_p0 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -2497,7 +2497,7 @@ private:
       gvar_array__ZL17_ps_cephes_exp_p0->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL17_ps_cephes_exp_p1 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -2506,7 +2506,7 @@ private:
       gvar_array__ZL17_ps_cephes_exp_p1->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL17_ps_cephes_exp_p2 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -2515,7 +2515,7 @@ private:
       gvar_array__ZL17_ps_cephes_exp_p2->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL17_ps_cephes_exp_p3 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -2524,7 +2524,7 @@ private:
       gvar_array__ZL17_ps_cephes_exp_p3->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL17_ps_cephes_exp_p4 = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_0,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -2533,7 +2533,7 @@ private:
       gvar_array__ZL17_ps_cephes_exp_p4->setAlignment(16);
 
       GlobalVariable* gvar_array__ZL10_pi32_0x7f = new GlobalVariable(
-		mod,
+		*mod,
       /*Type=*/ArrayTy_2,
       /*isConstant=*/true,
       /*Linkage=*/GlobalValue::InternalLinkage,
@@ -2828,12 +2828,12 @@ private:
       return exp_ps;
     }
 
-    Function* generateExp2PS(Module& mod, const unsigned simdWidth) const {
-        if (Function* tmpF = mod.getFunction("exp2f_ps")) {
+    Function* generateExp2PS(Module* mod, const unsigned simdWidth) const {
+        if (Function* tmpF = mod->getFunction("exp2f_ps")) {
             return tmpF;
         }
 
-		LLVMContext& context = mod.getContext();
+		LLVMContext& context = mod->getContext();
 
 		VectorType* vectorTy_float_SIMD = VectorType::get(Type::getFloatTy(context), simdWidth);
 		VectorType* vectorTy_int_SIMD = VectorType::get(Type::getInt32Ty(context), simdWidth);
@@ -2850,7 +2850,7 @@ private:
 		Function* exp2_ps = Function::Create(
 			/*Type=*/FuncTy_1,
 			/*Linkage=*/GlobalValue::ExternalLinkage,
-			/*Name=*/"exp2f_ps", &mod);
+			/*Name=*/"exp2f_ps", mod);
 		exp2_ps->setCallingConv(CallingConv::C);
 		AttrListPtr exp2_ps_PAL;
 		{
@@ -2962,12 +2962,12 @@ private:
 
       return exp2_ps;
     }
-	Function* generateLog2PS(Module& mod, const unsigned simdWidth) const {
-        if (Function* tmpF = mod.getFunction("log2f_ps")) {
+	Function* generateLog2PS(Module* mod, const unsigned simdWidth) const {
+        if (Function* tmpF = mod->getFunction("log2f_ps")) {
             return tmpF;
         }
 
-		LLVMContext& context = mod.getContext();
+		LLVMContext& context = mod->getContext();
 
 		VectorType* vectorTy_float_SIMD = VectorType::get(Type::getFloatTy(context), simdWidth);
 		VectorType* vectorTy_int_SIMD = VectorType::get(Type::getInt32Ty(context), simdWidth);
@@ -2984,7 +2984,7 @@ private:
 		Function* log2_ps = Function::Create(
 			/*Type=*/FuncTy_1,
 			/*Linkage=*/GlobalValue::ExternalLinkage,
-			/*Name=*/"log2f_ps", &mod);
+			/*Name=*/"log2f_ps", mod);
 		log2_ps->setCallingConv(CallingConv::C);
 		AttrListPtr log2_ps_PAL;
 		{
@@ -3117,12 +3117,12 @@ private:
 		return log2_ps;
 	}
 	// this function has issues for certain input values (see e.g. phong) :(
-	Function* generatePowPS(Module& mod, const unsigned simdWidth) const {
-        if (Function* tmpF = mod.getFunction("pow_ps")) {
+	Function* generatePowPS(Module* mod, const unsigned simdWidth) const {
+        if (Function* tmpF = mod->getFunction("pow_ps")) {
             return tmpF;
         }
 
-		LLVMContext& context = mod.getContext();
+		LLVMContext& context = mod->getContext();
 
 		VectorType* vectorTy_float_SIMD = VectorType::get(Type::getFloatTy(context), simdWidth);
 
@@ -3139,7 +3139,7 @@ private:
 		Function* pow_ps = Function::Create(
 		/*Type=*/FuncTy_2,
 		/*Linkage=*/GlobalValue::ExternalLinkage,
-		/*Name=*/"pow_ps", &mod);
+		/*Name=*/"pow_ps", mod);
 		pow_ps->setCallingConv(CallingConv::C);
 		AttrListPtr pow_ps_PAL;
 		{
@@ -3189,12 +3189,12 @@ private:
 		ret <4 x float> %1
 	}
 	*/
-	Function* generateAbsPS(Module& mod, const unsigned simdWidth) const {
-        if (Function* tmpF = mod.getFunction("abs_ps")) {
+	Function* generateAbsPS(Module* mod, const unsigned simdWidth) const {
+        if (Function* tmpF = mod->getFunction("abs_ps")) {
             return tmpF;
         }
 
-		LLVMContext& context = mod.getContext();
+		LLVMContext& context = mod->getContext();
 
 		VectorType* vectorTy_float_SIMD = VectorType::get(Type::getFloatTy(context), simdWidth);
 		VectorType* vectorTy_int_SIMD = VectorType::get(Type::getInt32Ty(context), simdWidth);
@@ -3211,7 +3211,7 @@ private:
 		Function* abs_ps = Function::Create(
 		/*Type=*/FuncTy_2,
 		/*Linkage=*/GlobalValue::ExternalLinkage,
-		/*Name=*/"abs_ps", &mod);
+		/*Name=*/"abs_ps", mod);
 		abs_ps->setCallingConv(CallingConv::C);
 		AttrListPtr abs_ps_PAL;
 		{
@@ -3238,9 +3238,9 @@ private:
 
 			std::vector<Constant*> elems;
 			// 4 x 0x7FFFFFFF
-			//ConstantInt* scalarConst = ConstantInt::get(mod.getContext(), APInt(32, StringRef("1325400064"), 10));
-			//ConstantInt* scalarConst = ConstantInt::get(mod.getContext(), APInt(32, StringRef("2.147483647e9"), 10));
-			ConstantInt* scalarConst = ConstantInt::get(mod.getContext(), APInt(32, StringRef("2147483647"), 10));
+			//ConstantInt* scalarConst = ConstantInt::get(mod->getContext(), APInt(32, StringRef("1325400064"), 10));
+			//ConstantInt* scalarConst = ConstantInt::get(mod->getContext(), APInt(32, StringRef("2.147483647e9"), 10));
+			ConstantInt* scalarConst = ConstantInt::get(mod->getContext(), APInt(32, StringRef("2147483647"), 10));
 			elems.push_back(scalarConst);
 			elems.push_back(scalarConst);
 			elems.push_back(scalarConst);

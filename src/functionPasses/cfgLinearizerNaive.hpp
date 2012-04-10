@@ -78,7 +78,7 @@ private:
 public:
 	static char ID; // Pass identification, replacement for typeid
 	CFGLinearizerNaive(bool* failed_flag=NULL, const bool verbose_flag=false)
-			: FunctionPass(ID), failed(failed_flag), verbose(verbose_flag)
+			: FunctionPass(ID), failed(failed_flag), mVerbose(verbose_flag)
 	{
 		initializeCFGLinearizerNaivePass(*PassRegistry::getPassRegistry());
 	}
@@ -161,7 +161,7 @@ public:
 
 private:
 	bool* failed;
-	const bool verbose;
+	const bool mVerbose;
 	MaskGraph* maskGraph;
 	AnalysisResults* analysisResults;
 	LoopInfo* loopInfo;

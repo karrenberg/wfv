@@ -49,7 +49,7 @@ class BranchInfoAnalysis : public FunctionPass {
 public:
 	static char ID; // Pass identification, replacement for typeid
 	BranchInfoAnalysis(bool* failed_flag=NULL, const bool verbose_flag = false)
-			: FunctionPass(ID), failed(failed_flag), verbose(verbose_flag)
+			: FunctionPass(ID), failed(failed_flag), mVerbose(verbose_flag)
 	{
 		initializeBranchInfoAnalysisPass(*PassRegistry::getPassRegistry());
 	}
@@ -138,7 +138,7 @@ public:
 
 private:
 	bool* failed;
-	const bool verbose;
+	const bool mVerbose;
 
 	BranchMapType branchMap;
 

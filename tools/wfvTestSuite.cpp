@@ -150,7 +150,13 @@ int main(int argc, char** argv) {
 	const unsigned simdWidth = use_avx ? 8 : 4;
 	const unsigned packetizationSize = use_avx ? 8 : 4;
 
-	Packetizer::Packetizer packetizer(*module, simdWidth, packetizationSize, use_sse41, use_avx, verbose);
+	Packetizer::Packetizer packetizer(*module,
+                                         LLVMWrapper::getContext(*module),
+                                         simdWidth,
+                                         packetizationSize,
+                                         use_sse41,
+                                         use_avx,
+                                         verbose);
 
 	if (testSuiteIdx == 1) {
 

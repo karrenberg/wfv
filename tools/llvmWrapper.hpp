@@ -109,6 +109,10 @@ Module* createModuleFromFile(const std::string & fileName) {
 	return mod;
 }
 
+LLVMContext& getContext(Module& module) {
+    return module.getContext();
+}
+
 void verifyModule(Module* module) {
 	assert(module && "module must not be NULL");
 	//use LLVMs own verifier pass
@@ -276,11 +280,9 @@ int executeMain(void* mainPtr, int argc, char **argv) {
 }
 
 static void shutdown() {
-	outs() << "shutting down... ";
 	globalExecEngine->runStaticConstructorsDestructors(true);
 	delete globalExecEngine;
-	//llvm_shutdown(); // "pointer being freed was not allocated"
-	outs() << "done.\n";
+	llvm_shutdown();
 }
 
 //

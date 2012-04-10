@@ -88,33 +88,74 @@ using namespace llvm;
 
 namespace Packetizer {
 
-PACKETIZER_API Packetizer::Packetizer(llvm::Module& module, const unsigned simdWidth, const unsigned packetizationSize, const bool use_sse41, const bool use_avx, const bool verbose) {
-	wfv = new WholeFunctionVectorizer(module, simdWidth, packetizationSize, use_sse41, use_avx, verbose);
+PACKETIZER_API
+Packetizer::Packetizer(llvm::Module& module,
+                       llvm::LLVMContext& context,
+                       const unsigned simdWidth,
+                       const unsigned packetizationSize,
+                       const bool use_sse41,
+                       const bool use_avx,
+                       const bool verbose)
+{
+	wfv = new WholeFunctionVectorizer(module,
+                                         context,
+                                         simdWidth,
+                                         packetizationSize,
+                                         use_sse41,
+                                         use_avx,
+                                         verbose);
 }
 
-PACKETIZER_API Packetizer::~Packetizer() { if (wfv) { wfv->releaseMemory(); delete wfv; } } // PassManager deletes wfv already if run() was called
+PACKETIZER_API
+Packetizer::~Packetizer()
+{
+    // PassManager deletes wfv already if run() was called
+    if (wfv) {
+        wfv->releaseMemory();
+        delete wfv;
+    }
+}
 
-PACKETIZER_API bool Packetizer::addFunction(const std::string& functionName, const std::string& newName) {
+PACKETIZER_API bool
+Packetizer::addFunction(const std::string& functionName, const std::string& newName)
+{
 	assert (wfv && "Packetizer is not initialized correctly");
 	return wfv->addFunction(functionName, newName);
 }
-PACKETIZER_API bool Packetizer::addVaryingFunctionMapping(const std::string& scalarFunctionName, const int maskPosition, llvm::Function* packetFunction) {
+
+PACKETIZER_API bool
+Packetizer::addVaryingFunctionMapping(const std::string& scalarFunctionName,
+                                      const int maskPosition,
+                                      llvm::Function* packetFunction)
+{
 	assert (wfv && "Packetizer is not initialized correctly");
 	return wfv->addVaryingFunctionMapping(scalarFunctionName, maskPosition, packetFunction);
 }
-PACKETIZER_API bool Packetizer::addValueInfo(llvm::Value* value, const bool uniform, const bool consecutive, const bool aligned) {
+
+PACKETIZER_API bool
+Packetizer::addValueInfo(llvm::Value* value,
+                         const bool uniform,
+                         const bool consecutive,
+                         const bool aligned)
+{
 	assert (wfv && "Packetizer is not initialized correctly");
 	return wfv->addValueInfo(value, uniform, consecutive, aligned);
 }
-PACKETIZER_API void Packetizer::run() {
+
+PACKETIZER_API void
+Packetizer::run()
+{
 	assert (wfv && "Packetizer is not initialized correctly");
 	PassManager PM;
-	PM.add(new TargetData(&wfv->getModule()));
+	PM.add(new TargetData(wfv->getModule()));
 	PM.add(wfv);
-	PM.run(wfv->getModule());
+	PM.run(*wfv->getModule());
 	wfv = NULL; // make sure we do not delete twice
 }
-PACKETIZER_API bool Packetizer::wfvSuccessful(const std::string& simdFunctionName, const llvm::Module& module) const {
+
+PACKETIZER_API bool
+Packetizer::wfvSuccessful(const std::string& simdFunctionName, const llvm::Module& module) const
+{
 	Function* f = module.getFunction(simdFunctionName);
 	return f && !f->empty();
 }
@@ -128,26 +169,34 @@ PACKETIZER_API bool Packetizer::wfvSuccessful(const std::string& simdFunctionNam
 
 PKTPacketizerRef
 PKTCreatePacketizer(LLVMModuleRef module,
-                    const unsigned simdWidth, const unsigned packetizationSize,
-                    const bool use_sse41, const bool use_avx,
+                    LLVMContextRef context,
+                    const unsigned simdWidth,
+                    const unsigned packetizationSize,
+                    const bool use_sse41,
+                    const bool use_avx,
                     const bool verbose)
 {
-	return wrap(new Packetizer::Packetizer(*unwrap(module), simdWidth,
-										   packetizationSize, use_sse41,
+	return wrap(new Packetizer::Packetizer(*unwrap(module),
+                                           *unwrap(context),
+                                           simdWidth,
+										   packetizationSize,
+                                           use_sse41,
 										   use_avx, verbose));
 }
 
 bool
 PKTAddFunction(PKTPacketizerRef packetizerRef,
-               const char* functionName, const char* newName)
+               const char* functionName,
+               const char* newName)
 {
 	return Packetizer::unwrap(packetizerRef)->addFunction(functionName, newName);
 }
 
 bool
 PKTAddVaryingFunctionMapping(PKTPacketizerRef packetizerRef,
-                     const char* scalarFunctionName,const int maskPosition,
-                     LLVMValueRef packetFunction)
+                             const char* scalarFunctionName,
+                             const int maskPosition,
+                             LLVMValueRef packetFunction)
 {
 	return Packetizer::unwrap(packetizerRef)->
 		addVaryingFunctionMapping(scalarFunctionName, maskPosition,
@@ -156,8 +205,10 @@ PKTAddVaryingFunctionMapping(PKTPacketizerRef packetizerRef,
 
 bool
 PKTAddUniformVaryingInfo(PKTPacketizerRef packetizerRef,
-						 LLVMValueRef value, const bool uniform,
-						 const bool consecutive, const bool aligned)
+						 LLVMValueRef value,
+                         const bool uniform,
+						 const bool consecutive,
+                         const bool aligned)
 {
 	return Packetizer::unwrap(packetizerRef)->
 		addValueInfo(cast<Value>(unwrap(value)),
@@ -186,31 +237,55 @@ PKTSuccessful(PKTPacketizerRef packetizerRef,
 ////////////////////////////////////////////////////////////////
 
 
-WholeFunctionVectorizer::WholeFunctionVectorizer(Module& M, const unsigned simd_width, const unsigned packetization_size, const bool use_sse41_flag, const bool use_avx_flag, const bool verbose_flag)
-		: ModulePass(ID), simdWidth(simd_width), packetizationSize(packetization_size), use_sse41(use_sse41_flag), use_avx(use_avx_flag), verbose(verbose_flag), info(Packetizer::PacketizerInfo(M, simd_width, packetization_size, use_sse41, use_avx, verbose)), nativeMethods(NativeMethods(use_sse41, use_avx, verbose)), analysisResults(NULL)
+WholeFunctionVectorizer::WholeFunctionVectorizer(Module& M,
+                                                 LLVMContext& C,
+                                                 const unsigned simd_width,
+                                                 const unsigned packetization_size,
+                                                 const bool use_sse41_flag,
+                                                 const bool use_avx_flag,
+                                                 const bool verbose_flag)
+: ModulePass(ID),
+        mSimdWidth(simd_width),
+        mPacketizationSize(packetization_size),
+        mUseSSE41(use_sse41_flag),
+        mUseAVX(use_avx_flag),
+        mVerbose(verbose_flag),
+        mInfo(new Packetizer::PacketizerInfo(&M,
+                                             &C,
+                                             simd_width,
+                                             packetization_size,
+                                             mUseSSE41,
+                                             mUseAVX,
+                                             mVerbose)),
+        mAnalysisResults(NULL)
 {
 	initializeWholeFunctionVectorizerPass(*PassRegistry::getPassRegistry());
 }
 
 WholeFunctionVectorizer::~WholeFunctionVectorizer() {}
 
-void WholeFunctionVectorizer::releaseMemory() {
-	for (NativeFunctionMapType::iterator it=nativeFunctionMap.begin(),
-			E=nativeFunctionMap.end(); it!=E; ++it)
+void
+WholeFunctionVectorizer::releaseMemory()
+{
+	for (NativeFunctionMapType::iterator it=mNativeFunctionMap.begin(),
+			E=mNativeFunctionMap.end(); it!=E; ++it)
 	{
 		delete it->second;
 	}
 
-	for (ValueInfoMapType::iterator it=globalValueInfoMap.begin(),
-			E=globalValueInfoMap.end(); it!=E; ++it)
+	for (ValueInfoMapType::iterator it=mGlobalValueInfoMap.begin(),
+			E=mGlobalValueInfoMap.end(); it!=E; ++it)
 	{
 		delete it->second;
 	}
-	if (analysisResults) delete analysisResults;
+    if (mInfo) delete mInfo;
+	if (mAnalysisResults) delete mAnalysisResults;
 }
 
 /// This function should be called *before* run()
-inline bool WholeFunctionVectorizer::addFunction(const std::string& scalarName, const std::string& targetName) {
+inline bool
+WholeFunctionVectorizer::addFunction(const std::string& scalarName, const std::string& targetName)
+{
 	if (scalarName == "") {
 		errs() << "ERROR: function to be added for packetization must have a name!\n";
 		return false;
@@ -219,20 +294,20 @@ inline bool WholeFunctionVectorizer::addFunction(const std::string& scalarName, 
 		errs() << "ERROR: packetization prototype function must have a name!\n";
 		return false;
 	}
-	if (!info.module.getFunction(scalarName)) {
+	if (!mInfo->mModule->getFunction(scalarName)) {
 		errs() << "ERROR: function to be added for packetization does not exist in module: '" << scalarName << "'\n";
 		return false;
 	}
-	if (!info.module.getFunction(targetName)) {
+	if (!mInfo->mModule->getFunction(targetName)) {
 		errs() << "ERROR: packetization prototype function does not exist in module: '" << targetName << "'\n";
 		return false;
 	}
-	if (functions.find(scalarName) != functions.end()) {
+	if (mFunctionNames.find(scalarName) != mFunctionNames.end()) {
 		errs() << "ERROR: the same scalar function must not be added more than once: '" << scalarName << "'\n";
 		return false;
 	}
 	for (std::map<const std::string, const std::string>::iterator
-			it=functions.begin(), E=functions.end(); it!=E; ++it)
+			it=mFunctionNames.begin(), E=mFunctionNames.end(); it!=E; ++it)
 	{
 		if (it->second == targetName) {
 			errs() << "ERROR: the same target function must not be the target "
@@ -243,34 +318,34 @@ inline bool WholeFunctionVectorizer::addFunction(const std::string& scalarName, 
 		}
 	}
 
-	functions.insert(std::make_pair(scalarName, targetName));
+	mFunctionNames.insert(std::make_pair(scalarName, targetName));
 	return true;
 }
 
 /// This function should be called *before* run()
 inline bool
 WholeFunctionVectorizer::addVaryingFunctionMapping(const std::string& scalarName,
-										   const int maskIndex,
-										   Function* nativeF)
+                                                   const int maskIndex,
+                                                   Function* nativeF)
 {
 	if (!nativeF) {
 		errs() << "ERROR: native varying function to be added must not be NULL!\n";
 		return false;
 	}
 
-	Function* scalarFn = info.module.getFunction(scalarName);
+	Function* scalarFn = mInfo->mModule->getFunction(scalarName);
 	if (!scalarFn) {
 		errs() << "ERROR: scalar native function '" << scalarName
 				<< "' does not exist in module!\n";
 		return false;
 	}
 
-	if (maskIndex < -1 || maskIndex > (int)info.module.getFunction(scalarName)->getFunctionType()->getNumParams()) {
-		errs() << "ERROR: bad mask index found (should be between -1 (no mask) and " << info.module.getFunction(scalarName)->getFunctionType()->getNumParams() << ")!\n";
+	if (maskIndex < -1 || maskIndex > (int)mInfo->mModule->getFunction(scalarName)->getFunctionType()->getNumParams()) {
+		errs() << "ERROR: bad mask index found (should be between -1 (no mask) and " << mInfo->mModule->getFunction(scalarName)->getFunctionType()->getNumParams() << ")!\n";
 		return false;
 	}
 
-	if (nativeFunctionMap.find(scalarFn) != nativeFunctionMap.end()) {
+	if (mNativeFunctionMap.find(scalarFn) != mNativeFunctionMap.end()) {
 		errs() << "ERROR: adding more than one mapping for scalar function '"
 				<< scalarFn->getName() << "' is not allowed!\n";
 		return false;
@@ -281,10 +356,10 @@ WholeFunctionVectorizer::addVaryingFunctionMapping(const std::string& scalarName
 	const bool consecutive = false; // TODO: really?
 	const bool aligned = false;     // TODO: really?
 	NativeFunctionInfo* nfi = new NativeFunctionInfo(scalarFn, nativeF, maskIndex, uniform, consecutive, aligned);
-	nativeFunctionMap.insert(std::make_pair(scalarFn, nfi));
+	mNativeFunctionMap.insert(std::make_pair(scalarFn, nfi));
 
 	// and add to native functions
-	nativeMethods.addNativeFunction(scalarFn->getName(), maskIndex, nativeF);
+	mInfo->mNativeMethods->addNativeFunction(scalarFn, nativeF, maskIndex);
 
 	// Functions are not inserted into globalValueInfoMap, but their uses are.
 	for (Function::use_iterator U=scalarFn->use_begin(),
@@ -299,10 +374,11 @@ WholeFunctionVectorizer::addVaryingFunctionMapping(const std::string& scalarName
 }
 
 // This function has no means to supply a maskIndex or native function mapping.
-inline bool WholeFunctionVectorizer::addValueInfo(Value* value,
-												  const bool uniform,
-												  const bool consecutive,
-												  const bool aligned)
+inline bool
+WholeFunctionVectorizer::addValueInfo(Value* value,
+                                      const bool uniform,
+                                      const bool consecutive,
+                                      const bool aligned)
 {
 	if (!value) {
 		errs() << "ERROR: " << (uniform ? "UNIFORM" : "VARYING")
@@ -322,8 +398,13 @@ inline bool WholeFunctionVectorizer::addValueInfo(Value* value,
 
 	if (Function* fn = dyn_cast<Function>(value)) {
 		// Add to native function map
-		NativeFunctionInfo* nfi = new NativeFunctionInfo(fn, NULL, -1, uniform, consecutive, aligned);
-		nativeFunctionMap.insert(std::make_pair(fn, nfi));
+		NativeFunctionInfo* nfi = new NativeFunctionInfo(fn,
+                                                         NULL,
+                                                         -1,
+                                                         uniform,
+                                                         consecutive,
+                                                         aligned);
+		mNativeFunctionMap.insert(std::make_pair(fn, nfi));
 
 		// Functions are not inserted into globalValueInfoMap, but their uses are.
 		for (Function::use_iterator U=fn->use_begin(),
@@ -348,38 +429,45 @@ inline bool WholeFunctionVectorizer::addValueInfo(Value* value,
 
 	// insert into global value info map
 	ValueInfo* info = new ValueInfo(value, uniform, consecutive, aligned);
-	globalValueInfoMap.insert(std::make_pair(value, info));
+	mGlobalValueInfoMap.insert(std::make_pair(value, info));
 	return true;
 }
 
-void WholeFunctionVectorizer::print(raw_ostream& o, const Module *M=NULL) const {
+void
+WholeFunctionVectorizer::print(raw_ostream& o, const Module *M=NULL) const
+{
 	o << "Functions successfully packetized: " << PacketizedFunctionsCounter << "\n";
 }
 
-void WholeFunctionVectorizer::getAnalysisUsage(AnalysisUsage& AU) const {
+void
+WholeFunctionVectorizer::getAnalysisUsage(AnalysisUsage& AU) const
+{
 	// TODO: add all passes here and then use getAnalysis<FunctionPacketizer>() ?
 }
 
-bool WholeFunctionVectorizer::runOnModule(Module& M) {
-	assert (&M == &info.module);
+bool WholeFunctionVectorizer::runOnModule(Module& M)
+{
+	assert (&M == mInfo->mModule);
 	PacketizedFunctionsCounter = 0;
 	return packetizeAllFunctions();
 }
 
-inline bool WholeFunctionVectorizer::packetizeAllFunctions() {
+inline bool
+WholeFunctionVectorizer::packetizeAllFunctions()
+{
 	DEBUG_PKT( outs() << "\n-----------------------------------------------------\n"; );
 	DEBUG_PKT( outs() << "Running whole-function vectorization...\n"; );
 
 	DEBUG_PKT(
 		outs() << "globalValueInfoMap:\n";
-		for (ValueInfoMapType::const_iterator it=globalValueInfoMap.begin(),
-				E=globalValueInfoMap.end(); it!=E; ++it)
+		for (ValueInfoMapType::const_iterator it=mGlobalValueInfoMap.begin(),
+				E=mGlobalValueInfoMap.end(); it!=E; ++it)
 		{
 			outs() << "  " << *it->first << " ["
-					<< (it->second->uniform ? "UNIFORM, " : "VARYING, ")
-					<< (it->second->consecutive ? "CONSECUTIVE, " :
-						(it->second->uniform ? "SAME, " : "RANDOM, "))
-					<< (it->second->aligned ? "ALIGNED, " : "UNALIGNED, ")
+					<< (it->second->mUniform ? "UNIFORM, " : "VARYING, ")
+					<< (it->second->mConsecutive ? "CONSECUTIVE, " :
+						(it->second->mUniform ? "SAME, " : "RANDOM, "))
+					<< (it->second->mAligned ? "ALIGNED, " : "UNALIGNED, ")
 					<< "]\n";
 		}
 	);
@@ -391,7 +479,7 @@ inline bool WholeFunctionVectorizer::packetizeAllFunctions() {
 
 	// Iterate over all added functions, check them and packetize them
 	for (std::map<const std::string, const std::string>::iterator
-			it=functions.begin(), E=functions.end(); it!=E; ++it)
+			it=mFunctionNames.begin(), E=mFunctionNames.end(); it!=E; ++it)
 	{
 		const std::string& scalarName = it->first;
 		const std::string& targetName = it->second;
@@ -430,7 +518,7 @@ inline bool WholeFunctionVectorizer::packetizeAllFunctions() {
 		cleanup();
 
 		if (!success) {
-			Function* f_SIMD = info.module.getFunction(targetName);
+			Function* f_SIMD = mInfo->mModule->getFunction(targetName);
 			if (f_SIMD && !f_SIMD->empty()) {
 				f_SIMD->deleteBody();
 				assert (f_SIMD->empty());
@@ -446,39 +534,40 @@ inline bool WholeFunctionVectorizer::packetizeAllFunctions() {
 #ifndef PACKETIZER_SILENT_MODE
 	outs() << "\nWhole-function vectorization finished ("
 			<< PacketizedFunctionsCounter << " successful, "
-			<< functions.size()-PacketizedFunctionsCounter << " failed)!\n";
+			<< mFunctionNames.size()-PacketizedFunctionsCounter << " failed)!\n";
 #endif
 	DEBUG_PKT( tg.print(outs()); );
 	DEBUG_PKT( outs() << "-----------------------------------------------------\n\n"; );
 
-	return functions.size()-PacketizedFunctionsCounter > 0;;
+	return mFunctionNames.size()-PacketizedFunctionsCounter > 0;;
 }
 
-bool WholeFunctionVectorizer::packetizeFunction(const std::string& scalarName,
-												const std::string& targetName)
+bool
+WholeFunctionVectorizer::packetizeFunction(const std::string& scalarName,
+                                           const std::string& targetName)
 {
-	Function* f = info.module.getFunction(scalarName);
+	Function* f = mInfo->mModule->getFunction(scalarName);
 
 	if (!f) {
 		errs() << "ERROR while packetizing function in module '"
-				<< info.module.getModuleIdentifier() << "': function '"
+				<< mInfo->mModule->getModuleIdentifier() << "': function '"
 				<< scalarName << "' not found!\n";
 		return false;
 	}
 
 	if (f->isVarArg()) {
 		errs() << "ERROR while packetizing function in module '"
-				<< info.module.getModuleIdentifier() << "': function '"
+				<< mInfo->mModule->getModuleIdentifier() << "': function '"
 				<< scalarName << "' has a variable argument list (not supported)!\n";
 		return false;
 	}
 
 	//check if newName is function declared as 'external'
-	Function* extF = info.module.getFunction(targetName);
+	Function* extF = mInfo->mModule->getFunction(targetName);
 
 	if (!extF) {
 		errs() << "ERROR while packetizing function in module '"
-				<< info.module.getModuleIdentifier() << "': extern target function '"
+				<< mInfo->mModule->getModuleIdentifier() << "': extern target function '"
 				<< targetName << "' not declared!\n";
 		return false;
 	}
@@ -487,14 +576,14 @@ bool WholeFunctionVectorizer::packetizeFunction(const std::string& scalarName,
 		assert (!extF->getBasicBlockList().empty() &&
 				"Function is no declaration but does not have basic blocks?!");
 		errs() << "ERROR while packetizing function in module '"
-				<< info.module.getModuleIdentifier() << "': extern target function '"
+				<< mInfo->mModule->getModuleIdentifier() << "': extern target function '"
 				<< targetName << "' must not have a body!\n";
 		return false;
 	}
 
 	DEBUG_PKT( f->print(outs()); );
 	DEBUG_PKT( Packetizer::writeFunctionToFile(f, scalarName+".ll"); );
-	DEBUG_PKT( Packetizer::writeModuleToFile(&info.module, scalarName+".mod.ll"); );
+	DEBUG_PKT( Packetizer::writeModuleToFile(mInfo->mModule, scalarName+".mod.ll"); );
 	DEBUG_PKT_NO_VERBOSE( verifyFunction(*f); );
 
 	// Don't touch original function... clone it.
@@ -503,7 +592,7 @@ bool WholeFunctionVectorizer::packetizeFunction(const std::string& scalarName,
 	// and clone into it.
 
 	// create temp function (target for cloning)
-	Function* tempF = Function::Create(f->getFunctionType(), GlobalValue::ExternalLinkage, scalarName+".tmp", &info.module);
+	Function* tempF = Function::Create(f->getFunctionType(), GlobalValue::ExternalLinkage, scalarName+".tmp", mInfo->mModule);
 	tempF->setCallingConv(CallingConv::C);
 	tempF->setAttributes(f->getAttributes());
 	tempF->setAlignment(f->getAlignment());
@@ -525,11 +614,11 @@ bool WholeFunctionVectorizer::packetizeFunction(const std::string& scalarName,
 
 	// Map all user-defined uniform/consecutive/aligned values that "belong"
 	// to the current function.
-	for (ValueInfoMapType::const_iterator it=globalValueInfoMap.begin(),
-			E=globalValueInfoMap.end(); it!=E; ++it)
+	for (ValueInfoMapType::const_iterator it=mGlobalValueInfoMap.begin(),
+			E=mGlobalValueInfoMap.end(); it!=E; ++it)
 	{
 		const ValueInfo* origInfo = it->second;
-		Value* origValue = origInfo->value;
+		Value* origValue = origInfo->mValue;
 
 		// ignore all instructions and arguments that do not belong to
 		// the current function.
@@ -552,21 +641,21 @@ bool WholeFunctionVectorizer::packetizeFunction(const std::string& scalarName,
 		assert (clonedValue);
 
 		ValueInfo* info = new ValueInfo(clonedValue,
-										origInfo->uniform,
-										origInfo->consecutive,
-										origInfo->aligned);
+										origInfo->mUniform,
+										origInfo->mConsecutive,
+										origInfo->mAligned);
 
-		valueInfoMap.insert(std::make_pair(clonedValue, info));
+		mValueInfoMap.insert(std::make_pair(clonedValue, info));
 	}
 
 	DEBUG_PKT(
 		outs() << "valueInfoMap:\n";
-		for (ValueInfoMapType::const_iterator it=valueInfoMap.begin(), E=valueInfoMap.end(); it!=E; ++it) {
+		for (ValueInfoMapType::const_iterator it=mValueInfoMap.begin(), E=mValueInfoMap.end(); it!=E; ++it) {
 			outs() << "  " << *it->first << " ["
-				<< (it->second->uniform ? "UNIFORM, " : "VARYING, ")
-				<< (it->second->consecutive ? "CONSECUTIVE, " :
-						(it->second->uniform ? "SAME, " : "RANDOM, "))
-				<< (it->second->aligned ? "ALIGNED, " : "UNALIGNED, ")
+				<< (it->second->mUniform ? "UNIFORM, " : "VARYING, ")
+				<< (it->second->mConsecutive ? "CONSECUTIVE, " :
+						(it->second->mUniform ? "SAME, " : "RANDOM, "))
+				<< (it->second->mAligned ? "ALIGNED, " : "UNALIGNED, ")
 				<< "]\n";
 		}
 	);
@@ -576,7 +665,7 @@ bool WholeFunctionVectorizer::packetizeFunction(const std::string& scalarName,
 
 	// Replace calls to fmodf by simple REM
 	// TODO: Shouldn't this be part of "native functions" or so?
-	if (Function* fmodf = info.module.getFunction("fmodf")) transformCalls(fmodf);
+	if (Function* fmodf = mInfo->mModule->getFunction("fmodf")) transformCalls(fmodf);
 
 	DEBUG_PKT( tempF->print(outs()); );
 	DEBUG_PKT( extF->print(outs()); );
@@ -601,18 +690,18 @@ bool WholeFunctionVectorizer::packetizeFunction(const std::string& scalarName,
 	/////////////////////////////
 
 	{
-		FunctionPassManager funPassManager(&info.module);
+		FunctionPassManager funPassManager(mInfo->mModule);
 
 		// run preparatory transformation phases (LLVM passes)
 		funPassManager.add(createLowerSwitchPass());
 		funPassManager.add(createBreakCriticalEdgesPass());
 		funPassManager.add(createLoopSimplifyPass());
 		// run custom preparation phases
-		funPassManager.add(createReturnUnifierPass(verbose));
+		funPassManager.add(createReturnUnifierPass(mVerbose));
 		//funPassManager.add(createUnifyFunctionExitNodesPass()); // TODO: Use this instead of returnUnifier
-		funPassManager.add(createPhiCanonicalizationPass(verbose));
-		funPassManager.add(createLoopBranchCanonicalizationPass(verbose));
-		funPassManager.add(createMemAccessCanonicalizationPass(verbose));
+		funPassManager.add(createPhiCanonicalizationPass(mVerbose));
+		funPassManager.add(createLoopBranchCanonicalizationPass(mVerbose));
+		funPassManager.add(createMemAccessCanonicalizationPass(mVerbose));
 		DEBUG_PKT_NO_VERBOSE( funPassManager.add(createVerifierPass()); );
 
 		funPassManager.doInitialization();
@@ -622,23 +711,23 @@ bool WholeFunctionVectorizer::packetizeFunction(const std::string& scalarName,
 
 	// TODO: is there a better way to cast to a const value?
 	const NativeFunctionMapType* constNativeFunctionMap =
-	const_cast<const NativeFunctionMapType*>(&nativeFunctionMap);
+	const_cast<const NativeFunctionMapType*>(&mNativeFunctionMap);
 	const ValueInfoMapType* constValueInfoMap =
-	const_cast<const ValueInfoMapType*>(&valueInfoMap);
+	const_cast<const ValueInfoMapType*>(&mValueInfoMap);
 
 	bool failed = false;
 	{
-		FunctionPassManager PM(&info.module);
-		PM.add(createBranchInfoAnalysisPass(&failed, verbose));
-		PM.add(createLoopLiveValueAnalysisPass(&failed, verbose));
-		PM.add(createVectorizationAnalysisPass(info, nativeMethods, *tempF, *extF, *constNativeFunctionMap, *constValueInfoMap, &failed, verbose));
-		PM.add(createMaskGeneratorPass(&failed, verbose));
-		PM.add(createSelectGeneratorPass(&failed, verbose));
-		PM.add(createCFGLinearizerNaivePass(&failed, verbose));
+		FunctionPassManager PM(mInfo->mModule);
+		PM.add(createBranchInfoAnalysisPass(&failed, mVerbose));
+		PM.add(createLoopLiveValueAnalysisPass(&failed, mVerbose));
+		PM.add(createVectorizationAnalysisPass(mInfo, tempF, extF, *constNativeFunctionMap, *constValueInfoMap, &failed, mVerbose));
+		PM.add(createMaskGeneratorPass(&failed, mVerbose));
+		PM.add(createSelectGeneratorPass(&failed, mVerbose));
+		PM.add(createCFGLinearizerNaivePass(&failed, mVerbose));
 #ifndef PACKETIZER_DO_NOT_USE_COHERENT_MASK_BRANCHING
-		PM.add(createCoherentMaskBranchGeneratorPass(&failed, verbose));
+		PM.add(createCoherentMaskBranchGeneratorPass(&failed, mVerbose));
 #endif
-		PM.add(createFunctionPacketizerPass(info, tempF, extF, *constNativeFunctionMap,  nativeMethods, &failed, verbose));
+		PM.add(createFunctionPacketizerPass(mInfo, tempF, extF, &failed, mVerbose));
 		DEBUG_PKT_NO_VERBOSE( PM.add(createVerifierPass()); );
 
 		PM.doInitialization();
@@ -665,19 +754,24 @@ bool WholeFunctionVectorizer::packetizeFunction(const std::string& scalarName,
 	return true;
 }
 
-void WholeFunctionVectorizer::cleanup() {
+void
+WholeFunctionVectorizer::cleanup()
+{
 	// TODO: erase tempF from parent (requires tempF to be visible here...)
 
 	// clean valueInfoMap of current function
-	for (ValueInfoMapType::const_iterator it=valueInfoMap.begin(),
-			E=valueInfoMap.end(); it!=E; ++it)
+	for (ValueInfoMapType::const_iterator it=mValueInfoMap.begin(),
+			E=mValueInfoMap.end(); it!=E; ++it)
 	{
 		delete it->second;
 	}
-	valueInfoMap.clear();
+	mValueInfoMap.clear();
 }
 
-bool WholeFunctionVectorizer::verifyFunctionSignaturesMatch(const Function* f, const Function* f_SIMD) {
+bool
+WholeFunctionVectorizer::verifyFunctionSignaturesMatch(const Function* f,
+                                                       const Function* f_SIMD)
+{
 	bool verified = true;
 
 	if (f->arg_size() != f_SIMD->arg_size()) {
@@ -688,7 +782,10 @@ bool WholeFunctionVectorizer::verifyFunctionSignaturesMatch(const Function* f, c
 	// check argument and return types
 	Type* scalarReturnType = f->getReturnType();
 	Type* foundPacketReturnType = f_SIMD->getReturnType();
-	//Type* expectedPacketReturnType = scalarReturnType->isVoidTy() ? scalarReturnType : packetizeType(packetize4xType(scalarReturnType));
+    //Type* expectedPacketReturnType =
+        //scalarReturnType->isVoidTy() ? scalarReturnType :
+            //packetizeType(packetize4xType(scalarReturnType));
+
 	if (!verifyPacketizedType(scalarReturnType, foundPacketReturnType)) {
 		errs() << "ERROR: return type does not match!\n";
 		errs() << "       scalar      : " << *scalarReturnType << "\n";
@@ -715,52 +812,27 @@ bool WholeFunctionVectorizer::verifyFunctionSignaturesMatch(const Function* f, c
 	return verified;
 }
 
-bool WholeFunctionVectorizer::verifyPacketizedType(Type* scalarType, Type* vecType) {
-	// first perform tests for exact matching and exact packetization
+bool
+WholeFunctionVectorizer::verifyPacketizedType(Type* scalarType, Type* vecType)
+{
+	// Check for uniform equivalence.
 	if (scalarType == vecType) return true;
-	if (scalarType->isVoidTy() || vecType->isVoidTy()) return false; // if one of both types is void, types cannot match!
-	if (Packetizer::packetizeSIMDWrapperType(Packetizer::packetizeSIMDType(scalarType, info), info) == vecType) return true;
+    if (Packetizer::typesMatch(scalarType, vecType, *mInfo)) return true;
 
-	// check additional possibilities:
-	// - i32 -> <2 x i64>
-	// - i32* -> <2 x i64>*
-	// - float -> <2 x double>
-	// - float* -> <2 x double>*
-	// - structs with mixed uniform/varying elements
-	switch (scalarType->getTypeID()) {
-		case Type::FloatTyID:
-			{
-				return vecType == VectorType::get(Type::getDoubleTy(getGlobalContext()), info.simdWidth/2);
-			}
-		case Type::IntegerTyID:
-			{
-				return vecType == VectorType::get(Type::getInt64Ty(getGlobalContext()), info.simdWidth/2);
-			}
-		case Type::PointerTyID:
-			{
-				if (!vecType->isPointerTy()) return false; // TODO: might this still be okay in some cases?
-				return verifyPacketizedType(scalarType->getContainedType(0), vecType->getContainedType(0));
-			}
-		case Type::StructTyID:
-			{
-				if (!vecType->isStructTy()) return false;
-				StructType* scalarSType = cast<StructType>(scalarType);
-				StructType* vecSType = cast<StructType>(vecType);
-				if (scalarSType->getNumContainedTypes() != vecSType->getNumContainedTypes()) return false;
-				for (unsigned i=0; i<scalarSType->getNumContainedTypes(); ++i) {
-					const bool elemVerified = verifyPacketizedType(scalarSType->getElementType(i), vecSType->getElementType(i));
-					if (!elemVerified) return false;
-				}
-				return true;
-			}
-		default: return false;
-	}
+    // Check for varying equivalence.
+    Type* vectorizedType =
+        Packetizer::packetizeSIMDWrapperType(Packetizer::packetizeSIMDType(scalarType, *mInfo), *mInfo);
+    if (Packetizer::typesMatch(vecType, vectorizedType, *mInfo)) return true;
+
+    return false;
 }
 
 // TODO: this function should ignore uniform paths!
 // Until this is implemented, this function only produces warnings instead of exiting.
 // The return value thus only gives a hint if the function *might* not be packetizable.
-bool WholeFunctionVectorizer::isPacketizable(const Function* f) const {
+bool
+WholeFunctionVectorizer::isPacketizable(const Function* f) const
+{
 	assert (f);
 	bool packetizable = true;
 
@@ -822,7 +894,7 @@ bool WholeFunctionVectorizer::isPacketizable(const Function* f) const {
 					//HACK: this requires special automatic treatment of i8* instructions!
 					//      -> to be replaced by some generic handling of uniform/varying values
 					//						const bool isVoidPointer = I->getType()->getTypeID() == Type::PointerTyID &&
-					//								cast<PointerType>(I->getType())->getElementType() == Type::getInt8Ty(getGlobalContext());
+					//								cast<PointerType>(I->getType())->getElementType() == Type::getInt8Ty(info.context);
 					//						if (!isPacketizableType(I->getType()) && !isVoidPointer)
 					if (!isPacketizableType(I->getType())) {
 						errs() << "WARNING: Function '" << f->getNameStr() << "' contains non-packetizable type - will not be able to packetize unless on uniform path!\n";
@@ -837,7 +909,10 @@ bool WholeFunctionVectorizer::isPacketizable(const Function* f) const {
 	} //BB
 	return packetizable;
 }
-bool WholeFunctionVectorizer::isPacketizableType(Type* type) const {
+
+bool
+WholeFunctionVectorizer::isPacketizableType(Type* type) const
+{
 	//first check most common types
 	if (type->isFloatTy() ||
 			type->isVoidTy() ||
@@ -880,7 +955,9 @@ bool WholeFunctionVectorizer::isPacketizableType(Type* type) const {
 //       anything.
 //
 
-bool WholeFunctionVectorizer::transformFunction(Function* f) {
+bool
+WholeFunctionVectorizer::transformFunction(Function* f)
+{
 	DEBUG_PKT( outs() << "transforming function '" << f->getNameStr() << "'... \n"; );
 
 	DEBUG_PKT( outs() << "  replacing constants of types of precision > 32bit if possible... "; );
@@ -901,7 +978,9 @@ bool WholeFunctionVectorizer::transformFunction(Function* f) {
 
 //replaces constant operands of I by 'packetizable' type
 // TODO: currently only handles i64 and double, nothing else implemented
-bool WholeFunctionVectorizer::transformConstants(Instruction* I) {
+bool
+WholeFunctionVectorizer::transformConstants(Instruction* I)
+{
 	if (I->isShift()) return false;
 
 	bool changed = false;
@@ -913,30 +992,30 @@ bool WholeFunctionVectorizer::transformConstants(Instruction* I) {
 
 		Constant* newC = NULL;
 
-		if (opType == Type::getInt64Ty(getGlobalContext())) {
+		if (opType == Type::getInt64Ty(*mInfo->mContext)) {
 			if (isa<UndefValue>(OP)) {
-				newC = UndefValue::get(Type::getInt32Ty(getGlobalContext()));
+				newC = UndefValue::get(Type::getInt32Ty(*mInfo->mContext));
 			} else {
 				ConstantInt* opC = cast<ConstantInt>(OP);
 				const uint64_t intValue = *opC->getValue().getRawData();
-				if (!ConstantInt::isValueValidForType(Type::getInt32Ty(getGlobalContext()), intValue)) {
+				if (!ConstantInt::isValueValidForType(Type::getInt32Ty(*mInfo->mContext), intValue)) {
 					errs() << "WARNING: Integer constant is too large to fit into 32bit "
 						<< "- cannot vectorize: " << intValue << "\n";
 					break;
 				}
-				newC = ConstantInt::get(getGlobalContext(), APInt(32, intValue));
+				newC = ConstantInt::get(*mInfo->mContext, APInt(32, intValue));
 			}
-		} else if (opType == Type::getDoubleTy(getGlobalContext())) {
+		} else if (opType == Type::getDoubleTy(*mInfo->mContext)) {
 			if (isa<UndefValue>(OP)) {
-				newC = UndefValue::get(Type::getFloatTy(getGlobalContext()));
+				newC = UndefValue::get(Type::getFloatTy(*mInfo->mContext));
 			} else {
 				ConstantFP* opC = cast<ConstantFP>(OP);
-				if (!ConstantFP::isValueValidForType(Type::getFloatTy(getGlobalContext()), opC->getValueAPF())) {
+				if (!ConstantFP::isValueValidForType(Type::getFloatTy(*mInfo->mContext), opC->getValueAPF())) {
 					errs() << "WARNING: Floating point constant is too large to fit into 32bit "
 						<< "- cannot vectorize: " << opC->getValueAPF().convertToDouble() << "\n";
 					break;
 				}
-				newC = ConstantFP::get(Type::getFloatTy(getGlobalContext()), opC->getValueAPF().convertToDouble());
+				newC = ConstantFP::get(Type::getFloatTy(*mInfo->mContext), opC->getValueAPF().convertToDouble());
 			}
 		}
 
@@ -948,7 +1027,9 @@ bool WholeFunctionVectorizer::transformConstants(Instruction* I) {
 	return changed;
 }
 
-void WholeFunctionVectorizer::transformCalls(Function* f) {
+void
+WholeFunctionVectorizer::transformCalls(Function* f)
+{
 	assert (f);
 
 	if (!f->getName().equals("fmodf")) return;
@@ -968,29 +1049,32 @@ void WholeFunctionVectorizer::transformCalls(Function* f) {
 // only run analyses without modifying the code
 // TODO: This is not exactly equivalent to what happens if packetization is performed:
 //       There are preparatory transformations (returnUnification etc.) that are not performed by this function.
-bool WholeFunctionVectorizer::analyzeFunction(const std::string& scalarName, const std::string& targetName) {
-	Function* f = info.module.getFunction(scalarName);
+bool
+WholeFunctionVectorizer::analyzeFunction(const std::string& scalarName,
+                                         const std::string& targetName)
+{
+	Function* f = mInfo->mModule->getFunction(scalarName);
 
 	if (!f) {
 		errs() << "ERROR while analyzing function in module '"
-				<< info.module.getModuleIdentifier() << "': function '"
+				<< mInfo->mModule->getModuleIdentifier() << "': function '"
 				<< scalarName << "' not found!\n";
 		return false;
 	}
 
 	if (f->isVarArg()) {
 		errs() << "ERROR while analyzing function in module '"
-				<< info.module.getModuleIdentifier() << "': function '"
+				<< mInfo->mModule->getModuleIdentifier() << "': function '"
 				<< scalarName << "' has a variable argument list (not supported)!\n";
 		return false;
 	}
 
 	//check if newName is function declared as 'external'
-	Function* extF = info.module.getFunction(targetName);
+	Function* extF = mInfo->mModule->getFunction(targetName);
 
 	if (!extF) {
 		errs() << "ERROR while analyzing function in module '"
-				<< info.module.getModuleIdentifier() << "': extern target function '"
+				<< mInfo->mModule->getModuleIdentifier() << "': extern target function '"
 				<< targetName << "' not declared!\n";
 		return false;
 	}
@@ -999,7 +1083,7 @@ bool WholeFunctionVectorizer::analyzeFunction(const std::string& scalarName, con
 		assert (!extF->getBasicBlockList().empty() &&
 				"Function is no declaration but does not have basic blocks?!");
 		errs() << "ERROR while analyzing function in module '"
-				<< info.module.getModuleIdentifier() << "': extern target function '"
+				<< mInfo->mModule->getModuleIdentifier() << "': extern target function '"
 				<< targetName << "' must not have a body!\n";
 		return false;
 	}
@@ -1008,11 +1092,11 @@ bool WholeFunctionVectorizer::analyzeFunction(const std::string& scalarName, con
 
 	// Map all user-defined uniform/consecutive/aligned values that "belong"
 	// to the current function.
-	for (ValueInfoMapType::const_iterator it=globalValueInfoMap.begin(),
-			E=globalValueInfoMap.end(); it!=E; ++it)
+	for (ValueInfoMapType::const_iterator it=mGlobalValueInfoMap.begin(),
+			E=mGlobalValueInfoMap.end(); it!=E; ++it)
 	{
 		const ValueInfo* origInfo = it->second;
-		Value* origValue = origInfo->value;
+		Value* origValue = origInfo->mValue;
 
 		// ignore all instructions and arguments that do not belong to
 		// the current function.
@@ -1028,7 +1112,7 @@ bool WholeFunctionVectorizer::analyzeFunction(const std::string& scalarName, con
 			continue;
 		}
 
-		valueInfoMap.insert(std::make_pair(origValue, origInfo));
+		mValueInfoMap.insert(std::make_pair(origValue, origInfo));
 	}
 
 	if (!verifyFunctionSignaturesMatch(f, extF)) {
@@ -1046,18 +1130,18 @@ bool WholeFunctionVectorizer::analyzeFunction(const std::string& scalarName, con
 
 	// TODO: is there a better way to cast to a const value?
 	const NativeFunctionMapType* constNativeFunctionMap =
-	const_cast<const NativeFunctionMapType*>(&nativeFunctionMap);
+	const_cast<const NativeFunctionMapType*>(&mNativeFunctionMap);
 	const ValueInfoMapType* constValueInfoMap =
-	const_cast<const ValueInfoMapType*>(&valueInfoMap);
+	const_cast<const ValueInfoMapType*>(&mValueInfoMap);
 
-	if (analysisResults) delete analysisResults;
-	analysisResults = new AnalysisResults(verbose);
+	if (mAnalysisResults) delete mAnalysisResults;
+	mAnalysisResults = new AnalysisResults(mVerbose);
 
 	bool failed = false;
-	FunctionPassManager PM(&info.module);
-	PM.add(createBranchInfoAnalysisPass(&failed, verbose));
-	PM.add(createLoopLiveValueAnalysisPass(&failed, verbose));
-	PM.add(createVectorizationAnalysisPass(info, nativeMethods, *f, *extF, *constNativeFunctionMap, *constValueInfoMap, &failed, verbose, analysisResults));
+	FunctionPassManager PM(mInfo->mModule);
+	PM.add(createBranchInfoAnalysisPass(&failed, mVerbose));
+	PM.add(createLoopLiveValueAnalysisPass(&failed, mVerbose));
+	PM.add(createVectorizationAnalysisPass(mInfo, f, extF, *constNativeFunctionMap, *constValueInfoMap, &failed, mVerbose, mAnalysisResults));
 	DEBUG_PKT_NO_VERBOSE( PM.add(createVerifierPass()); );
 
 	PM.run(*f);
@@ -1067,118 +1151,180 @@ bool WholeFunctionVectorizer::analyzeFunction(const std::string& scalarName, con
 	}
 
 	// clean valueInfoMap of current function
-	for (ValueInfoMapType::const_iterator it=valueInfoMap.begin(),
-			E=valueInfoMap.end(); it!=E; ++it)
+	for (ValueInfoMapType::const_iterator it=mValueInfoMap.begin(),
+			E=mValueInfoMap.end(); it!=E; ++it)
 	{
 		delete it->second;
 	}
-	valueInfoMap.clear();
+	mValueInfoMap.clear();
 
-	return analysisResults->verify(*f);
-}
-
-bool WholeFunctionVectorizer::isUniform(const Value* value) const {
-	return analysisResults->isUniform(value);
-}
-bool WholeFunctionVectorizer::isSame(const Value* value) const {
-	return analysisResults->isSame(value);
-}
-bool WholeFunctionVectorizer::isConsecutive(const Value* value) const {
-	return analysisResults->isConsecutive(value);
-}
-bool WholeFunctionVectorizer::isRandom(const Value* value) const {
-	return analysisResults->isRandom(value);
-}
-bool WholeFunctionVectorizer::isAligned(const Value* value) const {
-	return analysisResults->isAligned(value);
-}
-bool WholeFunctionVectorizer::isMask(const Value* value) const {
-	return analysisResults->isMask(value);
+	return mAnalysisResults->verify(*f);
 }
 
-bool WholeFunctionVectorizer::requiresReplication(const Value* value) const {
-	return analysisResults->requiresReplication(value);
+bool
+WholeFunctionVectorizer::isUniform(const Value* value) const
+{
+	return mAnalysisResults->isUniform(value);
 }
-bool WholeFunctionVectorizer::requiresSplitResult(const Value* value) const {
-	return analysisResults->requiresSplitResult(value);
+bool
+WholeFunctionVectorizer::isSame(const Value* value) const
+{
+	return mAnalysisResults->isSame(value);
 }
-bool WholeFunctionVectorizer::requiresSplitFull(const Value* value) const {
-	return analysisResults->requiresSplitFull(value);
+bool
+WholeFunctionVectorizer::isConsecutive(const Value* value) const
+{
+	return mAnalysisResults->isConsecutive(value);
 }
-bool WholeFunctionVectorizer::requiresSplitFullGuarded(const Value* value) const {
-	return analysisResults->requiresSplitFullGuarded(value);
+bool
+WholeFunctionVectorizer::isRandom(const Value* value) const
+{
+	return mAnalysisResults->isRandom(value);
+}
+bool
+WholeFunctionVectorizer::isAligned(const Value* value) const
+{
+	return mAnalysisResults->isAligned(value);
+}
+bool
+WholeFunctionVectorizer::isMask(const Value* value) const
+{
+	return mAnalysisResults->isMask(value);
 }
 
-bool WholeFunctionVectorizer::isNonDivergent(const BasicBlock* block) const {
-	return analysisResults->hasUniformEntry(block);
+bool
+WholeFunctionVectorizer::requiresReplication(const Value* value) const
+{
+	return mAnalysisResults->requiresReplication(value);
 }
-bool WholeFunctionVectorizer::isFullyNonDivergent(const BasicBlock* block) const {
-	return analysisResults->hasFullyUniformEntry(block);
+bool
+WholeFunctionVectorizer::requiresSplitResult(const Value* value) const
+{
+	return mAnalysisResults->requiresSplitResult(value);
 }
-bool WholeFunctionVectorizer::hasUniformExit(const BasicBlock* block) const {
-	return analysisResults->hasUniformExit(block);
+bool
+WholeFunctionVectorizer::requiresSplitFull(const Value* value) const
+{
+	return mAnalysisResults->requiresSplitFull(value);
 }
-bool WholeFunctionVectorizer::hasFullyUniformExit(const BasicBlock* block) const {
-	return analysisResults->hasFullyUniformExit(block);
+bool
+WholeFunctionVectorizer::requiresSplitFullGuarded(const Value* value) const
+{
+	return mAnalysisResults->requiresSplitFullGuarded(value);
 }
 
-bool WholeFunctionVectorizer::isInputIndependent(const Instruction* value) const {
-	return analysisResults->isInputIndependent(value);
+bool
+WholeFunctionVectorizer::isNonDivergent(const BasicBlock* block) const
+{
+	return mAnalysisResults->hasUniformEntry(block);
+}
+bool
+WholeFunctionVectorizer::isFullyNonDivergent(const BasicBlock* block) const
+{
+	return mAnalysisResults->hasFullyUniformEntry(block);
+}
+bool
+WholeFunctionVectorizer::hasUniformExit(const BasicBlock* block) const
+{
+	return mAnalysisResults->hasUniformExit(block);
+}
+bool
+WholeFunctionVectorizer::hasFullyUniformExit(const BasicBlock* block) const
+{
+	return mAnalysisResults->hasFullyUniformExit(block);
+}
+
+bool
+WholeFunctionVectorizer::isInputIndependent(const Instruction* value) const
+{
+	return mAnalysisResults->isInputIndependent(value);
 }
 
 
 namespace Packetizer {
 
-PACKETIZER_API bool Packetizer::analyzeFunction(const std::string& scalarName, const std::string& targetName) {
+PACKETIZER_API bool
+Packetizer::analyzeFunction(const std::string& scalarName, const std::string& targetName)
+{
 	return wfv->analyzeFunction(scalarName, targetName);
 }
 
-PACKETIZER_API bool Packetizer::isUniform(const Value* value) const {
+PACKETIZER_API bool
+Packetizer::isUniform(const Value* value) const
+{
 	return wfv->isUniform(value);
 }
-PACKETIZER_API bool Packetizer::isSame(const Value* value) const {
+PACKETIZER_API bool
+Packetizer::isSame(const Value* value) const
+{
 	return wfv->isSame(value);
 }
-PACKETIZER_API bool Packetizer::isConsecutive(const Value* value) const {
+PACKETIZER_API bool
+Packetizer::isConsecutive(const Value* value) const
+{
 	return wfv->isConsecutive(value);
 }
-PACKETIZER_API bool Packetizer::isRandom(const Value* value) const {
+PACKETIZER_API bool
+Packetizer::isRandom(const Value* value) const
+{
 	return wfv->isRandom(value);
 }
-PACKETIZER_API bool Packetizer::isAligned(const Value* value) const {
+PACKETIZER_API bool
+Packetizer::isAligned(const Value* value) const
+{
 	return wfv->isAligned(value);
 }
-PACKETIZER_API bool Packetizer::isMask(const Value* value) const {
+PACKETIZER_API bool
+Packetizer::isMask(const Value* value) const
+{
 	return wfv->isMask(value);
 }
 
-PACKETIZER_API bool Packetizer::requiresReplication(const Value* value) const {
+PACKETIZER_API bool
+Packetizer::requiresReplication(const Value* value) const
+{
 	return wfv->requiresReplication(value);
 }
-PACKETIZER_API bool Packetizer::requiresSplitResult(const Value* value) const {
+PACKETIZER_API bool
+Packetizer::requiresSplitResult(const Value* value) const
+{
 	return wfv->requiresSplitResult(value);
 }
-PACKETIZER_API bool Packetizer::requiresSplitFull(const Value* value) const {
+PACKETIZER_API bool
+Packetizer::requiresSplitFull(const Value* value) const
+{
 	return wfv->requiresSplitFull(value);
 }
-PACKETIZER_API bool Packetizer::requiresSplitFullGuarded(const Value* value) const {
+PACKETIZER_API bool
+Packetizer::requiresSplitFullGuarded(const Value* value) const
+{
 	return wfv->requiresSplitFullGuarded(value);
 }
 
-PACKETIZER_API bool Packetizer::isNonDivergent(const BasicBlock* block) const {
+PACKETIZER_API bool
+Packetizer::isNonDivergent(const BasicBlock* block) const
+{
 	return wfv->isNonDivergent(block);
 }
-PACKETIZER_API bool Packetizer::isFullyNonDivergent(const BasicBlock* block) const {
+PACKETIZER_API bool
+Packetizer::isFullyNonDivergent(const BasicBlock* block) const
+{
 	return wfv->isFullyNonDivergent(block);
 }
-PACKETIZER_API bool Packetizer::hasUniformExit(const BasicBlock* block) const {
+PACKETIZER_API bool
+Packetizer::hasUniformExit(const BasicBlock* block) const
+{
 	return wfv->hasUniformExit(block);
 }
-PACKETIZER_API bool Packetizer::hasFullyUniformExit(const BasicBlock* block) const {
+PACKETIZER_API bool
+Packetizer::hasFullyUniformExit(const BasicBlock* block) const
+{
 	return wfv->hasFullyUniformExit(block);
 }
 
-PACKETIZER_API bool Packetizer::isInputIndependent(const Instruction* value) const {
+PACKETIZER_API bool
+Packetizer::isInputIndependent(const Instruction* value) const
+{
 	return wfv->isInputIndependent(value);
 }
 

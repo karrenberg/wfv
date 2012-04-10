@@ -222,10 +222,10 @@
 // debug macros
 // do while and ((void)0) are used to enforce semicolon
 // DEBUG_PKT_VISIBLE allows arbitrary code that does not have its own scope
-// NOTE: a boolean 'verbose' has to be in scope in order to use this ;)
+// NOTE: a boolean 'mVerbose' has to be in scope in order to use this ;)
 #ifdef DEBUG_PACKETIZER
 	#define DEBUG_PKT_NO_VERBOSE(x) do { x } while (0)
-	#define DEBUG_PKT(x) do if (verbose) { x } while (0)
+	#define DEBUG_PKT(x) do if (mVerbose) { x } while (0)
 	#define DEBUG_PKT_VISIBLE(x) x
 #else
 	#define DEBUG_PKT_NO_VERBOSE(x) ((void)0)

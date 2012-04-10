@@ -54,7 +54,7 @@ class CoherentMaskBranchGenerator : public FunctionPass {
 public:
 	static char ID; // Pass identification, replacement for typeid
 	CoherentMaskBranchGenerator(bool* failed_flag=NULL, const bool verbose_flag = false)
-			: FunctionPass(ID), failed(failed_flag), verbose(verbose_flag)
+			: FunctionPass(ID), failed(failed_flag), mVerbose(verbose_flag)
 	{
 		initializeCoherentMaskBranchGeneratorPass(*PassRegistry::getPassRegistry());
 	}
@@ -139,7 +139,7 @@ public:
 
 private:
 	bool* failed;
-	const bool verbose;
+	const bool mVerbose;
 	LoopInfo* loopInfo;
 	AnalysisResults* analysisResults;
 	MaskGraph* maskGraph;

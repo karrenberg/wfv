@@ -54,24 +54,22 @@ public:
 
 	VectorizationAnalysis()
 	: FunctionPass(ID),
-			info(Packetizer::PacketizerInfo(dummyModule, 0, 0, false, false, true)),
-			nativeMethods(NativeMethods(false, false, true)),
-			source(*Function::Create(NULL, GlobalValue::ExternalLinkage, "", &dummyModule)),
-			target(*Function::Create(NULL, GlobalValue::ExternalLinkage, "", &dummyModule)),
+			mInfo(NULL),
+			source(NULL),
+			target(NULL),
 			nativeFunctions(WholeFunctionVectorizer::NativeFunctionMapType()),
 			userValueInfoMap(WholeFunctionVectorizer::ValueInfoMapType()),
 			failed(NULL),
-			verbose(true),
+			mVerbose(true),
 			deleteResults(true),
 			analysisResults(NULL)
 	{
 		errs() << "ERROR: empty constructor of class VectorizationAnalysis should never be called!\n";
 	}
 
-	VectorizationAnalysis(const Packetizer::PacketizerInfo& _info,
-						  NativeMethods& _nativeMethods,
-						  Function& sourceFunction,
-						  Function& targetFunction,
+	VectorizationAnalysis(const Packetizer::PacketizerInfo* info,
+						  Function* sourceFunction,
+						  Function* targetFunction,
 						  const WholeFunctionVectorizer::NativeFunctionMapType& _nativeFunctions,
 						  const WholeFunctionVectorizer::ValueInfoMapType& _userValueInfoMap,
 						  bool* failedFlag,
@@ -79,14 +77,13 @@ public:
 						  AnalysisResults* res=NULL) // if NULL, result is destroyed when analysis object is destroyed
 						  
 	: FunctionPass(ID),
-			info(_info),
-			nativeMethods(_nativeMethods),
+			mInfo(info),
 			source(sourceFunction),
 			target(targetFunction),
 			nativeFunctions(_nativeFunctions),
 			userValueInfoMap(_userValueInfoMap),
 			failed(failedFlag),
-			verbose(verbose_flag),
+			mVerbose(verbose_flag),
 			deleteResults(res == NULL),
 			analysisResults(res)
 	{
@@ -132,7 +129,7 @@ public:
 	//       Better use vector register instead of broadcasting every iteration?
 	// TODO: Do we actually require BranchInfo or would PDT do the job here?
 	virtual bool runOnFunction(Function& F) {
-		assert (&F == &source);
+		assert (&F == source);
 
 		if (failed && *failed) return true;
 
@@ -145,34 +142,35 @@ public:
 		// used after passes finished and PassManager is destroyed), we only
 		// need to set the loop info.
 		// Otherwise, we have to create a new results object.
-		if (!analysisResults) analysisResults = new AnalysisResults(loopInfo, verbose);
+		if (!analysisResults) analysisResults = new AnalysisResults(loopInfo, mVerbose);
 		else analysisResults->setLoopInfo(loopInfo);
 
 		DEBUG_PKT( outs() << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 				<< "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; );
-		DEBUG_PKT( outs() << "analyzing function '" << source.getNameStr() <<
+		DEBUG_PKT( outs() << "analyzing function '" << source->getNameStr() <<
 				"' for uniform, consecutive, and aligned values\n"; );
 		DEBUG_PKT( outs() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 				<< "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; );
 
 		try {
 			// find out which arguments are uniform and which are varying
-			findUniformArguments(source, target, uniformArgVec);
+			findUniformArguments(*source, *target, uniformArgVec);
 
 			analyzeUniformInfo();
 
-			analyzeConsecutiveAlignedInfo();
+			analyzeConsecutiveAlignedInfo(*mInfo);
 
-			analyzeSplitInfo(nativeMethods, info);
+			analyzeSplitInfo(*mInfo);
 
-			if (source.getName().equals("__OpenCL_mandelbrot_kernel.tmp")) {
+            // TODO: This optimization is not fully functional yet.
+			if (source->getName().equals("__OpenCL_mandelbrot_kernel.tmp")) {
 				DEBUG_PKT( outs() << "mandelbrot - attempting to find varying instructions that can remain scalar...\n"; );
 				findVaryingInstructionsThatCanRemainScalar(); // execute BEFORE marking of masks!!
 			}
 
 			analyzeMaskInfo();
 
-			if (detectRaceConditions(info)) {
+			if (detectRaceConditions(*mInfo)) {
 #ifdef PACKETIZER_ERROR_ON_RACE_CONDITION
 				throw std::logic_error("ERROR: RACE CONDITION DETECTED!\nStore operation attempts to write different values to the same location!");
 #endif
@@ -198,16 +196,16 @@ public:
 		DEBUG_PKT( outs() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 				<< "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; );
 
-		DEBUG_PKT( source.print(outs(), new WholeFunctionVectorizationAAW(*analysisResults)); );
-		assert (analysisResults->verify(source) && "verification of vectorization analysis failed!");
+		DEBUG_PKT( source->print(outs(), new WholeFunctionVectorizationAAW(*analysisResults)); );
+		assert (analysisResults->verify(*source) && "verification of vectorization analysis failed!");
 
 		return false; // function was not changed
 	}
 
-	bool hasNonUniformIndex(GetElementPtrInst* gep) {
+	bool hasNonUniformIndex(const GetElementPtrInst* gep) const {
 		assert (gep);
 
-		for (GetElementPtrInst::op_iterator IDX=gep->idx_begin(),
+		for (GetElementPtrInst::const_op_iterator IDX=gep->idx_begin(),
 				IDXE=gep->idx_end(); IDX!=IDXE; ++IDX)
 		{
 			assert (isa<Value>(IDX));
@@ -215,18 +213,6 @@ public:
 		}
 
 		return true;
-	}
-
-	// This function defines what we consider matching types
-	// in terms of uniform/varying.
-	inline bool typesMatch(const Type* t1, const Type* t2)
-	{
-		assert (t1 && t2);
-		if (t1 == t2) return true;
-		// TODO: add special cases
-		// e.g. <2 x i64> matches <4 x i32>
-
-		return false;
 	}
 
 	// find out which parameters of scalarFun remain scalar in vectorFun
@@ -239,17 +225,17 @@ public:
 		unsigned i = 0;
 		Function::const_arg_iterator A_SCALAR = scalarFun.arg_begin();
 		for (Function::const_arg_iterator A = vectorFun.arg_begin(),
-				AE = vectorFun.arg_end(); A != AE; ++A, ++A_SCALAR, ++i) {
-			uniformArgs[i] = typesMatch(A_SCALAR->getType(), A->getType());
+				AE = vectorFun.arg_end(); A != AE; ++A, ++A_SCALAR, ++i)
+        {
+			uniformArgs[i] = Packetizer::typesMatch(A_SCALAR->getType(), A->getType(), *mInfo);
 		}
 	}
 
 	
 private:
-	const Packetizer::PacketizerInfo& info;
-	NativeMethods nativeMethods;
-	Function& source;
-	Function& target;
+	const Packetizer::PacketizerInfo* mInfo;
+	Function* source;
+	Function* target;
 	const WholeFunctionVectorizer::NativeFunctionMapType& nativeFunctions;
 	const WholeFunctionVectorizer::ValueInfoMapType& userValueInfoMap;
 	LoopInfo* loopInfo;
@@ -258,7 +244,7 @@ private:
 	BranchInfoAnalysis::BranchMapType* branchMap;
 
 	bool* failed;
-	const bool verbose;
+	const bool mVerbose;
 	const bool deleteResults;         // set to "false" if results are still required after this object is destroyed
 	AnalysisResults* analysisResults; // stores all relevant results
 
@@ -290,7 +276,7 @@ private:
 		std::set<const Loop*> uniformLoops;
 
 		// initialize sets
-		for (Function::iterator BB=source.begin(), BBE=source.end(); BB!=BBE; ++BB) {
+		for (Function::iterator BB=source->begin(), BBE=source->end(); BB!=BBE; ++BB) {
 			for (BasicBlock::iterator I=BB->begin(), IE=BB->end(); I!=IE; ++I) {
 				uniformValues.insert(I);
 			}
@@ -301,8 +287,8 @@ private:
 			}
 		}
 		// also add arguments
-		for (Function::arg_iterator A = source.arg_begin(),
-				AE = source.arg_end(); A != AE; ++A)
+		for (Function::arg_iterator A = source->arg_begin(),
+				AE = source->arg_end(); A != AE; ++A)
 		{
 			uniformValues.insert(A);
 		}
@@ -311,8 +297,8 @@ private:
 		// Mark instructions that depend on varying arguments.
 		// This does not have to be repeated every iteration.
 		unsigned i=0;
-		for (Function::arg_iterator A=source.arg_begin(),
-				AE=source.arg_end(); A!=AE; ++A, ++i)
+		for (Function::arg_iterator A=source->arg_begin(),
+				AE=source->arg_end(); A!=AE; ++A, ++i)
 		{
 			Value* argVal = cast<Value>(A);
 			if (uniformArgVec[i]) continue;
@@ -326,15 +312,15 @@ private:
 				it=userValueInfoMap.begin(),
 				E=userValueInfoMap.end(); it!=E; ++it)
 		{
-			if (it->second->uniform) continue; // ignore uniform values
+			if (it->second->mUniform) continue; // ignore uniform values
 
 			// ignore instructions of other functions
 			if (const Instruction* inst = dyn_cast<Instruction>(it->first)) {
-				if (inst->getParent()->getParent() != &source) continue;
+				if (inst->getParent()->getParent() != source) continue;
 			}
 			// ignore arguments of other functions
 			if (const Argument* arg = dyn_cast<Argument>(it->first)) {
-				if (arg->getParent() != &source) continue;
+				if (arg->getParent() != source) continue;
 			}
 
 			DEBUG_PKT( outs() << "\nmarking user-defined varying value: "
@@ -342,9 +328,36 @@ private:
 			markVaryingValue(it->first, uniformValues);
 		}
 
+        // Mark all pointer parameters that are passed to VARYING arguments
+        // of functions that have a "native" mapping as VARYING and recurse into
+        // their operands.
+        for (Function::iterator BB=source->begin(), BBE=source->end(); BB!=BBE; ++BB) {
+			for (BasicBlock::iterator I=BB->begin(), IE=BB->end(); I!=IE; ++I) {
+                if (!isa<CallInst>(I)) continue;
+                CallInst* call = cast<CallInst>(I);
+                Function* callee = call->getCalledFunction();
+
+                WholeFunctionVectorizer::NativeFunctionMapType::const_iterator
+                    it = nativeFunctions.find(callee);
+                if (it == nativeFunctions.end()) continue;
+                if (it->second->mUniform) continue;
+
+                for (unsigned i=0, e=callee->getArgumentList().size(); i<e; ++i) {
+                    if (!isa<PointerType>(call->getArgOperand(i)->getType())) continue;
+                    if (mInfo->mNativeMethods->isUniformArg(callee, i, *mInfo)) continue;
+                    DEBUG_PKT( outs() << "\nmarking pointer parameter " << i
+                            << " of call to mapped function '" << callee->getName()
+                            << "': " << *call->getArgOperand(i)
+                            << " as VARYING...\n"; );
+                    markVaryingPointer(call->getArgOperand(i), uniformValues);
+                }
+            }
+        }
+
+
 #ifdef PACKETIZER_DO_NOT_USE_UNIFORM_ANALYSIS
 //		// mark all values as VARYING
-//		for (Function::iterator BB=source.begin(), BBE=source.end(); BB!=BBE; ++BB) {
+//		for (Function::iterator BB=source->begin(), BBE=source->end(); BB!=BBE; ++BB) {
 //			for (BasicBlock::iterator I=BB->begin(), IE=BB->end(); I!=IE; ++I) {
 //				// ignore values marked as UNIFORM by user
 //				WholeFunctionVectorizer::ValueInfoMapType::const_iterator
@@ -356,7 +369,7 @@ private:
 //		}
 
 		// mark all branches as VARYING (= force linearization of all control flow)
-		for (Function::iterator BB=source.begin(), BBE=source.end(); BB!=BBE; ++BB) {
+		for (Function::iterator BB=source->begin(), BBE=source->end(); BB!=BBE; ++BB) {
 			if (!isa<BranchInst>(BB->getTerminator())) continue;
 			if (cast<BranchInst>(BB->getTerminator())->isUnconditional()) continue;
 			markVaryingValue(BB->getTerminator(), uniformValues);
@@ -370,9 +383,10 @@ private:
 		// - induction variables
 		// - return (without value or returning an induction variable)
 		// - branches (unconditional or dependent on induction variable)
+        // - allocas
 		std::set<Instruction*> argDependentInsts;
-		for (Function::arg_iterator A=source.arg_begin(),
-				AE=source.arg_end(); A!=AE; ++A, ++i)
+		for (Function::arg_iterator A=source->arg_begin(),
+				AE=source->arg_end(); A!=AE; ++A, ++i)
 		{
 			for (Argument::use_iterator U=A->use_begin(), UE=A->use_end(); U!=UE; ++U) {
 				assert (isa<Instruction>(*U));
@@ -383,24 +397,27 @@ private:
 		// Mark input-independent loads and all calls that are not defined as
 		// UNIFORM by the user via addValueInfo().
 		// This does not have to be repeated every iteration.
-		for (Function::iterator BB=source.begin(), BBE=source.end(); BB!=BBE; ++BB) {
+		for (Function::iterator BB=source->begin(), BBE=source->end(); BB!=BBE; ++BB) {
 			for (BasicBlock::iterator I=BB->begin(), IE=BB->end(); I!=IE; ++I) {
 				// ignore this instruction if it depends on any argument
 				if (argDependentInsts.find(I) != argDependentInsts.end()) continue;
 
 				if (isa<TerminatorInst>(I)) continue;
 
+                // If this operation returns a pointer, ignore it (handled in markVaryingPointer()).
+				if (isa<PointerType>(I->getType())) continue;
+
 				// ignore values marked as UNIFORM by user
 				WholeFunctionVectorizer::ValueInfoMapType::const_iterator
 						tmp = userValueInfoMap.find(I);
-				if (tmp != userValueInfoMap.end() && tmp->second->uniform) continue;
+				if (tmp != userValueInfoMap.end() && tmp->second->mUniform) continue;
 
-				// If it is no call or load, it is an induction variable, which
-				// is UNIFORM by definition if independent of arguments, unless it
-				// lives out of a VARYING loop.
-				if (!isa<CallInst>(I) && !isa<LoadInst>(I)) {
+				// If it is no call, load, of pointer type, or a value depending on such a value,
+                // it is an induction variable, which is UNIFORM by definition if
+                // independent of arguments, unless it lives out of a VARYING loop.
+				if (!isa<CallInst>(I) && !isa<LoadInst>(I) && !isa<PointerType>(I->getType())) {
 					DEBUG_PKT( errs() << "\nWARNING: Input-independent value found"
-							<< " that is neither load nor call: " << *I << "\n"; );
+							<< " that is neither load nor call nor pointer: " << *I << "\n"; );
 					DEBUG_PKT( errs() << "         Make sure this value is "
 							<< "related to an induction variable!\n"; );
 					analysisResults->addInputIndependentValue(I, false);
@@ -409,18 +426,18 @@ private:
 
 				// If this is a call to a native function marked UNIFORM,
 				// do not mark it as VARYING.
+                // Otherwise, mark all VARYING pointer arguments as VARYING.
 				if (CallInst* call = dyn_cast<CallInst>(I)) {
 					Function* callee = call->getCalledFunction();
 					WholeFunctionVectorizer::NativeFunctionMapType::const_iterator
 						it = nativeFunctions.find(callee);
-					if (it != nativeFunctions.end() &&
-							it->second->uniform)
-					{
-						DEBUG_PKT( outs() << "\ntarget function (" << callee->getName()
-								<< ") of input-independend call: " << *call
-								<< " is marked as UNIFORM by user - ignored!\n"; );
-						continue;
-					}
+					if (it != nativeFunctions.end() && it->second->mUniform)
+                    {
+                        DEBUG_PKT( outs() << "\ntarget function (" << callee->getName()
+                                << ") of input-independent call: " << *call
+                                << " is marked as UNIFORM by user - ignored!\n"; );
+                        continue;
+                    }
 				}
 
 				// If this is a load that was defined as UNIFORM, ignore it
@@ -428,16 +445,17 @@ private:
 					WholeFunctionVectorizer::ValueInfoMapType::const_iterator
 						it = userValueInfoMap.find(load);
 					if (it != userValueInfoMap.end() &&
-							it->second->uniform)
+							it->second->mUniform)
 					{
-						DEBUG_PKT( outs() << "\ninput-independend load: " << *load
+						DEBUG_PKT( outs() << "\ninput-independent load: " << *load
 								<< " is marked as UNIFORM by user - ignored!\n"; );
 						continue;
 					}
 				}
 
 				DEBUG_PKT( outs() << "\nmarking uses of input-independent "
-						<< (isa<CallInst>(I) ? "call" : "load") << ": "
+						<< (isa<CallInst>(I) ? "call" :
+                            (isa<AllocaInst>(I) ? "alloca" : "load")) << ": "
 						<< *I << " as VARYING...\n"; );
 
 				markVaryingValue(I, uniformValues);
@@ -474,14 +492,14 @@ private:
 
 			// mark blocks
 			DEBUG_PKT ( outs() << "\nmarking uniform/varying blocks...\n\n"; );
-			BasicBlock* entryBB = &source.getEntryBlock();
+			BasicBlock* entryBB = &source->getEntryBlock();
 			std::set<BasicBlock*> finishedSet;
 			const bool uniform = true;
 			changed |= markBlock(entryBB, uniform, true, uniformValues, uniformLoops, uniformBlocks, finishedSet);
 			DEBUG_PKT ( outs() << "\nfinished marking of uniform/varying blocks!\n"; );
 
 			// mark phi-instructions in varying non-loop-header-blocks as VARYING
-			for (Function::iterator BB=source.begin(), BBE=source.end(); BB!=BBE; ++BB) {
+			for (Function::iterator BB=source->begin(), BBE=source->end(); BB!=BBE; ++BB) {
 				if (loopInfo->isLoopHeader(BB)) continue;
 				if (uniformBlocks.find(BB) != uniformBlocks.end()) continue;
 
@@ -505,10 +523,10 @@ private:
 			// block has a VARYING entry, which means the select that the phi
 			// will be transformed to (because control-flow will be linearized)
 			// will have a VARYING condition.
-			for (Function::iterator BB=source.begin(), BBE=source.end(); BB!=BBE; ++BB) {
+			for (Function::iterator BB=source->begin(), BBE=source->end(); BB!=BBE; ++BB) {
 				if (loopInfo->isLoopHeader(BB)) continue;
 				if (BB->getUniquePredecessor()) continue;
-				if (&source.getEntryBlock() == BB) continue;
+				if (&source->getEntryBlock() == BB) continue;
 
 				typedef GraphTraits<Inverse<BasicBlock*> > InvBlockTraits;
 				InvBlockTraits::ChildIteratorType PI = InvBlockTraits::child_begin(BB);
@@ -560,14 +578,14 @@ private:
 
 		// add argument info
 		unsigned j=0;
-		for (Function::arg_iterator A=source.arg_begin(),
-				AE=source.arg_end(); A!=AE; ++A, ++j)
+		for (Function::arg_iterator A=source->arg_begin(),
+				AE=source->arg_end(); A!=AE; ++A, ++j)
 		{
 			const bool isUniform = uniformArgVec[j];
 			analysisResults->addValueInfo(A, isUniform ? AnalysisResults::UNIFORM : AnalysisResults::VARYING);
 		}
 
-		for (Function::iterator BB=source.begin(), BBE=source.end(); BB!=BBE; ++BB) {
+		for (Function::iterator BB=source->begin(), BBE=source->end(); BB!=BBE; ++BB) {
 
 			// add instruction info
 			for (BasicBlock::iterator I=BB->begin(), IE=BB->end(); I!=IE; ++I) {
@@ -611,7 +629,7 @@ private:
 
 		// mark FULLY_UNIFORM blocks
 		DEBUG_PKT ( outs() << "\nmarking FULLY_UNIFORM blocks and loops...\n"; );
-		BasicBlock* entryBB = &source.getEntryBlock();
+		BasicBlock* entryBB = &source->getEntryBlock();
 		std::set<BasicBlock*> visitedSet;
 		markFullyUniform(entryBB, visitedSet);
 		DEBUG_PKT ( outs() << "\nfinished marking of FULLY_UNIFORM blocks and loops!\n"; );
@@ -680,6 +698,29 @@ private:
 
 		uniformValues.erase(it); // mark as VARYING
 
+        // If this is a call, we have to make sure to mark possible
+        // VARYING pointer parameters correctly. To this end, we first
+        // have to check which argument of the function is VARYING and
+        // which is UNIFORM.
+
+
+        // If this value requires a pointer to a VARYING value (e.g. a call),
+        // make sure that defining operations of this value are
+        // also marked as VARYING (e.g. pointer loads/allocas).
+        if (Instruction* valI = dyn_cast<Instruction>(value)) {
+            for (Instruction::op_iterator O = valI->op_begin(),
+                    OE = valI->op_end(); O != OE; ++O)
+            {
+                Value* opVal = cast<Value>(O);
+                // If the operand is no pointer, we do not look at operands.
+                if (!isa<PointerType>(opVal->getType())) continue;
+                std::set<Value*>::iterator it = uniformValues.find(opVal);
+                // If the operand is uniform, we do not look at operands.
+                if (it != uniformValues.end()) continue;
+                markVaryingPointer(opVal, uniformValues);
+            }
+        }
+
 		// recurse into uses (DFS)
 		for (Value::use_iterator U = value->use_begin(), UE = value->use_end(); U != UE; ++U) {
 			Value* useVal = cast<Value>(*U);
@@ -688,6 +729,61 @@ private:
 
 		return true;
 	}
+
+    // Returns true if some mark was set, false otherwise.
+	// This is guaranteed to terminate, as each value is removed from the
+	// set before recursing.
+	bool markVaryingPointer(Value* value, std::set<Value*>& uniformValues) {
+		assert (value);
+        assert (value->getType()->isPointerTy());
+
+        if (isa<Function>(value)) return false;
+
+		DEBUG_PKT( outs() << "  marking pointer value: " << *value << " as VARYING...\n"; );
+
+		std::set<Value*>::iterator it = uniformValues.find(value);
+		if (it == uniformValues.end()) {
+			DEBUG_PKT( outs() << "    previously marked as VARYING - ignored!\n"; );
+			return false; // is already marked as VARYING
+		}
+
+		uniformValues.erase(it); // mark as VARYING
+
+        // If this is an instruction, recurse into pointer operands.
+        if (isa<Instruction>(value)) {
+            assert ((isa<AllocaInst>(value) || isa<PHINode>(value) ||
+                     isa<SelectInst>(value) || isa<LoadInst>(value) ||
+                     isa<GetElementPtrInst>(value)) &&
+                    "unexpected pointer-returning instruction found!");
+
+            // If this is an alloca, we stop recursion into operands.
+            // If this is a load, we only recurse into the pointer operand.
+            // Otherwise (phi / select), we recurse into all operands.
+            if (!isa<AllocaInst>(value)) {
+                Instruction* valI = cast<Instruction>(value);
+                for (Instruction::op_iterator O = valI->op_begin(),
+                        OE = valI->op_end(); O != OE; ++O)
+                {
+                    Value* opVal = cast<Value>(O);
+                    // If the operand is no pointer, we do not look at operands.
+                    if (!isa<PointerType>(opVal->getType())) continue;
+                    std::set<Value*>::iterator it = uniformValues.find(opVal);
+                    // If the operand is uniform, we do not look at operands.
+                    if (it != uniformValues.end()) continue;
+                    markVaryingPointer(opVal, uniformValues);
+                }
+            }
+        }
+
+		// recurse into uses (DFS)
+		for (Value::use_iterator U = value->use_begin(), UE = value->use_end(); U != UE; ++U) {
+			Value* useVal = cast<Value>(*U);
+			markVaryingValue(useVal, uniformValues);
+		}
+
+		return true;
+	}
+
 
 	// Returns true if some mark was set, false otherwise.
 	bool markLoop(const Loop* loop, std::set<Value*>& uniformValues, std::set<const Loop*>& uniformLoops) {
@@ -1152,12 +1248,12 @@ private:
 	// Therefore, we start by marking uniform values as SAME and user-defined
 	// values according to the input.
 	// Only then we start recursively marking the rest of the function.
-	void analyzeConsecutiveAlignedInfo() {
+	void analyzeConsecutiveAlignedInfo(const Packetizer::PacketizerInfo& info) {
 		assert (analysisResults->hasValueInfo() && "forgot to run analyzeUniformInfo()?");
 
 		std::set<Value*> markedValues;
 
-		DEBUG_PKT( outs() << source; );
+		DEBUG_PKT( outs() << *source; );
 
 //#ifdef PACKETIZER_DO_NOT_USE_SPLIT_ANALYSIS
 //		for (AnalysisResults::ValueInfoMapType::const_iterator it=analysisResults->begin(),
@@ -1182,30 +1278,40 @@ private:
 		{
 			// ignore instructions of other functions
 			if (const Instruction* inst = dyn_cast<Instruction>(it->first)) {
-				if (inst->getParent()->getParent() != &source) {
+				if (inst->getParent()->getParent() != source) {
 					DEBUG_PKT( outs() << "ignored user-defined instruction while marking: "
-							<< *inst << "\n  source: " << source.getName()
+							<< *inst << "\n  source: " << source->getName()
 							<< "\n  parent: " << inst->getParent()->getParent()->getName() << "\n"; );
 					continue;
 				}
 			}
+
 			// ignore arguments of other functions
 			if (const Argument* arg = dyn_cast<Argument>(it->first)) {
-				if (arg->getParent() != &source) {
+				if (arg->getParent() != source) {
 					DEBUG_PKT( outs() << "ignored user-defined argument while marking: "
-							<< *arg << "\n  source: " << source.getName()
+							<< *arg << "\n  source: " << source->getName()
 							<< "\n  parent: " << arg->getParent()->getName() << "\n"; );
 					continue;
 				}
 			}
 
-			IndexInfo ii = it->second->uniform ? AnalysisResults::INDEX_SAME :
-				it->second->consecutive ? AnalysisResults::INDEX_CONSECUTIVE : AnalysisResults::INDEX_RANDOM;
-			AlignmentInfo ai = it->second->aligned ? AnalysisResults::ALIGN_TRUE : AnalysisResults::ALIGN_FALSE;
+			IndexInfo ii = it->second->mUniform ?
+                AnalysisResults::INDEX_SAME :
+                it->second->mConsecutive ?
+                    AnalysisResults::INDEX_CONSECUTIVE :
+                    AnalysisResults::INDEX_RANDOM;
+
+			AlignmentInfo ai = it->second->mAligned ?
+                AnalysisResults::ALIGN_TRUE :
+                AnalysisResults::ALIGN_FALSE;
+
 			analysisResults->setIndexInfo(it->first, ii);
 			analysisResults->setAlignmentInfo(it->first, ai);
 
-			assert (!(ii == AnalysisResults::INDEX_SAME && !analysisResults->isUniform(it->first)) && "value must not be VARYING / INDEX_SAME!");
+			assert (!(ii == AnalysisResults::INDEX_SAME &&
+                                !analysisResults->isUniform(it->first))
+                                && "value must not be VARYING / INDEX_SAME!");
 
 			DEBUG_PKT( outs() << "marked user-defined value: " << *it->first << " as "
 					<< AnalysisResults::getIndexInfoString(ii) << " / "
@@ -1231,23 +1337,30 @@ private:
 			if (markedValues.find(value) != markedValues.end()) {
 				assert (analysisResults->getValueInfo(value));
 				DEBUG_PKT( outs() << "  value already marked as "
-					<< AnalysisResults::getIndexInfoString(analysisResults->getValueInfo(value)->indexInfo) << " / "
-					<< AnalysisResults::getAlignmentInfoString(analysisResults->getValueInfo(value)->alignmentInfo) << " - ignored!\n"; );
+					<< AnalysisResults::getIndexInfoString(
+                                        analysisResults->getValueInfo(value)->indexInfo)
+                    << " / "
+					<< AnalysisResults::getAlignmentInfoString(
+                                        analysisResults->getValueInfo(value)->alignmentInfo)
+                    << " - ignored!\n"; );
 				continue;
 			}
 
 			Argument* arg = cast<Argument>(value);
 
 			if (analysisResults->isUniform(arg)) {
-				AlignmentInfo ai =
-					value->getType()->isPointerTy() ? AnalysisResults::ALIGN_TRUE : AnalysisResults::ALIGN_FALSE;
+				AlignmentInfo ai = value->getType()->isPointerTy() ?
+                    AnalysisResults::ALIGN_TRUE :
+                    AnalysisResults::ALIGN_FALSE;
 				analysisResults->setIndexInfo(value, AnalysisResults::INDEX_SAME);
 				analysisResults->setAlignmentInfo(value, ai);
 				DEBUG_PKT( outs() << "marked UNIFORM argument: " << *value << " as "
-						<< "INDEX_SAME / " << AnalysisResults::getAlignmentInfoString(ai) << "!\n"; );
+						<< "INDEX_SAME / "
+                        << AnalysisResults::getAlignmentInfoString(ai) << "!\n"; );
 			} else {
-				IndexInfo ii =
-					value->getType()->isPointerTy() ? AnalysisResults::INDEX_CONSECUTIVE : AnalysisResults::INDEX_RANDOM;
+				IndexInfo ii = value->getType()->isPointerTy() ?
+                    AnalysisResults::INDEX_CONSECUTIVE :
+                    AnalysisResults::INDEX_RANDOM;
 				analysisResults->setIndexInfo(arg, ii);
 				analysisResults->setAlignmentInfo(arg, AnalysisResults::ALIGN_TRUE);
 				DEBUG_PKT( outs() << "marked VARYING argument: " << *value
@@ -1266,9 +1379,9 @@ private:
 
 		// If the function returns something, this is an output :).
 		// Otherwise, ignore but mark as INDEX_SAME / ALIGN_FALSE.
-		BasicBlock* returnBlock = Packetizer::findReturnBlock(source);
+		BasicBlock* returnBlock = Packetizer::findReturnBlock(*source);
 		assert (returnBlock);
-		if (!source.getFunctionType()->getReturnType()->isVoidTy()) {
+		if (!source->getFunctionType()->getReturnType()->isVoidTy()) {
 			workSet.insert(returnBlock->getTerminator());
 		} else {
 			analysisResults->setIndexInfo(returnBlock->getTerminator(), AnalysisResults::INDEX_SAME);
@@ -1280,7 +1393,7 @@ private:
 		// they depend on other values that have to be marked.
 		// NOTE: Adding calls is not enough: they might have been added by the
 		//       user and thus are marked already. We have to add their operands.
-		for (Function::iterator BB=source.begin(), BBE=source.end(); BB!=BBE; ++BB) {
+		for (Function::iterator BB=source->begin(), BBE=source->end(); BB!=BBE; ++BB) {
 			for (BasicBlock::iterator I=BB->begin(), IE=BB->end(); I!=IE; ++I) {
 				if (!isa<CallInst>(I) &&
 						!isa<StoreInst>(I) &&
@@ -1321,7 +1434,7 @@ private:
 		DEBUG_PKT( outs() << "\nmarking instructions...\n"; );
 		for (std::set<Value*>::iterator it=workSet.begin(), E=workSet.end(); it!=E; ++it) {
 			Value* value = *it;
-			markConsecutiveAlignedValueAndOperands(value, markedValues);
+			markConsecutiveAlignedValueAndOperands(value, markedValues, info);
 			assert (analysisResults->getValueInfo(value));
 			assert (analysisResults->getValueInfo(value)->alignmentInfo != AnalysisResults::ALIGN_NOT_INITIALIZED);
 			assert (analysisResults->getValueInfo(value)->alignmentInfo != AnalysisResults::ALIGN_UNKNOWN);
@@ -1332,7 +1445,7 @@ private:
 
 	}
 
-	void markConsecutiveAlignedValueAndOperands(Value* value, std::set<Value*>& markedValues) {
+	void markConsecutiveAlignedValueAndOperands(Value* value, std::set<Value*>& markedValues, const Packetizer::PacketizerInfo& info) {
 		assert (value);
 		assert (!isa<BasicBlock>(value));
 		assert (!isa<Function>(value));
@@ -1349,7 +1462,7 @@ private:
 		}
 
 		if (Constant* c = dyn_cast<Constant>(value)) {
-			AlignmentInfo ai = deriveAlignedInformation(c);
+			AlignmentInfo ai = deriveAlignedInformation(c, info);
 			IndexInfo ii = deriveIndexInfo(c);
 			analysisResults->setIndexInfo(value, ii);
 			analysisResults->setAlignmentInfo(value, ai);
@@ -1373,14 +1486,14 @@ private:
 			// Mark predecessor of incoming value from outside loop
 			BasicBlock* preheaderBB = loop->getLoopPreheader();
 			Value* preheaderVal = phi->getIncomingValueForBlock(preheaderBB);
-			markConsecutiveAlignedValueAndOperands(preheaderVal, markedValues);
+			markConsecutiveAlignedValueAndOperands(preheaderVal, markedValues, info);
 
-			ValueInfo* info = analysisResults->getValueInfo(preheaderVal);
-			assert (info);
-			assert (info->indexInfo != AnalysisResults::INDEX_NOT_INITIALIZED);
-			assert (info->alignmentInfo != AnalysisResults::ALIGN_NOT_INITIALIZED);
-			assert (info->indexInfo != AnalysisResults::INDEX_UNKNOWN);
-			assert (info->alignmentInfo != AnalysisResults::ALIGN_UNKNOWN);
+			ValueInfo* valInfo = analysisResults->getValueInfo(preheaderVal);
+			assert (valInfo);
+			assert (valInfo->indexInfo != AnalysisResults::INDEX_NOT_INITIALIZED);
+			assert (valInfo->alignmentInfo != AnalysisResults::ALIGN_NOT_INITIALIZED);
+			assert (valInfo->indexInfo != AnalysisResults::INDEX_UNKNOWN);
+			assert (valInfo->alignmentInfo != AnalysisResults::ALIGN_UNKNOWN);
 
 			// Mark the phi according to this predecessor, unless the phi is
 			// known to be VARYING and the predecessor is INDEX_SAME - this
@@ -1389,11 +1502,11 @@ private:
 			// NOTE: Unfortunately, marking the phi as INDEX_RANDOM  might
 			//       introduce some imprecision in cases where the other
 			//       incoming value is INDEX_CONSECUTIVE.
-			analysisResults->setIndexInfo(phi, info->indexInfo);
-			analysisResults->setAlignmentInfo(phi, info->alignmentInfo);
+			analysisResults->setIndexInfo(phi, valInfo->indexInfo);
+			analysisResults->setAlignmentInfo(phi, valInfo->alignmentInfo);
 			DEBUG_PKT( outs() << "marked loop phi: " << *phi << " as "
-				<< AnalysisResults::getIndexInfoString(info->indexInfo) << " / "
-				<< AnalysisResults::getAlignmentInfoString(info->alignmentInfo) << "!\n"; );
+				<< AnalysisResults::getIndexInfoString(valInfo->indexInfo) << " / "
+				<< AnalysisResults::getAlignmentInfoString(valInfo->alignmentInfo) << "!\n"; );
 
 			markedValues.insert(phi);
 
@@ -1401,7 +1514,7 @@ private:
 			const int preheaderIdx = phi->getBasicBlockIndex(preheaderBB);
 			const int backedgeIdx = preheaderIdx == 0 ? 1 : 0;
 			Value* backedgeVal = phi->getIncomingValue(backedgeIdx);
-			markConsecutiveAlignedValueAndOperands(backedgeVal, markedValues);
+			markConsecutiveAlignedValueAndOperands(backedgeVal, markedValues, info);
 
 			assert (analysisResults->getValueInfo(backedgeVal));
 			assert (analysisResults->getValueInfo(backedgeVal)->alignmentInfo != AnalysisResults::ALIGN_NOT_INITIALIZED);
@@ -1413,9 +1526,9 @@ private:
 			// preheader-marks).
 			std::vector<AlignmentInfo> aiVec;
 			std::vector<IndexInfo> iiVec;
-			iiVec.push_back(info->indexInfo);
+			iiVec.push_back(valInfo->indexInfo);
 			iiVec.push_back(analysisResults->getValueInfo(backedgeVal)->indexInfo);
-			aiVec.push_back(info->alignmentInfo);
+			aiVec.push_back(valInfo->alignmentInfo);
 			aiVec.push_back(analysisResults->getValueInfo(backedgeVal)->alignmentInfo);
 
 			IndexInfo ii = deriveIndexInfo(phi, iiVec);
@@ -1442,17 +1555,17 @@ private:
 			if (isa<BasicBlock>(opVal)) continue; // handle phis correctly
 			if (isa<Function>(opVal)) continue; // handle calls correctly
 
-			markConsecutiveAlignedValueAndOperands(opVal, markedValues);
+			markConsecutiveAlignedValueAndOperands(opVal, markedValues, info);
 
-			ValueInfo* info = analysisResults->getValueInfo(opVal);
-			assert (info);
-			assert (info->indexInfo != AnalysisResults::INDEX_NOT_INITIALIZED);
-			assert (info->indexInfo != AnalysisResults::INDEX_UNKNOWN);
-			assert (info->alignmentInfo != AnalysisResults::ALIGN_NOT_INITIALIZED);
-			assert (info->alignmentInfo != AnalysisResults::ALIGN_UNKNOWN);
+			ValueInfo* valInfo = analysisResults->getValueInfo(opVal);
+			assert (valInfo);
+			assert (valInfo->indexInfo != AnalysisResults::INDEX_NOT_INITIALIZED);
+			assert (valInfo->indexInfo != AnalysisResults::INDEX_UNKNOWN);
+			assert (valInfo->alignmentInfo != AnalysisResults::ALIGN_NOT_INITIALIZED);
+			assert (valInfo->alignmentInfo != AnalysisResults::ALIGN_UNKNOWN);
 
-			aiVec.push_back(info->alignmentInfo);
-			iiVec.push_back(info->indexInfo);
+			aiVec.push_back(valInfo->alignmentInfo);
+			iiVec.push_back(valInfo->indexInfo);
 		}
 
 		// Derive alignment and index info depending on instruction and marks of
@@ -1827,7 +1940,7 @@ private:
 	}
 
 	// TODO: implement support for natural numbers stored as floats?
-	AlignmentInfo deriveAlignedInformation(const Constant* c) const
+	AlignmentInfo deriveAlignedInformation(const Constant* c, const Packetizer::PacketizerInfo& info) const
 	{
 		assert (c);
 		assert (!isa<BasicBlock>(c));
@@ -1837,7 +1950,7 @@ private:
 		if (c->getType()->isIntegerTy()) {
 			const ConstantInt* cint = cast<ConstantInt>(c);
 			const uint64_t& intValue = *cint->getValue().getRawData();
-			if (intValue % info.simdWidth == 0) return AnalysisResults::ALIGN_TRUE;
+			if (intValue % info.mSimdWidth == 0) return AnalysisResults::ALIGN_TRUE;
 			else return AnalysisResults::ALIGN_FALSE;
 		}
 
@@ -1855,7 +1968,7 @@ private:
 
 		// The vector is aligned if its first element is aligned and the
 		// constant is either SAME or CONSECUTIVE
-		if (intValue % info.simdWidth != 0) return AnalysisResults::ALIGN_FALSE;
+		if (intValue % info.mSimdWidth != 0) return AnalysisResults::ALIGN_FALSE;
 
 		// TODO: There might be other cases (e.g. STRIDED) where we want to
 		//       return true...
@@ -1872,7 +1985,7 @@ private:
 
 	typedef std::map<const Value*, SplitInfo> SplitInfoMapType;
 
-	void analyzeSplitInfo(NativeMethods& nativeMethods, const Packetizer::PacketizerInfo& info) {
+	void analyzeSplitInfo(const Packetizer::PacketizerInfo& info) {
 		assert (analysisResults->hasValueInfo() && "forgot to run analyzeUniformInfo()?");
 
 		DEBUG_PKT( outs() << "\nTesting for instructions that have to be split"
@@ -1882,7 +1995,7 @@ private:
 
 		SplitInfoMapType primarySplitValues;
 
-		for (Function::const_iterator BB=source.begin(), BBE=source.end(); BB!=BBE; ++BB) {
+		for (Function::const_iterator BB=source->begin(), BBE=source->end(); BB!=BBE; ++BB) {
 			for (BasicBlock::const_iterator I=BB->begin(), IE=BB->end(); I!=IE; ++I) {
 
 				// Only these kinds of instructions are targets for "full" splitting.
@@ -1950,7 +2063,7 @@ private:
 					}
 					case Instruction::Call:
 					{
-						si = analyzeCallForSplitting(cast<CallInst>(I), nativeMethods, info);
+						si = analyzeCallForSplitting(cast<CallInst>(I), info);
 						break;
 					}
 					default:
@@ -2145,14 +2258,14 @@ private:
 
 		// Now update information in valueInfoMap and mark all
 		// values that are still without mark as SPLIT_NEVER.
-		for (Function::const_iterator BB=source.begin(), BBE=source.end(); BB!=BBE; ++BB) {
+		for (Function::const_iterator BB=source->begin(), BBE=source->end(); BB!=BBE; ++BB) {
 			for (BasicBlock::const_iterator I=BB->begin(), IE=BB->end(); I!=IE; ++I) {
 
-				ValueInfo* info = analysisResults->getValueInfo(I);
-				if (info->splitInfo != AnalysisResults::SPLIT_NOT_INITIALIZED) continue; // do not overwrite anything
+				ValueInfo* valInfo = analysisResults->getValueInfo(I);
+				if (valInfo->splitInfo != AnalysisResults::SPLIT_NOT_INITIALIZED) continue; // do not overwrite anything
 
 				SplitInfoMapType::const_iterator it = secondarySplitValues.find(I);
-				info->splitInfo = it == secondarySplitValues.end() ? AnalysisResults::SPLIT_NEVER : it->second;
+				valInfo->splitInfo = it == secondarySplitValues.end() ? AnalysisResults::SPLIT_NEVER : it->second;
 
 				// Be sure that we have all operators marked as well.
 				for (Instruction::const_op_iterator O=I->op_begin(), OE=I->op_end(); O!=OE; ++O) {
@@ -2172,14 +2285,14 @@ private:
 		// Also do not forget to mark all other arguments.
 		// This is only for completeness, it actually means that the argument
 		// is unused.
-		for (Function::const_arg_iterator A=source.arg_begin(),
-				AE=source.arg_end(); A!=AE; ++A)
+		for (Function::const_arg_iterator A=source->arg_begin(),
+				AE=source->arg_end(); A!=AE; ++A)
 		{
-				ValueInfo* info = analysisResults->getValueInfo(A);
-				if (info->splitInfo != AnalysisResults::SPLIT_NOT_INITIALIZED) continue; // do not overwrite anything
+				ValueInfo* valInfo = analysisResults->getValueInfo(A);
+				if (valInfo->splitInfo != AnalysisResults::SPLIT_NOT_INITIALIZED) continue; // do not overwrite anything
 
 				SplitInfoMapType::const_iterator it = secondarySplitValues.find(A);
-				info->splitInfo = it == secondarySplitValues.end() ? AnalysisResults::SPLIT_NEVER : it->second;
+				valInfo->splitInfo = it == secondarySplitValues.end() ? AnalysisResults::SPLIT_NEVER : it->second;
 		}
 
 	}
@@ -2325,7 +2438,6 @@ public:
 	// A call has to be split if there is no vectorized function mapping
 	// available.
 	SplitInfo analyzeCallForSplitting(const CallInst* call,
-									  NativeMethods& nativeMethods,
 									  const Packetizer::PacketizerInfo& info)
 	{
 		assert (call);
@@ -2333,9 +2445,9 @@ public:
 		const Function* callee = call->getCalledFunction();
 		if (!callee) return AnalysisResults::SPLIT_FULL_GUARDED;
 
-		Function* vecF = nativeMethods.getNativeFunction(callee->getName(),
-														 info.module,
-														 info.simdWidth);
+		Function* vecF = info.mNativeMethods->getNativeFunction(callee->getName(),
+                                                                info.mModule,
+                                                                info.mSimdWidth);
 
 		if (vecF) return AnalysisResults::SPLIT_NEVER;
 
@@ -2386,6 +2498,7 @@ private:
 		}
 
 		// Constants, pointer arguments, and uniform values must never be split.
+        // TODO: This leads to problems with varying pointer arguments (#19).
 		if (isa<Constant>(value) || analysisResults->isUniform(value) ||
 				(isa<Argument>(value) && value->getType()->isPointerTy()))
 		{
@@ -2543,7 +2656,7 @@ private:
 
 		// Collect input-independent values that are allowed to remain scalar
 		std::set<const Instruction*> inputIndepVecSet;
-		for (Function::const_iterator BB=source.begin(), BBE=source.end(); BB!=BBE; ++BB) {
+		for (Function::const_iterator BB=source->begin(), BBE=source->end(); BB!=BBE; ++BB) {
 			for (BasicBlock::const_iterator I=BB->begin(), IE=BB->end(); I!=IE; ++I) {
 
 				std::set<const Instruction*> visitedSet;
@@ -2721,7 +2834,7 @@ private:
 
 
 	inline void analyzeMaskInfo() {
-		for (Function::const_iterator BB=source.begin(), BBE=source.end(); BB!=BBE; ++BB) {
+		for (Function::const_iterator BB=source->begin(), BBE=source->end(); BB!=BBE; ++BB) {
 			for (BasicBlock::const_iterator I=BB->begin(), IE=BB->end(); I!=IE; ++I) {
 				if (const BranchInst* br = dyn_cast<BranchInst>(I)) {
 					if (br->isConditional()) {
@@ -2769,7 +2882,7 @@ private:
 
 		bool raceConditionFound = false;
 
-		for (Function::const_iterator BB=source.begin(), BBE=source.end();
+		for (Function::const_iterator BB=source->begin(), BBE=source->end();
 				BB!=BBE; ++BB)
 		{
 			for (BasicBlock::const_iterator I=BB->begin(), IE=BB->end();
@@ -2814,7 +2927,7 @@ private:
 #else
 				errs() << "\nWARNING: RACE CONDITION DETECTED!\n"
 #endif
-					<< "       Store attempts to write " << info.simdWidth
+					<< "       Store attempts to write " << info.mSimdWidth
 					<< " values to the same address!\n"
 					<< "       Store  : " << *store << "\n"
 					<< "       Value  : " << *value << "\n"
@@ -2842,17 +2955,23 @@ INITIALIZE_PASS_DEPENDENCY(BranchInfoAnalysis)
 INITIALIZE_PASS_END(VectorizationAnalysis, "vectorization analysis", "Vectorization Analysis", false, false)
 
 namespace llvm {
-	FunctionPass* createVectorizationAnalysisPass(const Packetizer::PacketizerInfo& info,
-												 NativeMethods& nativeMethods,
-												 Function& source,
-												 Function& target,
+	FunctionPass* createVectorizationAnalysisPass(const Packetizer::PacketizerInfo* info,
+												 Function* source,
+												 Function* target,
 												 const WholeFunctionVectorizer::NativeFunctionMapType& nativeFunctions,
 												 const WholeFunctionVectorizer::ValueInfoMapType& userValueInfoMap,
 												 bool* failed,
 												 const bool verbose=false,
 												 AnalysisResults* analysisResults=NULL)
 	{
-		return new VectorizationAnalysis(info, nativeMethods, source, target, nativeFunctions, userValueInfoMap, failed, verbose, analysisResults);
+		return new VectorizationAnalysis(info,
+                                         source,
+                                         target,
+                                         nativeFunctions,
+                                         userValueInfoMap,
+                                         failed,
+                                         verbose,
+                                         analysisResults);
 	}
 }
 

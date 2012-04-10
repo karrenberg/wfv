@@ -23,120 +23,134 @@ namespace Packetizer {
 
 class PacketizerInfo {
 public:
-	PacketizerInfo(Module& M,
-				   const unsigned simd_width,
+    PacketizerInfo(Module* M,
+                   LLVMContext* C,
+                   const unsigned simd_width,
 				   const unsigned packetization_size,
-				   const bool use_sse41_flag=false,
-				   const bool use_avx_flag=false,
-				   const bool verbose_flag=false)
-			: module(M),
-					targetData(new TargetData(&M)),
-					simdWidth(simd_width),
-					packetizationSize(packetization_size),
-					totalSIMDIterations(packetization_size/simd_width),
-					use_sse41(use_sse41_flag),
-					use_avx(use_avx_flag),
-					verbose(verbose_flag)
-	{
+                   const bool use_sse41_flag=false,
+                   const bool use_avx_flag=false,
+                   const bool verbose_flag=false)
+            : mModule(M),
+                    mTargetData(new TargetData(M)),
+                    mContext(C),
+                    mNativeMethods(new NativeMethods(use_sse41_flag, use_avx_flag, verbose_flag)),
+                    mSimdWidth(simd_width),
+                    mPacketizationSize(packetization_size),
+                    mTotalSIMDIterations(packetization_size/simd_width),
+                    mUseSSE41(use_sse41_flag),
+                    mUseAVX(use_avx_flag),
+                    mVerbose(verbose_flag)
+    {
 		// initialize all constants (values that do not depend on module or target data)
 
-		assert (packetizationSize > 0);
-		if (packetizationSize % simdWidth != 0) {
-			errs() << "ERROR: Packetization size (" << packetizationSize << ") is no multiple of 'simdWidth' (" << simdWidth << ")!\n";
+		assert (mPacketizationSize > 0);
+		if (mPacketizationSize % mSimdWidth != 0)
+        {
+			errs() << "ERROR: Packetization size (" << mPacketizationSize << ") is no multiple of 'simdWidth' (" << mSimdWidth << ")!\n";
 			assert (false && "packetization size is no multiple of SIMD width!");
 		}
 
-		DEBUG_PKT( outs() << "\nuse SSE4.1 = " << (use_sse41 ? "true" : "false") << "\n"; );
-		DEBUG_PKT( outs() << "\nuse AVX = " << (use_avx ? "true" : "false") << "\n"; );
+		DEBUG_PKT( outs() << "\nuse SSE4.1 = " << (mUseSSE41 ? "true" : "false") << "\n"; );
+		DEBUG_PKT( outs() << "\nuse AVX = " << (mUseAVX ? "true" : "false") << "\n"; );
 
 		//create packet-datatypes
-		vectorTy_floatSIMD = VectorType::get(Type::getFloatTy(getGlobalContext()), simdWidth);
-		vectorTy_intSIMD = VectorType::get(Type::getInt32Ty(getGlobalContext()), simdWidth);
-		vectorTy_boolSIMD = VectorType::get(Type::getInt1Ty(getGlobalContext()), simdWidth);
+		mVectorTyFloatSIMD = VectorType::get(Type::getFloatTy(*mContext), mSimdWidth);
+		mVectorTyIntSIMD = VectorType::get(Type::getInt32Ty(*mContext), mSimdWidth);
+		mVectorTyBoolSIMD = VectorType::get(Type::getInt1Ty(*mContext), mSimdWidth);
 
 		//generate constants
-		const_vec_SIMD_int32_neg1 = createPacketConstantInt(-1);
-		const_vec_SIMD_f32_1 = createPacketConstantFloat(1.000000e+00f);
-		const_int32_0 = ConstantInt::get(getGlobalContext(), APInt(32,  "0", 10));
-		const_int32_1 = ConstantInt::get(getGlobalContext(), APInt(32,  "1", 10));
-		const_int32_2 = ConstantInt::get(getGlobalContext(), APInt(32,  "2", 10));
-		const_int32_3 = ConstantInt::get(getGlobalContext(), APInt(32,  "3", 10));
-		const_bool_1 = Constant::getAllOnesValue(Type::getInt1Ty(getGlobalContext()));
-		const_bool_0 = Constant::getNullValue(Type::getInt1Ty(getGlobalContext()));
+		mConstVecSIMDInt32MinusOne = createPacketConstantInt(-1);
+		mConstVecSIMDF32One = createPacketConstantFloat(1.000000e+00f);
+		mConstInt32Zero = ConstantInt::get(*mContext, APInt(32,  "0", 10));
+		mConstInt32One = ConstantInt::get(*mContext, APInt(32,  "1", 10));
+		mConstInt32Two = ConstantInt::get(*mContext, APInt(32,  "2", 10));
+		mConstInt32Three = ConstantInt::get(*mContext, APInt(32,  "3", 10));
+		mConstBoolTrue = Constant::getAllOnesValue(Type::getInt1Ty(*mContext));
+		mConstBoolFalse = Constant::getNullValue(Type::getInt1Ty(*mContext));
 		
 		
 		// initialize "dynamic" stuff
 
-		alignmentScalar = targetData->getABITypeAlignment(Type::getFloatTy(getGlobalContext()));
-		alignmentPtr = targetData->getABITypeAlignment(PointerType::getUnqual(Type::getFloatTy(getGlobalContext())));
-		alignmentSIMDPtr = targetData->getABITypeAlignment(PointerType::getUnqual(vectorTy_floatSIMD));
-		alignmentSIMD = targetData->getABITypeAlignment(vectorTy_floatSIMD); //simdWidth * 4;
-		DEBUG_PKT( outs() << "\nalignment = " << alignmentScalar << "\n"; );
-		DEBUG_PKT( outs() << "alignmentPtr = " << alignmentPtr << "\n"; );
-		DEBUG_PKT( outs() << "alignmentSIMDPtr = " << alignmentSIMDPtr << "\n"; );
-		DEBUG_PKT( outs() << "alignmentSIMD = " << alignmentSIMD << "\n\n"; );
+		mAlignmentScalar = mTargetData->getABITypeAlignment(Type::getFloatTy(*mContext));
+		mAlignmentPtr = mTargetData->getABITypeAlignment(PointerType::getUnqual(Type::getFloatTy(*mContext)));
+		mAlignmentSIMDPtr = mTargetData->getABITypeAlignment(PointerType::getUnqual(mVectorTyFloatSIMD));
+		mAlignmentSIMD = mTargetData->getABITypeAlignment(mVectorTyFloatSIMD); //simdWidth * 4;
+		DEBUG_PKT( outs() << "\nalignment = " << mAlignmentScalar << "\n"; );
+		DEBUG_PKT( outs() << "alignmentPtr = " << mAlignmentPtr << "\n"; );
+		DEBUG_PKT( outs() << "alignmentSIMDPtr = " << mAlignmentSIMDPtr << "\n"; );
+		DEBUG_PKT( outs() << "alignmentSIMD = " << mAlignmentSIMD << "\n\n"; );
 		
-		const_alignment_SIMD = ConstantInt::get(getGlobalContext(), APInt(32, alignmentSIMD));
+		mConstAlignmentSIMD = ConstantInt::get(*mContext, APInt(32, mAlignmentSIMD));
 	}
 
-	~PacketizerInfo() {
-		//delete targetData; // memory leak, but deleting introduces a segfault...
+	~PacketizerInfo()
+    {
+		delete mTargetData;
+        if (mNativeMethods) delete mNativeMethods;
 	}
 
-	Module& module;
-	TargetData* targetData;
+	Module*        mModule;
+	TargetData*    mTargetData;
+    LLVMContext*   mContext;
+	NativeMethods* mNativeMethods; // natively available SSE function mappings
 
 	//packetization information
-	const unsigned simdWidth; //TODO: get from host machine (target data?)
-	const unsigned packetizationSize;
-	const unsigned totalSIMDIterations;
+	const unsigned mSimdWidth; //TODO: get from host machine (target data?)
+	const unsigned mPacketizationSize;
+	const unsigned mTotalSIMDIterations;
 
-	const bool use_sse41;
-	const bool use_avx;
-	const bool verbose;
+	const bool mUseSSE41;
+	const bool mUseAVX;
+	const bool mVerbose;
 
 	//packetized datatypes
-	VectorType* vectorTy_floatSIMD;
-	VectorType* vectorTy_intSIMD;
-	VectorType* vectorTy_boolSIMD;
+	VectorType* mVectorTyFloatSIMD;
+	VectorType* mVectorTyIntSIMD;
+	VectorType* mVectorTyBoolSIMD;
 
 	//llvm constants
-	Constant* const_vec_SIMD_int32_neg1;
-	Constant* const_vec_SIMD_f32_1;
-	ConstantInt* const_int32_0;
-	ConstantInt* const_int32_1;
-	ConstantInt* const_int32_2;
-	ConstantInt* const_int32_3;
-	Constant* const_bool_1;
-	Constant* const_bool_0;
-	Constant* const_alignment_SIMD;
+	Constant*    mConstVecSIMDInt32MinusOne;
+	Constant*    mConstVecSIMDF32One;
+	ConstantInt* mConstInt32Zero;
+	ConstantInt* mConstInt32One;
+	ConstantInt* mConstInt32Two;
+	ConstantInt* mConstInt32Three;
+	Constant*    mConstBoolTrue;
+	Constant*    mConstBoolFalse;
+	Constant*    mConstAlignmentSIMD;
 	
 	//alignment information
-	unsigned alignmentScalar;
-	unsigned alignmentPtr;
-	unsigned alignmentSIMDPtr;
-	unsigned alignmentSIMD;
+	unsigned mAlignmentScalar;
+	unsigned mAlignmentPtr;
+	unsigned mAlignmentSIMDPtr;
+	unsigned mAlignmentSIMD;
 
 	// NOTE: we must not pre-generate this due to possibly different address spaces
-	const PointerType* getPointerVectorType(const PointerType* oldType) const {
-		return PointerType::get(VectorType::get(oldType->getElementType(), simdWidth), oldType->getAddressSpace());
+	const PointerType* getPointerVectorType(const PointerType* oldType) const
+    {
+		return PointerType::get(VectorType::get(oldType->getElementType(), mSimdWidth),
+                                oldType->getAddressSpace());
 	}
 	
 private:
 
-	inline Constant* createPacketConstantInt(const int c) const {
+	inline Constant* createPacketConstantInt(const int c) const
+    {
 		std::vector<Constant*> cVec; //packet of 'simdWidth' int32
-		ConstantInt* const_int32 = ConstantInt::get(getGlobalContext(), APInt(32, c)); //APInt(32,  "c", 2, 10)
-		for (unsigned i=0; i<simdWidth; ++i) {
+		ConstantInt* const_int32 = ConstantInt::get(*mContext, APInt(32, c));
+		for (unsigned i=0; i<mSimdWidth; ++i)
+        {
 			cVec.push_back(const_int32);
 		}
 		return ConstantVector::get(ArrayRef<Constant*>(cVec));
 	}
 
-	inline Constant* createPacketConstantFloat(const float c) const {
+	inline Constant* createPacketConstantFloat(const float c) const
+    {
 		std::vector<Constant*> fVec; //packet of 'simdWidth' f32
-		ConstantFP* const_f32 = ConstantFP::get(getGlobalContext(), APFloat(c));
-		for (unsigned i=0; i<simdWidth; ++i) {
+		ConstantFP* const_f32 = ConstantFP::get(*mContext, APFloat(c));
+		for (unsigned i=0; i<mSimdWidth; ++i)
+        {
 			fVec.push_back(const_f32);
 		}
 		return ConstantVector::get(ArrayRef<Constant*>(fVec));

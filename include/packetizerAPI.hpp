@@ -48,6 +48,7 @@
 // LLVM forward declarations
 namespace llvm {
 	class Module;
+    class LLVMContext;
 	class Function;
 	class Value;
 
@@ -63,7 +64,7 @@ namespace Packetizer {
 
 PACKETIZER_API class Packetizer {
 public:
-	PACKETIZER_API Packetizer(llvm::Module& module, const unsigned simdWidth, const unsigned packetizationSize, const bool use_sse41, const bool use_avx, const bool verbose);
+	PACKETIZER_API Packetizer(llvm::Module& module, llvm::LLVMContext& context, const unsigned simdWidth, const unsigned packetizationSize, const bool use_sse41, const bool use_avx, const bool verbose);
 	PACKETIZER_API ~Packetizer();
 
 	PACKETIZER_API bool addFunction(const std::string& functionName, const std::string& simdFunctionName);

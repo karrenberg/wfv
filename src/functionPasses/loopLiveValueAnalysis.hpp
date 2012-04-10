@@ -39,7 +39,7 @@ public:
 	typedef std::set<Instruction*> LiveValueSetType;
 
 	LoopLiveValueAnalysis(bool* failed_flag=NULL, const bool verbose_flag = false)
-			: FunctionPass(ID), failed(failed_flag), verbose(verbose_flag)
+			: FunctionPass(ID), failed(failed_flag), mVerbose(verbose_flag)
 	{
 		initializeLoopLiveValueAnalysisPass(*PassRegistry::getPassRegistry());
 	}
@@ -171,7 +171,7 @@ public:
 
 private:
 	bool* failed;
-	const bool verbose; // required for DEBUG mode
+	const bool mVerbose; // required for DEBUG mode
 	LoopInfo* loopInfo;
 
 	std::map<const Loop*, LiveValueSetType*> liveValueSets;
