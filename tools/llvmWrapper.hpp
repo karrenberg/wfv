@@ -1,17 +1,17 @@
 /**
- * @file   llvmWrapper.hpp
+ * @file   llvmWrapper.h
  * @date   10.05.2011
  * @author Ralf Karrenberg
  *
  * This file is distributed under the University of Illinois Open Source
  * License. See the COPYING file in the root directory for details.
  *
- * Copyright (C) 2008, 2009, 2010, 2011 Saarland University
+ * Copyright (C) 2008, 2009, 2010, 2011, 2012 Saarland University
  *
  */
 
-#ifndef _LLVMWRAPPER_HPP
-#define _LLVMWRAPPER_HPP
+#ifndef _LLVMWRAPPER_H
+#define _LLVMWRAPPER_H
 
 #ifdef __INTEL_COMPILER
 	#pragma warning( disable : 279 )
@@ -43,6 +43,7 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/JITMemoryManager.h>
 #include <llvm/ExecutionEngine/JIT.h> //required to prevent "JIT has not been linked in" errors
+//#include <llvm/ExecutionEngine/MCJIT.h> // LLVMLinkInMCJIT()
 
 #include <llvm/Target/TargetData.h>
 #include <llvm/Support/TargetSelect.h>
@@ -59,6 +60,8 @@
 
 #include "llvm/Support/ManagedStatic.h" // llvm_shutdown()
 
+#include <llvm/Support/InstIterator.h>
+
 using namespace llvm;
 
 namespace LLVMWrapper {
@@ -67,26 +70,30 @@ namespace LLVMWrapper {
 // create module, search function, etc.
 //
 
-Module* createModuleFromFile(const std::string & fileName) {
-
+Module*
+createModuleFromFile(const std::string & fileName)
+{
 	std::string errorMessage;
 
 	//create memory buffer for file
 	OwningPtr<MemoryBuffer> fileBuffer;
 	error_code e = MemoryBuffer::getFile(fileName.c_str(), fileBuffer);
 
-	if (e) {
+	if (e)
+	{
 		errs() << "Error reading file '"
 			<< fileName << "': " << e.message() << "\n";
 		return NULL;
 	}
 
-	if (!fileBuffer) {
+	if (!fileBuffer)
+	{
 		errs() << "Error reading file '" << fileName << "'.\n";
 		return NULL;
 	}
 
-	if (fileBuffer->getBufferSize() & 3) {
+	if (fileBuffer->getBufferSize() & 3)
+	{
 		errs() << "Error: Bitcode stream should be "
 			<< "a multiple of 4 bytes in length\n";
 		return NULL;
@@ -96,12 +103,14 @@ Module* createModuleFromFile(const std::string & fileName) {
 
 	Module* mod = ParseBitcodeFile(fileBuffer.get(), getGlobalContext(), &errorMessage);
 
-	if (errorMessage != "") {
+	if (errorMessage != "")
+	{
 		errs() << "Error reading bitcode file: " << errorMessage << "\n";
 		return NULL;
 	}
 
-	if (!mod) {
+	if (!mod)
+	{
 		errs() << "Error reading bitcode file.\n";
 		return NULL;
 	}
@@ -109,34 +118,40 @@ Module* createModuleFromFile(const std::string & fileName) {
 	return mod;
 }
 
-LLVMContext& getContext(Module& module) {
-    return module.getContext();
-}
-
-void verifyModule(Module* module) {
+void
+verifyModule(Module* module)
+{
 	assert(module && "module must not be NULL");
 	//use LLVMs own verifier pass
 	std::string errorMessage;
-	if (verifyModule(*module, AbortProcessAction, &errorMessage)) {
+	if (verifyModule(*module, AbortProcessAction, &errorMessage))
+	{
 		errs() << "\nverification of module failed:\n" << errorMessage << "\n";
 	}
 }
 
 //@returns the function or null if it was not found in the specified module
-Function* getFunction(const std::string& name, Module* module) {
+Function*
+getFunction(const std::string& name, Module* module)
+{
 	assert (module);
 	return module->getFunction(name);
 }
 
-std::string getFunctionName(const Function* f) {
+std::string
+getFunctionName(const Function* f)
+{
 	assert (f);
-	return f->getNameStr();
+	return f->getName();
 }
 
-Module* getModule(Function* f) {
+Module*
+getModule(Function* f)
+{
 	assert (f);
-	if (!f->getParent()) {
-		errs() << "ERROR: function '" << f->getNameStr()
+	if (!f->getParent())
+	{
+		errs() << "ERROR: function '" << f->getName()
 			<< "' has no parent module!\n";
 		return NULL;
 	}
@@ -148,7 +163,9 @@ Module* getModule(Function* f) {
 //
 
 // link source module into target module
-Module* linkInModule(Module* target, Module* source) {
+Module*
+linkInModule(Module* target, Module* source)
+{
 	assert (source && target);
 	//outs() << "linking src module '" << source->getModuleIdentifier()
 	//<< "' into dest module '" << target->getModuleIdentifier()
@@ -156,7 +173,8 @@ Module* linkInModule(Module* target, Module* source) {
 	std::auto_ptr<llvm::Linker> linker(new llvm::Linker("Packetizer Linker", target));
 	assert (linker.get() != 0);
 	std::string errorMessage;
-	if (linker->LinkInModule(source, &errorMessage)) {
+	if (linker->LinkInModule(source, &errorMessage))
+	{
 		errs() << "ERROR: Could not link source module into cloned target: " << errorMessage << "\n";
 		return NULL;
 	}
@@ -171,23 +189,32 @@ Module* linkInModule(Module* target, Module* source) {
 //we must prevent creation of several JITs
 static ExecutionEngine *globalExecEngine = 0;
 
-ExecutionEngine *getExecutionEngine() {
-	if (!globalExecEngine) {
+ExecutionEngine*
+getExecutionEngine()
+{
+	if (!globalExecEngine)
+	{
 		errs() << "ERROR: no execution engine available, create one first!\n";
 		return NULL;
 	}
 	return globalExecEngine;
 }
 
-ExecutionEngine* createExecutionEngine(Module* mod) {
+ExecutionEngine*
+createExecutionEngine(Module* mod, const bool useAVX)
+{
 	assert (mod);
 
 	if (!globalExecEngine)
 	{
 		//we first have to initialize the native target for code generation
 		const bool initFailed = InitializeNativeTarget();
+		//InitializeAllTargetMCs();
+		//LLVMLinkInMCJIT();
+		InitializeNativeTargetAsmPrinter(); // Required, otherwise "LLVM ERROR: Target does not support MC emission!" if setUseMCJIT() is set to 'true'
 
-		if (initFailed) {
+		if (initFailed)
+		{
 			errs() << "ERROR: could not initialize native target (required for "
 				<< "LLVM execution engine)\n";
 			return NULL;
@@ -198,30 +225,42 @@ ExecutionEngine* createExecutionEngine(Module* mod) {
 		EngineBuilder eb = EngineBuilder(mod);
 		eb.setEngineKind(EngineKind::JIT);
 		eb.setErrorStr(&errorMessage);
-		//eb.setJITMemoryManager(JITMemoryManager::CreateDefaultMemManager());
-		//eb.setOptLevel(CodeGenOpt::Default);
-		//eb.setAllocateGVsWithCode(false);
-		//eb.setCodeModel(CodeModel::JITDefault); // setting this to "Default" crashes!
-		//eb.setRelocationModel(Reloc::PIC_);
-		//eb.setMArch("x86-64");
-		//eb.setMCPU("penryn");
+		eb.setJITMemoryManager(JITMemoryManager::CreateDefaultMemManager());
+		eb.setOptLevel(CodeGenOpt::Aggressive);
+		eb.setAllocateGVsWithCode(false);
+		eb.setRelocationModel(Reloc::Default);
+		eb.setCodeModel(CodeModel::JITDefault); // Default crashes with "invalid rip-relative address"
+		eb.setMArch("x86-64");
+        eb.setMCPU("corei7-avx"); //eb.setMCPU("penryn");
+        eb.setUseMCJIT(true);
+		std::vector<std::string> attrs;
+		if (useAVX) {
+			outs() << "Creating ExecutionEngine with AVX support!\n";
+			attrs.push_back("avx");
+		} else {
+			attrs.push_back("sse41");
+		}
+		eb.setMAttrs(attrs);
 
 		globalExecEngine = eb.create();
 
-		if (errorMessage != "") {
+		if (errorMessage != "")
+		{
 			errs() << "ERROR: could not create execution engine for module "
 				<< mod->getModuleIdentifier() << ": " << errorMessage << "\n";
 			return NULL;
 		}
 
-		if (!globalExecEngine) {
+		if (!globalExecEngine)
+		{
 			errs() << "ERROR: could not create execution engine for module "
 				<< mod->getModuleIdentifier() << "!\n";
 			return NULL;
 		}
 
 	} else {
-		if (globalExecEngine->removeModule(mod)) {
+		if (globalExecEngine->removeModule(mod))
+		{
 			errs() << "WARNING: module '"
 				<< mod->getModuleIdentifier()
 				<< "' was already added to execution engine"
@@ -235,28 +274,38 @@ ExecutionEngine* createExecutionEngine(Module* mod) {
 	return globalExecEngine;
 }
 
-bool removeModule(Module* mod, ExecutionEngine* engine) {
+bool
+removeModule(Module* mod, ExecutionEngine* engine)
+{
 	assert (mod && engine);
 	return engine->removeModule(mod);
 }
 
-void deleteModule(llvm::Module * mod) {
+void
+deleteModule(llvm::Module * mod)
+{
 	llvm::ExecutionEngine *engine = getExecutionEngine();
-	if (engine && mod) {
+	if (engine && mod)
+	{
 		engine->clearGlobalMappingsFromModule(mod);
-		if (!engine->removeModule(mod)) {
+		if (!engine->removeModule(mod))
+		{
 			errs() << "WARNING: could not remove module '" << mod->getModuleIdentifier() << "' from engine!\n";
 		}
 	}
 	delete mod;
 }
 
-void* getPointerToFunction(Function* f, ExecutionEngine* engine) {
+void*
+getPointerToFunction(Function* f, ExecutionEngine* engine)
+{
 	assert (engine && f);
 	return engine->getPointerToFunction(f);
 }
 
-int executeMain(void* mainPtr, int argc, char **argv) {
+int
+executeMain(void* mainPtr, int argc, char **argv)
+{
 	outs() << "executing function 'main()'... ";
 	//example: cast function-pointer to fn: int -> int
 	//int (*add1)(int) = (int (*)(int))functions[0][0];
@@ -279,17 +328,23 @@ int executeMain(void* mainPtr, int argc, char **argv) {
 	return res;
 }
 
-static void shutdown() {
+static void
+shutdown()
+{
+	outs() << "shutting down... ";
 	globalExecEngine->runStaticConstructorsDestructors(true);
 	delete globalExecEngine;
-	llvm_shutdown();
+	//llvm_shutdown(); // "pointer being freed was not allocated"
+	outs() << "done.\n";
 }
 
 //
 // optimization
 //
 
-void inlineFunctionCalls(Function* f) {
+void
+inlineFunctionCalls(Function* f)
+{
 	bool functionChanged = true;
 	while (functionChanged) {
 		functionChanged = false;
@@ -299,16 +354,18 @@ void inlineFunctionCalls(Function* f) {
 				if (!isa<CallInst>(I)) { ++I; continue; }
 				CallInst* call = cast<CallInst>(I++);
 				Function* callee = call->getCalledFunction();
-				if (!callee) {
+				if (!callee)
+				{
 					//errs() << "ERROR: could not inline function call: " << *call;
 					continue;
 				}
-				if (callee->getAttributes().hasAttrSomewhere(Attribute::NoInline)) {
-					//DEBUG_OPT( outs() << "    function '" << callee->getNameStr() << "' has attribute 'no inline', ignored call!\n"; )
+				if (callee->getAttributes().hasAttrSomewhere(Attribute::NoInline))
+				{
+					//DEBUG_OPT( outs() << "    function '" << callee->getName() << "' has attribute 'no inline', ignored call!\n"; )
 					continue;
 				}
 
-				const std::string calleeName = callee->getNameStr(); //possibly deleted by InlineFunction()
+				const std::string calleeName = callee->getName(); //possibly deleted by InlineFunction()
 
 				InlineFunctionInfo IFI(NULL, NULL); //new TargetData(mod));
 				blockChanged = InlineFunction(call, IFI);
@@ -319,7 +376,9 @@ void inlineFunctionCalls(Function* f) {
 }
 
 /// adopted from: llvm-2.5/tools/llvm-ld
-void optimizeFunction(Function* f) {
+void
+optimizeFunction(Function* f)
+{
 	assert (f);
 	assert (f->getParent());
 	Module* mod = f->getParent();
@@ -398,7 +457,9 @@ void optimizeFunction(Function* f) {
 // (= construct SSA from load-store-code that is often produced by front ends)
 // Adding the following line would perform optimizations similar to GCC's -O3
 // createStandardModulePasses(&Passes, 3, false, false, true, true, false, createFunctionInliningPass());
-void optimizeModuleSimple(Module* mod) {
+void
+optimizeModuleSimple(Module* mod)
+{
 	assert (mod);
 
 	PassManager Passes;
@@ -420,23 +481,30 @@ void optimizeModuleSimple(Module* mod) {
 // output / debugging
 //
 
-void writeModuleToFile(Module* mod, const std::string& fileName) {
+void
+writeModuleToFile(Module* mod, const std::string& fileName)
+{
 	assert (mod);
 	std::string errorMessage = "";
 	raw_fd_ostream file(fileName.c_str(), errorMessage);
 	mod->print(file, NULL);
 	file.close();
-	if (errorMessage != "") {
+	if (errorMessage != "")
+	{
 		errs() << "ERROR: printing module to file failed: " << errorMessage << "\n";
 	}
 }
-void writeFunctionToFile(Function* f, const std::string & fileName) {
+
+void
+writeFunctionToFile(Function* f, const std::string & fileName)
+{
 	assert (f);
 	std::string errorMessage = "";
 	raw_fd_ostream file(fileName.c_str(), errorMessage);
 	f->print(file, NULL);
 	file.close();
-	if (errorMessage != "") {
+	if (errorMessage != "")
+	{
 		errs() << "ERROR: printing function to file failed: " << errorMessage << "\n";
 	}
 }
@@ -445,4 +513,4 @@ void writeFunctionToFile(Function* f, const std::string & fileName) {
 
 } // namespace LLVMWrapper
 
-#endif /* _LLVMWRAPPER_HPP */
+#endif /* _LLVMWRAPPER_H */

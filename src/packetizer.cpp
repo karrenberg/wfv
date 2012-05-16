@@ -603,7 +603,7 @@ WholeFunctionVectorizer::packetizeFunction(const std::string& scalarName,
 	Function::arg_iterator destI = tempF->arg_begin();
 	for (Function::const_arg_iterator I = f->arg_begin(), E = f->arg_end(); I != E; ++I) {
 		if (valueMap.count(I) == 0) {     // Is this argument preserved?
-			destI->setName(I->getNameStr()); // Copy the name over...
+			destI->setName(I->getName()); // Copy the name over...
 			valueMap[I] = destI++;        // Add mapping to ValueMap
 		}
 	}
@@ -838,7 +838,7 @@ WholeFunctionVectorizer::isPacketizable(const Function* f) const
 
 	for (Function::const_arg_iterator A=f->arg_begin(); A!=f->arg_end(); ++A) {
 		if (!isPacketizableType(A->getType())) {
-			errs() << "WARNING: Function '" << f->getNameStr() << "' contains unsupported argument-type: \n  " << *A << " - will not be able to packetize unless argument is only used in uniform operations!\n";
+			errs() << "WARNING: Function '" << f->getName() << "' contains unsupported argument-type: \n  " << *A << " - will not be able to packetize unless argument is only used in uniform operations!\n";
 			packetizable = false;
 		}
 	}
@@ -854,39 +854,39 @@ WholeFunctionVectorizer::isPacketizable(const Function* f) const
 					!isa<BranchInst>(I) &&
 					!isa<CallInst>(I))
 			{
-				errs() << "ERROR: Function '" << f->getNameStr() << "' contains instruction without use: " << *I << "(run DCE before WFV!)\n";
+				errs() << "ERROR: Function '" << f->getName() << "' contains instruction without use: " << *I << "(run DCE before WFV!)\n";
 				throw std::logic_error("ERROR: Function contains instruction without use! Run DCE before WFV!");
 			}
 
 			switch (I->getOpcode()) {
 				case Instruction::FPExt:
 				{
-					errs() << "WARNING: Function '" << f->getNameStr() << "' contains FPExt instruction - will not be able to packetize unless on uniform path!\n";
+					errs() << "WARNING: Function '" << f->getName() << "' contains FPExt instruction - will not be able to packetize unless on uniform path!\n";
 					packetizable = false;
 					break;
 				}
 				case Instruction::Trunc:
 				{
-					errs() << "WARNING: Function '" << f->getNameStr() << "' contains TruncInst instruction - will not be able to packetize unless on uniform path!\n";
+					errs() << "WARNING: Function '" << f->getName() << "' contains TruncInst instruction - will not be able to packetize unless on uniform path!\n";
 					packetizable = false;
 					break;
 				}
 				case Instruction::ZExt:
 				{
 					if (I->getType()->isIntegerTy(32)) continue; //allow ZExt to i32
-					errs() << "WARNING: Function '" << f->getNameStr() << "' contains ZExtInst instruction - will not be able to packetize unless on uniform path!\n";
+					errs() << "WARNING: Function '" << f->getName() << "' contains ZExtInst instruction - will not be able to packetize unless on uniform path!\n";
 					packetizable = false;
 					break;
 				}
 				case Instruction::SExt:
 				{
-					errs() << "WARNING: Function '" << f->getNameStr() << "' contains SExtInst instruction - will not be able to packetize unless on uniform path!\n";
+					errs() << "WARNING: Function '" << f->getName() << "' contains SExtInst instruction - will not be able to packetize unless on uniform path!\n";
 					packetizable = false;
 					break;
 				}
 				case Instruction::Switch:
 				{
-					DEBUG_PKT_NO_VERBOSE( errs() << "WARNING: Function '" << f->getNameStr() << "' contains Switch instruction: lowering to branches!\n"; );
+					DEBUG_PKT_NO_VERBOSE( errs() << "WARNING: Function '" << f->getName() << "' contains Switch instruction: lowering to branches!\n"; );
 					break;
 				}
 				default:
@@ -897,7 +897,7 @@ WholeFunctionVectorizer::isPacketizable(const Function* f) const
 					//								cast<PointerType>(I->getType())->getElementType() == Type::getInt8Ty(info.context);
 					//						if (!isPacketizableType(I->getType()) && !isVoidPointer)
 					if (!isPacketizableType(I->getType())) {
-						errs() << "WARNING: Function '" << f->getNameStr() << "' contains non-packetizable type - will not be able to packetize unless on uniform path!\n";
+						errs() << "WARNING: Function '" << f->getName() << "' contains non-packetizable type - will not be able to packetize unless on uniform path!\n";
 						errs() << "       Instruction: " << *I << "\n";
 						packetizable = false;
 					}
@@ -958,7 +958,7 @@ WholeFunctionVectorizer::isPacketizableType(Type* type) const
 bool
 WholeFunctionVectorizer::transformFunction(Function* f)
 {
-	DEBUG_PKT( outs() << "transforming function '" << f->getNameStr() << "'... \n"; );
+	DEBUG_PKT( outs() << "transforming function '" << f->getName() << "'... \n"; );
 
 	DEBUG_PKT( outs() << "  replacing constants of types of precision > 32bit if possible... "; );
 	for (Function::iterator BB=f->begin(), BE=f->end(); BB!=BE; ++BB) {

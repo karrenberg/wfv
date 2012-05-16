@@ -113,7 +113,7 @@ public:
 		assert (!maskGraph->hasCompoundMasks() && "mask operation insertion not complete!");
 
 		DEBUG_PKT( outs() << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; );
-		DEBUG_PKT( outs() << "linearizing CFG of function '" << f.getNameStr() << "'...\n"; );
+		DEBUG_PKT( outs() << "linearizing CFG of function '" << f.getName() << "'...\n"; );
 		DEBUG_PKT( outs() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n"; );
 
 		try {

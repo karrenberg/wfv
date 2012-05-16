@@ -31,7 +31,7 @@ static bool verify;
 	Module* module                   = LLVMWrapper::createModuleFromFile(filename); \
 	EXPECT_FALSE(module == NULL); \
 	if (!module) return; \
-	Packetizer::Packetizer packetizer(*module, simdWidth, packetizationSize, use_sse41, use_avx, verbose)
+	Packetizer::Packetizer packetizer(*module, module->getContext(), simdWidth, packetizationSize, use_sse41, use_avx, verbose)
 
 using namespace llvm;
 
@@ -57,7 +57,7 @@ protected:
 	virtual void SetUp() {
 		// Code here will be called immediately after the constructor (right
 		// before each test).
-		
+
 	}
 
 	virtual void TearDown() {

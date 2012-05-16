@@ -109,7 +109,29 @@ private:
 		return Intrinsic::getDeclaration(mod, Intrinsic::x86_sse2_cvtdq2ps);
     }
     inline Function* generatePcmpeq(Module* mod) const {
-		return Intrinsic::getDeclaration(mod, Intrinsic::x86_sse2_pcmpeq_d);
+		LLVMContext& context = mod->getContext();
+
+		VectorType* vectorTy_int_SIMD = VectorType::get(Type::getInt32Ty(context), 4);
+        std::vector<Type*>FuncTy_3_args;
+        FuncTy_3_args.push_back(vectorTy_int_SIMD);
+        FuncTy_3_args.push_back(vectorTy_int_SIMD);
+        FunctionType* FuncTy_3 = FunctionType::get(/*Result=*/vectorTy_int_SIMD,
+                                                   /*Params=*/FuncTy_3_args,
+                                                   /*isVarArg=*/false);
+
+        Function* func_llvm_x86_sse2_pcmpeq_d = mod->getFunction("llvm.x86.sse2.pcmpeq.d");
+        if (!func_llvm_x86_sse2_pcmpeq_d) {
+            func_llvm_x86_sse2_pcmpeq_d = Function::Create(/*Type=*/FuncTy_3,
+                                                           /*Linkage=*/GlobalValue::ExternalLinkage,
+                                                           /*Name=*/"llvm.x86.sse2.pcmpeq.d", mod); // (external, no body)
+            func_llvm_x86_sse2_pcmpeq_d->setCallingConv(CallingConv::C);
+        }
+        Attributes Attrs;
+        Attrs |= Attribute::NoUnwind;
+        Attrs |= Attribute::ReadNone;
+        AttrListPtr func_llvm_x86_sse2_pcmpeq_d_PAL = AttrListPtr().addAttr(~0u, Attrs);
+        func_llvm_x86_sse2_pcmpeq_d->setAttributes(func_llvm_x86_sse2_pcmpeq_d_PAL);
+        return func_llvm_x86_sse2_pcmpeq_d;
     }
     inline Function* generatePsllid(Module* mod) const {
 		return Intrinsic::getDeclaration(mod, Intrinsic::x86_sse2_pslli_d);
@@ -193,15 +215,10 @@ private:
         /*Linkage=*/GlobalValue::ExternalLinkage,
         /*Name=*/"sin_ps", mod);
       sin_ps->setCallingConv(CallingConv::C);
-      AttrListPtr sin_ps_PAL;
-      {
-        SmallVector<AttributeWithIndex, 4> Attrs;
-        AttributeWithIndex PAWI;
-        PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-        Attrs.push_back(PAWI);
-        sin_ps_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-      }
+      Attributes Attrs_sin_ps_PAL;
+      Attrs_sin_ps_PAL |= Attribute::NoUnwind;
+      Attrs_sin_ps_PAL |= Attribute::ReadNone;
+      AttrListPtr sin_ps_PAL = AttrListPtr().addAttr(~0u, Attrs_sin_ps_PAL);
       sin_ps->setAttributes(sin_ps_PAL);
 
       // Global Variable Declarations
@@ -567,14 +584,11 @@ private:
         BinaryOperator* packed_tmp_i42 = BinaryOperator::Create(Instruction::FMul, packed_tmp3_i50, packed_78, "tmp.i42", label_entry);
         CallInst* packed_79 = CallInst::Create(generateCvttps2dq(mod), ArrayRef<Value*>(packed_tmp_i42), "", label_entry);
         packed_79->setCallingConv(CallingConv::C);
-        packed_79->setTailCall(true);AttrListPtr packed_79_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-          Attrs.push_back(PAWI);
-          packed_79_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-        }
+        packed_79->setTailCall(true);
+        Attributes Attrs_packed_79_PAL;
+        Attrs_packed_79_PAL |= Attribute::NoUnwind;
+        Attrs_packed_79_PAL |= Attribute::ReadNone;
+        AttrListPtr packed_79_PAL = AttrListPtr().addAttr(~0u, Attrs_packed_79_PAL);
         packed_79->setAttributes(packed_79_PAL);
 
         LoadInst* packed_80 = new LoadInst(const_ptr_57, "", false, label_entry);
@@ -586,15 +600,11 @@ private:
         CastInst* packed_84 = new BitCastInst(packed_tmp_i40, vectorTy_int_SIMD, "", label_entry);
         CallInst* packed_85 = CallInst::Create(generateCvtdq2ps(mod), ArrayRef<Value*>(packed_84), "", label_entry);
         packed_85->setCallingConv(CallingConv::C);
-        packed_85->setTailCall(true);AttrListPtr packed_85_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-          Attrs.push_back(PAWI);
-          packed_85_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
+        packed_85->setTailCall(true);
+        Attributes Attrs_packed_85_PAL;
+        Attrs_packed_85_PAL |= Attribute::NoUnwind;
+        Attrs_packed_85_PAL |= Attribute::ReadNone;
+        AttrListPtr packed_85_PAL = AttrListPtr().addAttr(~0u, Attrs_packed_85_PAL);
         packed_85->setAttributes(packed_85_PAL);
 
         LoadInst* packed_86 = new LoadInst(const_ptr_59, "", false, label_entry);
@@ -605,35 +615,29 @@ private:
         packed_88_params.push_back(const_int32_60);
         CallInst* packed_88 = CallInst::Create(generatePsllid(mod), ArrayRef<Value*>(packed_88_params), "", label_entry);
         packed_88->setCallingConv(CallingConv::C);
-        packed_88->setTailCall(true);AttrListPtr packed_88_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-          Attrs.push_back(PAWI);
-          packed_88_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
+        packed_88->setTailCall(true);
+        Attributes Attrs_packed_88_PAL;
+        Attrs_packed_88_PAL |= Attribute::NoUnwind;
+        Attrs_packed_88_PAL |= Attribute::ReadNone;
+        AttrListPtr packed_88_PAL = AttrListPtr().addAttr(~0u, Attrs_packed_88_PAL);
         packed_88->setAttributes(packed_88_PAL);
 
         LoadInst* packed_89 = new LoadInst(const_ptr_61, "", false, label_entry);
         BinaryOperator* packed_tmp_i38 = BinaryOperator::Create(Instruction::And, packed_tmp_i40, packed_89, "tmp.i38", label_entry);
         CastInst* packed_90 = new BitCastInst(packed_tmp_i38, vectorTy_int_SIMD, "", label_entry);
-        std::vector<Value*> packed_91_params;
-        packed_91_params.push_back(packed_90);
-        packed_91_params.push_back(const_packed_62);
-        CallInst* packed_91 = CallInst::Create(generatePcmpeq(mod), ArrayRef<Value*>(packed_91_params), "", label_entry);
-        packed_91->setCallingConv(CallingConv::C);
-        packed_91->setTailCall(true);AttrListPtr packed_91_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-          Attrs.push_back(PAWI);
-          packed_91_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
-        packed_91->setAttributes(packed_91_PAL);
+//        std::vector<Value*> packed_91_params;
+//        packed_91_params.push_back(packed_90);
+//        packed_91_params.push_back(const_packed_62);
+//        CallInst* packed_91 = CallInst::Create(generatePcmpeq(mod), ArrayRef<Value*>(packed_91_params), "", label_entry);
+//        packed_91->setCallingConv(CallingConv::C);
+//        packed_91->setTailCall(true);
+//        Attributes Attrs_packed_91_PAL;
+//        Attrs_packed_91_PAL |= Attribute::NoUnwind;
+//        Attrs_packed_91_PAL |= Attribute::ReadNone;
+//        AttrListPtr packed_91_PAL = AttrListPtr().addAttr(~0u, Attrs_packed_91_PAL);
+//        packed_91->setAttributes(packed_91_PAL);
+        Instruction* icmp = new ICmpInst(*label_entry, ICmpInst::ICMP_EQ, packed_90, const_packed_62, "");
+        SExtInst* packed_91 = new SExtInst(icmp, vectorTy_int_SIMD, "", label_entry);
 
         BinaryOperator* packed_tmp2_i36 = BinaryOperator::Create(Instruction::Xor, packed_tmp2_i45, packed_88, "tmp2.i36", label_entry);
         LoadInst* packed_92 = new LoadInst(const_ptr_63, "", false, label_entry);
@@ -714,7 +718,7 @@ private:
 
 		VectorType* vectorTy_float_SIMD = VectorType::get(Type::getFloatTy(context), simdWidth);
 		VectorType* vectorTy_int_SIMD = VectorType::get(Type::getInt32Ty(context), simdWidth);
-        
+
       // Type Definitions
       ArrayType* ArrayTy_0 = ArrayType::get(IntegerType::get(context, 32), 4);
 
@@ -732,7 +736,7 @@ private:
       VectorType* VectorTy_10 = VectorType::get(IntegerType::get(context, 64), 2);
 
       PointerType* PointerTy_11 = PointerType::get(VectorTy_10, 0);
-      
+
       // Function Declarations
 
       Function* cos_ps = Function::Create(
@@ -740,15 +744,10 @@ private:
         /*Linkage=*/GlobalValue::ExternalLinkage,
         /*Name=*/"cos_ps", mod);
       cos_ps->setCallingConv(CallingConv::C);
-      AttrListPtr cos_ps_PAL;
-      {
-        SmallVector<AttributeWithIndex, 4> Attrs;
-        AttributeWithIndex PAWI;
-        PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-        Attrs.push_back(PAWI);
-        cos_ps_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-      }
+      Attributes Attrs_cos_ps_PAL;
+      Attrs_cos_ps_PAL |= Attribute::NoUnwind;
+      Attrs_cos_ps_PAL |= Attribute::ReadNone;
+      AttrListPtr cos_ps_PAL = AttrListPtr().addAttr(~0u, Attrs_cos_ps_PAL);
       cos_ps->setAttributes(cos_ps_PAL);
 
 
@@ -1099,15 +1098,11 @@ private:
 
         CallInst* packed_77 = CallInst::Create(generateCvttps2dq(mod), ArrayRef<Value*>(packed_tmp_i40), "", label_entry);
         packed_77->setCallingConv(CallingConv::C);
-        packed_77->setTailCall(true);AttrListPtr packed_77_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-          Attrs.push_back(PAWI);
-          packed_77_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
+        packed_77->setTailCall(true);
+        Attributes Attrs_packed_77_PAL;
+        Attrs_packed_77_PAL |= Attribute::NoUnwind;
+        Attrs_packed_77_PAL |= Attribute::ReadNone;
+        AttrListPtr packed_77_PAL = AttrListPtr().addAttr(~0u, Attrs_packed_77_PAL);
         packed_77->setAttributes(packed_77_PAL);
 
         LoadInst* packed_78 = new LoadInst(const_ptr_54, "", false, label_entry);
@@ -1119,15 +1114,11 @@ private:
         CastInst* packed_82 = new BitCastInst(packed_tmp_i38, vectorTy_int_SIMD, "", label_entry);
         CallInst* packed_83 = CallInst::Create(generateCvtdq2ps(mod), ArrayRef<Value*>(packed_82), "", label_entry);
         packed_83->setCallingConv(CallingConv::C);
-        packed_83->setTailCall(true);AttrListPtr packed_83_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-          Attrs.push_back(PAWI);
-          packed_83_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
+        packed_83->setTailCall(true);
+        Attributes Attrs_packed_83_PAL;
+        Attrs_packed_83_PAL |= Attribute::NoUnwind;
+        Attrs_packed_83_PAL |= Attribute::ReadNone;
+        AttrListPtr packed_83_PAL = AttrListPtr().addAttr(~0u, Attrs_packed_83_PAL);
         packed_83->setAttributes(packed_83_PAL);
 
         LoadInst* packed_84 = new LoadInst(const_ptr_56, "", false, label_entry);
@@ -1143,34 +1134,28 @@ private:
         packed_89_params.push_back(const_int32_60);
         CallInst* packed_89 = CallInst::Create(generatePsllid(mod), ArrayRef<Value*>(packed_89_params), "", label_entry);
         packed_89->setCallingConv(CallingConv::C);
-        packed_89->setTailCall(true);AttrListPtr packed_89_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-          Attrs.push_back(PAWI);
-          packed_89_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
+        packed_89->setTailCall(true);
+        Attributes Attrs_packed_89_PAL;
+        Attrs_packed_89_PAL |= Attribute::NoUnwind;
+        Attrs_packed_89_PAL |= Attribute::ReadNone;
+        AttrListPtr packed_89_PAL = AttrListPtr().addAttr(~0u, Attrs_packed_89_PAL);
         packed_89->setAttributes(packed_89_PAL);
 
         BinaryOperator* packed_tmp_i34 = BinaryOperator::Create(Instruction::And, packed_86, packed_84, "tmp.i34", label_entry);
         CastInst* packed_90 = new BitCastInst(packed_tmp_i34, vectorTy_int_SIMD, "", label_entry);
-        std::vector<Value*> packed_91_params;
-        packed_91_params.push_back(packed_90);
-        packed_91_params.push_back(const_packed_61);
-        CallInst* packed_91 = CallInst::Create(generatePcmpeq(mod), ArrayRef<Value*>(packed_91_params), "", label_entry);
-        packed_91->setCallingConv(CallingConv::C);
-        packed_91->setTailCall(true);AttrListPtr packed_91_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-          Attrs.push_back(PAWI);
-          packed_91_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
-        packed_91->setAttributes(packed_91_PAL);
+//        std::vector<Value*> packed_91_params;
+//        packed_91_params.push_back(packed_90);
+//        packed_91_params.push_back(const_packed_61);
+//        CallInst* packed_91 = CallInst::Create(generatePcmpeq(mod), ArrayRef<Value*>(packed_91_params), "", label_entry);
+//        packed_91->setCallingConv(CallingConv::C);
+//        packed_91->setTailCall(true);
+//        Attributes Attrs_packed_91_PAL;
+//        Attrs_packed_91_PAL |= Attribute::NoUnwind;
+//        Attrs_packed_91_PAL |= Attribute::ReadNone;
+//        AttrListPtr packed_91_PAL = AttrListPtr().addAttr(~0u, Attrs_packed_91_PAL);
+//        packed_91->setAttributes(packed_91_PAL);
+        Instruction* icmp = new ICmpInst(*label_entry, ICmpInst::ICMP_EQ, packed_90, const_packed_61, "");
+        SExtInst* packed_91 = new SExtInst(icmp, vectorTy_int_SIMD, "", label_entry);
 
         LoadInst* packed_92 = new LoadInst(const_ptr_62, "", false, label_entry);
         LoadInst* packed_93 = new LoadInst(const_ptr_63, "", false, label_entry);
@@ -1280,20 +1265,12 @@ private:
         /*Linkage=*/GlobalValue::ExternalLinkage,
         /*Name=*/"sincos_ps", mod);
       sincos_ps->setCallingConv(CallingConv::C);
-      AttrListPtr sincos_ps_PAL;
-      {
-        SmallVector<AttributeWithIndex, 4> Attrs;
-        AttributeWithIndex PAWI;
-        PAWI.Index = 2U; PAWI.Attrs = 0  | Attribute::NoCapture;
-        Attrs.push_back(PAWI);
-        PAWI.Index = 3U; PAWI.Attrs = 0  | Attribute::NoCapture;
-        Attrs.push_back(PAWI);
-        PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind;
-        Attrs.push_back(PAWI);
-        sincos_ps_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-      }
+      Attributes Attrs;
+      Attrs |= Attribute::NoUnwind;
+      AttrListPtr sincos_ps_PAL = AttrListPtr().addAttr(~0u, Attrs);
       sincos_ps->setAttributes(sincos_ps_PAL);
+      sincos_ps->setDoesNotCapture(2);
+      sincos_ps->setDoesNotCapture(3);
 
 
       // Global Variable Declarations
@@ -1668,15 +1645,11 @@ private:
         BinaryOperator* packed_tmp_i51 = BinaryOperator::Create(Instruction::FMul, packed_tmp3_i59, packed_80, "tmp.i51", label_entry);
         CallInst* packed_81 = CallInst::Create(generateCvttps2dq(mod), ArrayRef<Value*>(packed_tmp_i51), "", label_entry);
         packed_81->setCallingConv(CallingConv::C);
-        packed_81->setTailCall(true);AttrListPtr packed_81_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-          Attrs.push_back(PAWI);
-          packed_81_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
+        packed_81->setTailCall(true);
+        Attributes Attrs_packed_81_PAL;
+        Attrs_packed_81_PAL |= Attribute::NoUnwind;
+        Attrs_packed_81_PAL |= Attribute::ReadNone;
+        AttrListPtr packed_81_PAL = AttrListPtr().addAttr(~0u, Attrs_packed_81_PAL);
         packed_81->setAttributes(packed_81_PAL);
 
         LoadInst* packed_82 = new LoadInst(const_ptr_57, "", false, label_entry);
@@ -1688,15 +1661,11 @@ private:
         CastInst* packed_86 = new BitCastInst(packed_tmp_i49, vectorTy_int_SIMD, "", label_entry);
         CallInst* packed_87 = CallInst::Create(generateCvtdq2ps(mod), ArrayRef<Value*>(packed_86), "", label_entry);
         packed_87->setCallingConv(CallingConv::C);
-        packed_87->setTailCall(true);AttrListPtr packed_87_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-          Attrs.push_back(PAWI);
-          packed_87_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
+        packed_87->setTailCall(true);
+        Attributes Attrs_packed_87_PAL;
+        Attrs_packed_87_PAL |= Attribute::NoUnwind;
+        Attrs_packed_87_PAL |= Attribute::ReadNone;
+        AttrListPtr packed_87_PAL = AttrListPtr().addAttr(~0u, Attrs_packed_87_PAL);
         packed_87->setAttributes(packed_87_PAL);
 
         LoadInst* packed_88 = new LoadInst(const_ptr_59, "", false, label_entry);
@@ -1707,35 +1676,29 @@ private:
         packed_90_params.push_back(const_int32_60);
         CallInst* packed_90 = CallInst::Create(generatePsllid(mod), ArrayRef<Value*>(packed_90_params), "", label_entry);
         packed_90->setCallingConv(CallingConv::C);
-        packed_90->setTailCall(true);AttrListPtr packed_90_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-          Attrs.push_back(PAWI);
-          packed_90_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
+        packed_90->setTailCall(true);
+        Attributes Attrs_packed_90_PAL;
+        Attrs_packed_90_PAL |= Attribute::NoUnwind;
+        Attrs_packed_90_PAL |= Attribute::ReadNone;
+        AttrListPtr packed_90_PAL = AttrListPtr().addAttr(~0u, Attrs_packed_90_PAL);
         packed_90->setAttributes(packed_90_PAL);
 
         LoadInst* packed_91 = new LoadInst(const_ptr_61, "", false, label_entry);
         BinaryOperator* packed_tmp_i47 = BinaryOperator::Create(Instruction::And, packed_tmp_i49, packed_91, "tmp.i47", label_entry);
         CastInst* packed_92 = new BitCastInst(packed_tmp_i47, vectorTy_int_SIMD, "", label_entry);
-        std::vector<Value*> packed_93_params;
-        packed_93_params.push_back(packed_92);
-        packed_93_params.push_back(const_packed_62);
-        CallInst* packed_93 = CallInst::Create(generatePcmpeq(mod), ArrayRef<Value*>(packed_93_params), "", label_entry);
-        packed_93->setCallingConv(CallingConv::C);
-        packed_93->setTailCall(true);AttrListPtr packed_93_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-          Attrs.push_back(PAWI);
-          packed_93_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
-        packed_93->setAttributes(packed_93_PAL);
+//        std::vector<Value*> packed_93_params;
+//        packed_93_params.push_back(packed_92);
+//        packed_93_params.push_back(const_packed_62);
+//        CallInst* packed_93 = CallInst::Create(generatePcmpeq(mod), ArrayRef<Value*>(packed_93_params), "", label_entry);
+//        packed_93->setCallingConv(CallingConv::C);
+//        packed_93->setTailCall(true);
+//        Attributes Attrs_packed_93_PAL;
+//        Attrs_packed_93_PAL |= Attribute::NoUnwind;
+//        Attrs_packed_93_PAL |= Attribute::ReadNone;
+//        AttrListPtr packed_93_PAL = AttrListPtr().addAttr(~0u, Attrs_packed_93_PAL);
+//        packed_93->setAttributes(packed_93_PAL);
+        Instruction* icmp = new ICmpInst(*label_entry, ICmpInst::ICMP_EQ, packed_92, const_packed_62, "");
+        SExtInst* packed_93 = new SExtInst(icmp, vectorTy_int_SIMD, "", label_entry);
 
         LoadInst* packed_94 = new LoadInst(const_ptr_63, "", false, label_entry);
         LoadInst* packed_95 = new LoadInst(const_ptr_64, "", false, label_entry);
@@ -1757,15 +1720,11 @@ private:
         packed_100_params.push_back(const_int32_60);
         CallInst* packed_100 = CallInst::Create(generatePsllid(mod), ArrayRef<Value*>(packed_100_params), "", label_entry);
         packed_100->setCallingConv(CallingConv::C);
-        packed_100->setTailCall(true);AttrListPtr packed_100_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-          Attrs.push_back(PAWI);
-          packed_100_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
+        packed_100->setTailCall(true);
+        Attributes Attrs_packed_100_PAL;
+        Attrs_packed_100_PAL |= Attribute::NoUnwind;
+        Attrs_packed_100_PAL |= Attribute::ReadNone;
+        AttrListPtr packed_100_PAL = AttrListPtr().addAttr(~0u, Attrs_packed_100_PAL);
         packed_100->setAttributes(packed_100_PAL);
 
         BinaryOperator* packed_tmp2_i36 = BinaryOperator::Create(Instruction::Xor, packed_tmp2_i54, packed_90, "tmp2.i36", label_entry);
@@ -1871,15 +1830,10 @@ private:
         /*Linkage=*/GlobalValue::ExternalLinkage,
         /*Name=*/"log_ps", mod);
       log_ps->setCallingConv(CallingConv::C);
-      AttrListPtr log_ps_PAL;
-      {
-        SmallVector<AttributeWithIndex, 4> Attrs;
-        AttributeWithIndex PAWI;
-        PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-        Attrs.push_back(PAWI);
-        log_ps_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-      }
+      Attributes Attrs_log_ps_PAL;
+      Attrs_log_ps_PAL |= Attribute::NoUnwind;
+      Attrs_log_ps_PAL |= Attribute::ReadNone;
+      AttrListPtr log_ps_PAL = AttrListPtr().addAttr(~0u, Attrs_log_ps_PAL);
       log_ps->setAttributes(log_ps_PAL);
 
 
@@ -2218,15 +2172,10 @@ private:
         packed_tmp_i50_params.push_back(const_int8_54);
         CallInst* packed_tmp_i50 = CallInst::Create(generateCmpPS(mod), ArrayRef<Value*>(packed_tmp_i50_params), "tmp.i50", label_entry);
         packed_tmp_i50->setCallingConv(CallingConv::C);
-        packed_tmp_i50->setTailCall(true);AttrListPtr packed_tmp_i50_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind;
-          Attrs.push_back(PAWI);
-          packed_tmp_i50_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
+        packed_tmp_i50->setTailCall(true);
+        Attributes Attrs;
+        Attrs |= Attribute::NoUnwind;
+        AttrListPtr packed_tmp_i50_PAL = AttrListPtr().addAttr(~0u, Attrs);
         packed_tmp_i50->setAttributes(packed_tmp_i50_PAL);
 
         LoadInst* packed_74 = new LoadInst(const_ptr_55, "", false, label_entry);
@@ -2235,15 +2184,11 @@ private:
         packed_75_params.push_back(packed_74);
         CallInst* packed_75 = CallInst::Create(generateMaxPS(mod), ArrayRef<Value*>(packed_75_params), "", label_entry);
         packed_75->setCallingConv(CallingConv::C);
-        packed_75->setTailCall(true);AttrListPtr packed_75_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-          Attrs.push_back(PAWI);
-          packed_75_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
+        packed_75->setTailCall(true);
+        Attributes Attrs_packed_75_PAL;
+        Attrs_packed_75_PAL |= Attribute::NoUnwind;
+        Attrs_packed_75_PAL |= Attribute::ReadNone;
+        AttrListPtr packed_75_PAL = AttrListPtr().addAttr(~0u, Attrs_packed_75_PAL);
         packed_75->setAttributes(packed_75_PAL);
 
         CastInst* packed_76 = new BitCastInst(packed_75, vectorTy_int_SIMD, "", label_entry);
@@ -2252,15 +2197,11 @@ private:
         packed_77_params.push_back(const_int32_56);
         CallInst* packed_77 = CallInst::Create(generatePsrlid(mod), ArrayRef<Value*>(packed_77_params), "", label_entry);
         packed_77->setCallingConv(CallingConv::C);
-        packed_77->setTailCall(true);AttrListPtr packed_77_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-          Attrs.push_back(PAWI);
-          packed_77_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
+        packed_77->setTailCall(true);
+        Attributes Attrs_packed_77_PAL;
+        Attrs_packed_77_PAL |= Attribute::NoUnwind;
+        Attrs_packed_77_PAL |= Attribute::ReadNone;
+        AttrListPtr packed_77_PAL = AttrListPtr().addAttr(~0u, Attrs_packed_77_PAL);
         packed_77->setAttributes(packed_77_PAL);
 
         LoadInst* packed_78 = new LoadInst(const_ptr_57, "", false, label_entry);
@@ -2275,15 +2216,11 @@ private:
         BinaryOperator* packed_tmp_i41 = BinaryOperator::Create(Instruction::Sub, packed_77, packed_81, "tmp.i41", label_entry);
         CallInst* packed_82 = CallInst::Create(generateCvtdq2ps(mod), ArrayRef<Value*>(packed_tmp_i41), "", label_entry);
         packed_82->setCallingConv(CallingConv::C);
-        packed_82->setTailCall(true);AttrListPtr packed_82_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-          Attrs.push_back(PAWI);
-          packed_82_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
+        packed_82->setTailCall(true);
+        Attributes Attrs_packed_82_PAL;
+        Attrs_packed_82_PAL |= Attribute::NoUnwind;
+        Attrs_packed_82_PAL |= Attribute::ReadNone;
+        AttrListPtr packed_82_PAL = AttrListPtr().addAttr(~0u, Attrs_packed_82_PAL);
         packed_82->setAttributes(packed_82_PAL);
 
         BinaryOperator* packed_tmp_i40 = BinaryOperator::Create(Instruction::FAdd, packed_82, packed_73, "tmp.i40", label_entry);
@@ -2294,15 +2231,10 @@ private:
         packed_tmp_i39_params.push_back(const_int8_61);
         CallInst* packed_tmp_i39 = CallInst::Create(generateCmpPS(mod), ArrayRef<Value*>(packed_tmp_i39_params), "tmp.i39", label_entry);
         packed_tmp_i39->setCallingConv(CallingConv::C);
-        packed_tmp_i39->setTailCall(true);AttrListPtr packed_tmp_i39_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind;
-          Attrs.push_back(PAWI);
-          packed_tmp_i39_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
+        packed_tmp_i39->setTailCall(true);
+        Attributes Attrs2;
+        Attrs2 |= Attribute::NoUnwind;
+        AttrListPtr packed_tmp_i39_PAL = AttrListPtr().addAttr(~0u, Attrs2);
         packed_tmp_i39->setAttributes(packed_tmp_i39_PAL);
 
         CastInst* packed_tmp1_i36 = new BitCastInst(packed_tmp_i39, vectorTy_int_SIMD, "tmp1.i36", label_entry);
@@ -2384,7 +2316,7 @@ private:
 
 		VectorType* vectorTy_float_SIMD = VectorType::get(Type::getFloatTy(context), simdWidth);
 		VectorType* vectorTy_int_SIMD = VectorType::get(Type::getInt32Ty(context), simdWidth);
-        
+
       // Type Definitions
       ArrayType* ArrayTy_0 = ArrayType::get(Type::getFloatTy(context), 4);
       ArrayType* ArrayTy_2 = ArrayType::get(IntegerType::get(context, 32), 4);
@@ -2409,15 +2341,10 @@ private:
         /*Linkage=*/GlobalValue::ExternalLinkage,
         /*Name=*/"exp_ps", mod);
       exp_ps->setCallingConv(CallingConv::C);
-      AttrListPtr exp_ps_PAL;
-      {
-        SmallVector<AttributeWithIndex, 4> Attrs;
-        AttributeWithIndex PAWI;
-        PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-        Attrs.push_back(PAWI);
-        exp_ps_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-      }
+      Attributes Attrs_exp_ps_PAL;
+      Attrs_exp_ps_PAL |= Attribute::NoUnwind;
+      Attrs_exp_ps_PAL |= Attribute::ReadNone;
+      AttrListPtr exp_ps_PAL = AttrListPtr().addAttr(~0u, Attrs_exp_ps_PAL);
       exp_ps->setAttributes(exp_ps_PAL);
 
 
@@ -2682,15 +2609,11 @@ private:
         packed_63_params.push_back(packed_62);
         CallInst* packed_63 = CallInst::Create(generateMinPS(mod), ArrayRef<Value*>(packed_63_params), "", label_entry);
         packed_63->setCallingConv(CallingConv::C);
-        packed_63->setTailCall(true);AttrListPtr packed_63_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-          Attrs.push_back(PAWI);
-          packed_63_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
+        packed_63->setTailCall(true);
+        Attributes Attrs_packed_63_PAL;
+        Attrs_packed_63_PAL |= Attribute::NoUnwind;
+        Attrs_packed_63_PAL |= Attribute::ReadNone;
+        AttrListPtr packed_63_PAL = AttrListPtr().addAttr(~0u, Attrs_packed_63_PAL);
         packed_63->setAttributes(packed_63_PAL);
 
         LoadInst* packed_64 = new LoadInst(const_ptr_48, "", false, label_entry);
@@ -2699,15 +2622,11 @@ private:
         packed_65_params.push_back(packed_64);
         CallInst* packed_65 = CallInst::Create(generateMaxPS(mod), ArrayRef<Value*>(packed_65_params), "", label_entry);
         packed_65->setCallingConv(CallingConv::C);
-        packed_65->setTailCall(true);AttrListPtr packed_65_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-          Attrs.push_back(PAWI);
-          packed_65_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
+        packed_65->setTailCall(true);
+        Attributes Attrs_packed_65_PAL;
+        Attrs_packed_65_PAL |= Attribute::NoUnwind;
+        Attrs_packed_65_PAL |= Attribute::ReadNone;
+        AttrListPtr packed_65_PAL = AttrListPtr().addAttr(~0u, Attrs_packed_65_PAL);
         packed_65->setAttributes(packed_65_PAL);
 
         LoadInst* packed_66 = new LoadInst(const_ptr_49, "", false, label_entry);
@@ -2716,28 +2635,20 @@ private:
         BinaryOperator* packed_tmp_i24 = BinaryOperator::Create(Instruction::FAdd, packed_tmp_i25, packed_67, "tmp.i24", label_entry);
         CallInst* packed_68 = CallInst::Create(generateCvttps2dq(mod), ArrayRef<Value*>(packed_tmp_i24), "", label_entry);
         packed_68->setCallingConv(CallingConv::C);
-        packed_68->setTailCall(true);AttrListPtr packed_68_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-          Attrs.push_back(PAWI);
-          packed_68_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
+        packed_68->setTailCall(true);
+        Attributes Attrs_packed_68_PAL;
+        Attrs_packed_68_PAL |= Attribute::NoUnwind;
+        Attrs_packed_68_PAL |= Attribute::ReadNone;
+        AttrListPtr packed_68_PAL = AttrListPtr().addAttr(~0u, Attrs_packed_68_PAL);
         packed_68->setAttributes(packed_68_PAL);
 
         CallInst* packed_69 = CallInst::Create(generateCvtdq2ps(mod), ArrayRef<Value*>(packed_68), "", label_entry);
         packed_69->setCallingConv(CallingConv::C);
-        packed_69->setTailCall(true);AttrListPtr packed_69_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-          Attrs.push_back(PAWI);
-          packed_69_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
+        packed_69->setTailCall(true);
+        Attributes Attrs_packed_69_PAL;
+        Attrs_packed_69_PAL |= Attribute::NoUnwind;
+        Attrs_packed_69_PAL |= Attribute::ReadNone;
+        AttrListPtr packed_69_PAL = AttrListPtr().addAttr(~0u, Attrs_packed_69_PAL);
         packed_69->setAttributes(packed_69_PAL);
 
         std::vector<Value*> packed_tmp_i23_params;
@@ -2746,15 +2657,10 @@ private:
         packed_tmp_i23_params.push_back(const_int8_51);
         CallInst* packed_tmp_i23 = CallInst::Create(generateCmpPS(mod), ArrayRef<Value*>(packed_tmp_i23_params), "tmp.i23", label_entry);
         packed_tmp_i23->setCallingConv(CallingConv::C);
-        packed_tmp_i23->setTailCall(true);AttrListPtr packed_tmp_i23_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind;
-          Attrs.push_back(PAWI);
-          packed_tmp_i23_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
+        packed_tmp_i23->setTailCall(true);
+        Attributes Attrs;
+        Attrs |= Attribute::NoUnwind;
+        AttrListPtr packed_tmp_i23_PAL = AttrListPtr().addAttr(~0u, Attrs);
         packed_tmp_i23->setAttributes(packed_tmp_i23_PAL);
 
         CastInst* packed_tmp_i22 = new BitCastInst(packed_tmp_i23, vectorTy_int_SIMD, "tmp.i22", label_entry);
@@ -2789,15 +2695,11 @@ private:
         BinaryOperator* packed_tmp_i3 = BinaryOperator::Create(Instruction::FAdd, packed_tmp_i4, packed_61, "tmp.i3", label_entry);
         CallInst* packed_77 = CallInst::Create(generateCvttps2dq(mod), ArrayRef<Value*>(packed_tmp_i21), "", label_entry);
         packed_77->setCallingConv(CallingConv::C);
-        packed_77->setTailCall(true);AttrListPtr packed_77_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-          Attrs.push_back(PAWI);
-          packed_77_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
+        packed_77->setTailCall(true);
+        Attributes Attrs_packed_77_PAL;
+        Attrs_packed_77_PAL |= Attribute::NoUnwind;
+        Attrs_packed_77_PAL |= Attribute::ReadNone;
+        AttrListPtr packed_77_PAL = AttrListPtr().addAttr(~0u, Attrs_packed_77_PAL);
         packed_77->setAttributes(packed_77_PAL);
 
         LoadInst* packed_78 = new LoadInst(const_ptr_59, "", false, label_entry);
@@ -2808,15 +2710,11 @@ private:
         packed_80_params.push_back(const_int32_60);
         CallInst* packed_80 = CallInst::Create(generatePsllid(mod), ArrayRef<Value*>(packed_80_params), "", label_entry);
         packed_80->setCallingConv(CallingConv::C);
-        packed_80->setTailCall(true);AttrListPtr packed_80_PAL;
-        {
-          SmallVector<AttributeWithIndex, 4> Attrs;
-          AttributeWithIndex PAWI;
-          PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-          Attrs.push_back(PAWI);
-          packed_80_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-        }
+        packed_80->setTailCall(true);
+        Attributes Attrs_packed_80_PAL;
+        Attrs_packed_80_PAL |= Attribute::NoUnwind;
+        Attrs_packed_80_PAL |= Attribute::ReadNone;
+        AttrListPtr packed_80_PAL = AttrListPtr().addAttr(~0u, Attrs_packed_80_PAL);
         packed_80->setAttributes(packed_80_PAL);
 
         CastInst* packed_81 = new BitCastInst(packed_80, vectorTy_float_SIMD, "", label_entry);
@@ -2837,7 +2735,7 @@ private:
 
 		VectorType* vectorTy_float_SIMD = VectorType::get(Type::getFloatTy(context), simdWidth);
 		VectorType* vectorTy_int_SIMD = VectorType::get(Type::getInt32Ty(context), simdWidth);
-		
+
         // Type Definitions
 		std::vector<Type*>FuncTy_1_args;
 		FuncTy_1_args.push_back(vectorTy_float_SIMD);
@@ -2852,14 +2750,10 @@ private:
 			/*Linkage=*/GlobalValue::ExternalLinkage,
 			/*Name=*/"exp2f_ps", mod);
 		exp2_ps->setCallingConv(CallingConv::C);
-		AttrListPtr exp2_ps_PAL;
-		{
-			SmallVector<AttributeWithIndex, 4> Attrs;
-			AttributeWithIndex PAWI;
-			PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-			Attrs.push_back(PAWI);
-			exp2_ps_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-		}
+        Attributes Attrs_exp2_ps_PAL;
+        Attrs_exp2_ps_PAL |= Attribute::NoUnwind;
+        Attrs_exp2_ps_PAL |= Attribute::ReadNone;
+        AttrListPtr exp2_ps_PAL = AttrListPtr().addAttr(~0u, Attrs_exp2_ps_PAL);
 		exp2_ps->setAttributes(exp2_ps_PAL);
 
 
@@ -2986,14 +2880,10 @@ private:
 			/*Linkage=*/GlobalValue::ExternalLinkage,
 			/*Name=*/"log2f_ps", mod);
 		log2_ps->setCallingConv(CallingConv::C);
-		AttrListPtr log2_ps_PAL;
-		{
-			SmallVector<AttributeWithIndex, 4> Attrs;
-			AttributeWithIndex PAWI;
-			PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadNone;
-			Attrs.push_back(PAWI);
-			log2_ps_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-		}
+        Attributes Attrs_log2_ps_PAL;
+        Attrs_log2_ps_PAL |= Attribute::NoUnwind;
+        Attrs_log2_ps_PAL |= Attribute::ReadNone;
+        AttrListPtr log2_ps_PAL = AttrListPtr().addAttr(~0u, Attrs_log2_ps_PAL);
 		log2_ps->setAttributes(log2_ps_PAL);
 
 		// Global Variable Declarations
@@ -3141,14 +3031,10 @@ private:
 		/*Linkage=*/GlobalValue::ExternalLinkage,
 		/*Name=*/"pow_ps", mod);
 		pow_ps->setCallingConv(CallingConv::C);
-		AttrListPtr pow_ps_PAL;
-		{
-			SmallVector<AttributeWithIndex, 4> Attrs;
-			AttributeWithIndex PAWI;
-			PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadOnly;
-			Attrs.push_back(PAWI);
-			pow_ps_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-		}
+        Attributes Attrs_pow_ps_PAL;
+        Attrs_pow_ps_PAL |= Attribute::NoUnwind;
+        Attrs_pow_ps_PAL |= Attribute::ReadNone;
+        AttrListPtr pow_ps_PAL = AttrListPtr().addAttr(~0u, Attrs_pow_ps_PAL);
 		pow_ps->setAttributes(pow_ps_PAL);
 
 		// Function Definitions
@@ -3166,13 +3052,15 @@ private:
 			// Block entry (label_entry)
 			CallInst* packed_4 = CallInst::Create(generateLog2PS(mod, simdWidth), ArrayRef<Value*>(packed_x), "", label_entry);
 			packed_4->setCallingConv(CallingConv::C);
-			packed_4->setTailCall(true);AttrListPtr packed_4_PAL;
+			packed_4->setTailCall(true);
+            AttrListPtr packed_4_PAL;
 			packed_4->setAttributes(packed_4_PAL);
 
 			BinaryOperator* packed_5 = BinaryOperator::Create(Instruction::FMul, packed_4, packed_y, "", label_entry);
 			CallInst* packed_6 = CallInst::Create(generateExp2PS(mod, simdWidth), ArrayRef<Value*>(packed_5), "", label_entry);
 			packed_6->setCallingConv(CallingConv::C);
-			packed_6->setTailCall(true);AttrListPtr packed_6_PAL;
+			packed_6->setTailCall(true);
+            AttrListPtr packed_6_PAL;
 			packed_6->setAttributes(packed_6_PAL);
 
 			ReturnInst::Create(context, packed_6, label_entry);
@@ -3213,14 +3101,10 @@ private:
 		/*Linkage=*/GlobalValue::ExternalLinkage,
 		/*Name=*/"abs_ps", mod);
 		abs_ps->setCallingConv(CallingConv::C);
-		AttrListPtr abs_ps_PAL;
-		{
-			SmallVector<AttributeWithIndex, 4> Attrs;
-			AttributeWithIndex PAWI;
-			PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind | Attribute::ReadOnly;
-			Attrs.push_back(PAWI);
-			abs_ps_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-		}
+        Attributes Attrs_abs_ps_PAL;
+        Attrs_abs_ps_PAL |= Attribute::NoUnwind;
+        Attrs_abs_ps_PAL |= Attribute::ReadNone;
+        AttrListPtr abs_ps_PAL = AttrListPtr().addAttr(~0u, Attrs_abs_ps_PAL);
 		abs_ps->setAttributes(abs_ps_PAL);
 
 		// Function Definitions

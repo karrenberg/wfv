@@ -77,7 +77,7 @@ public:
 		loopInfo = &LI;
 
 		DEBUG_PKT( outs() << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; );
-		DEBUG_PKT( outs() << "canonicalizing loop branches of function '" << f.getNameStr() << "'...\n"; );
+		DEBUG_PKT( outs() << "canonicalizing loop branches of function '" << f.getName() << "'...\n"; );
 		DEBUG_PKT( outs() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n"; );
 
 		for (LoopInfo::iterator L=loopInfo->begin(); L!=loopInfo->end(); ++L) {
@@ -122,7 +122,7 @@ public:
 	//returns false otherwise and prints all 'bad' branches
 	//TODO: correct?
 	bool verify(Function* f) {
-		outs() << "verifying canonicalization of loop-branches for function '" << f->getNameStr() << "'... ";
+		outs() << "verifying canonicalization of loop-branches for function '" << f->getName() << "'... ";
 		bool verified = true;
 		//for (Function::iterator BB=f->begin(); BB!=f->end(); ++BB) {
 		for (LoopInfo::iterator L=loopInfo->begin(); L!=loopInfo->end(); ++L) {
@@ -155,7 +155,7 @@ private:
 		for (Loop::block_iterator BB=loop->block_begin(); BB!=loop->block_end(); ++BB) {
 			if (loopInfo->getLoopDepth(*BB) != loop->getLoopDepth()) continue; //only check blocks of current depth
 
-			DEBUG_PKT( outs() << "    testing block '" << (*BB)->getNameStr() << "' for flipped branch...\n"; );
+			DEBUG_PKT( outs() << "    testing block '" << (*BB)->getName() << "' for flipped branch...\n"; );
 			if (!isa<BranchInst>((*BB)->getTerminator())) continue;
 			BranchInst* br = cast<BranchInst>((*BB)->getTerminator());
 			++LoopBranchCounter;
@@ -205,7 +205,7 @@ private:
 				if (br->isUnconditional()) continue;
 				if (!isBranchFlipped(br, loop)) {
 					if (verified) outs() << "\n";
-					errs() << "ERROR: conditional branch in loop block '" << (*BB)->getNameStr() << "' remained flipped after loop-branch-canonicalization:\n";
+					errs() << "ERROR: conditional branch in loop block '" << (*BB)->getName() << "' remained flipped after loop-branch-canonicalization:\n";
 					br->print(outs());
 					verified = false;
 				}
@@ -249,14 +249,14 @@ private:
 
 		//this is REALLY bad :P
 		errs() << "ERROR: neither edge from branch leads to backedge: "
-		<< br->getSuccessor(0)->getNameStr() << " / " << br->getSuccessor(1)->getNameStr() << "\n";
+		<< br->getSuccessor(0)->getName() << " / " << br->getSuccessor(1)->getName() << "\n";
 		assert(!"CRITICAL ERROR!");
 		return false;
 
 	}
 
 	bool isBackedgeOnForwardPath(BasicBlock* startBB, Loop* loop, std::set<BasicBlock*>* visitedBlocks) {
-		//DEBUG_IFC( outs() << "  looking for BB '" << requestedBB->getNameStr() << "' on foward path from BB '" << startBB->getNameStr() << "'\n"; )
+		//DEBUG_IFC( outs() << "  looking for BB '" << requestedBB->getName() << "' on foward path from BB '" << startBB->getName() << "'\n"; )
 		if (!loop->contains(startBB)) return false; //we definitiely have an exit on this path
 		if (visitedBlocks->find(startBB) != visitedBlocks->end()) return true; //current block already seen, so we took a backedge at some point :p
 		visitedBlocks->insert(startBB);
@@ -268,11 +268,11 @@ private:
 		for (BlockTraits::ChildIteratorType PI = BlockTraits::child_begin(startBB),
 				PE = BlockTraits::child_end(startBB); PI != PE; ++PI) {
 			BasicBlock* succBB = *PI;
-			//DEBUG_IFC( outs() << "    checking predecessor '" << predBB->getNameStr() << "'\n"; )
+			//DEBUG_IFC( outs() << "    checking predecessor '" << predBB->getName() << "'\n"; )
 			if (latchBB == succBB) return true;
 			if (isBackedgeOnForwardPath(succBB, loop, visitedBlocks)) return true;
 		}
-		//DEBUG_IFC( outs() << "  nothing found on path through '" << startBB->getNameStr() << "'\n"; )
+		//DEBUG_IFC( outs() << "  nothing found on path through '" << startBB->getName() << "'\n"; )
 		return false;
 	}
 
@@ -288,8 +288,8 @@ private:
 		} else if (isa<BinaryOperator>(inst)) {
 			Instruction* newInst = NULL;
 			switch (inst->getOpcode()) { //TODO: use createMaskOr etc.
-				case Instruction::And : newInst = BinaryOperator::Create(Instruction::Or, inst->getOperand(0), inst->getOperand(1), inst->getNameStr(), inst); break;
-				case Instruction::Or  : newInst = BinaryOperator::Create(Instruction::And, inst->getOperand(0), inst->getOperand(1), inst->getNameStr(), inst); break;
+				case Instruction::And : newInst = BinaryOperator::Create(Instruction::Or, inst->getOperand(0), inst->getOperand(1), inst->getName(), inst); break;
+				case Instruction::Or  : newInst = BinaryOperator::Create(Instruction::And, inst->getOperand(0), inst->getOperand(1), inst->getName(), inst); break;
 				case Instruction::Xor : {
 					Value* xorOpVal = BinaryOperator::getNotArgument(inst);
 					if (isa<Instruction>(xorOpVal)) newInst = cast<Instruction>(xorOpVal);

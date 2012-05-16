@@ -143,22 +143,22 @@ struct StrI3_pkt {
 	VECI f;
 	VECI* g;
 	VECI h;
-};
+} ALIGN;
 
 struct Vec3f_pkt {
 	VEC x, y, z;
 	Vec3f_pkt() {}
 	Vec3f_pkt(VEC a, VEC b, VEC c) : x(a), y(b), z(c) {}
-};
+} ALIGN;
 struct Vec3fA_pkt {
 	VEC data[3];
 	Vec3fA_pkt() {}
 	Vec3fA_pkt(VEC a, VEC b, VEC c) { data[0] = a; data[1] = b; data[2] = c; }
-};
+} ALIGN;
 struct Uniform_pkt {
 	VEC x, y, z;
 	float a;
-};
+} ALIGN;
 struct Uniform2_pkt {
 	VEC x;
 	float a;
@@ -166,17 +166,17 @@ struct Uniform2_pkt {
 	float b;
 	VEC z;
 	float c;
-};
+} ALIGN;
 struct Nested_pkt {
 	Vec3f_pkt a, b, c;
-};
+} ALIGN;
 struct Nested2_pkt {
 	VEC x;
 	Vec3f_pkt a;
 	float y;
 	Uniform u;
 	Vec3fA_pkt b;
-};
+} ALIGN;
 
 
 //----------------------------------------------------------------------------//
@@ -330,7 +330,7 @@ typedef bool (*executeFnType)(float, float, float, float,
 	extern "C" void testfn_pkt(int* uniformOutArr, StrI3* uniformOutStr, StrI3_pkt* varyingOutStr, StrI3 uniformInStr, StrI3_pkt varyingInStr, VECI varyingInX, int uniformInX) ALIGN; \
 	bool testfn_execute(INPUTDATA) { \
 		/* Uniform input struct, same for scalar and packet function */ \
-		StrI3 uniformInStr; \
+		ALIGN StrI3 uniformInStr; \
 		int guni = (int)f1; \
 		uniformInStr.f = (int)f0; \
 		uniformInStr.g = &guni; \
@@ -338,44 +338,44 @@ typedef bool (*executeFnType)(float, float, float, float,
  \
 		/* Varying input structs, different for each call, supplied via pointer */ \
 		int gin0 = (int)f0, gin1 = (int)f1, gin2 = (int)f2, gin3 = (int)f3, gin4 = (int)f4, gin5 = (int)f5, gin6 = (int)f6, gin7 = (int)f7; \
-		StrI3 varyingInStr0; varyingInStr0.f = (int)f0; varyingInStr0.g = (int*)&gin0; varyingInStr0.h = (int)f7; \
-		StrI3 varyingInStr1; varyingInStr1.f = (int)f1; varyingInStr1.g = (int*)&gin1; varyingInStr1.h = (int)f6; \
-		StrI3 varyingInStr2; varyingInStr2.f = (int)f3; varyingInStr2.g = (int*)&gin2; varyingInStr2.h = (int)f4; \
-		StrI3 varyingInStr3; varyingInStr3.f = (int)f5; varyingInStr3.g = (int*)&gin3; varyingInStr3.h = (int)f1; \
-		StrI3 varyingInStr4; varyingInStr4.f = (int)f6; varyingInStr4.g = (int*)&gin4; varyingInStr4.h = (int)f5; \
-		StrI3 varyingInStr5; varyingInStr5.f = (int)f2; varyingInStr5.g = (int*)&gin5; varyingInStr5.h = (int)f0; \
-		StrI3 varyingInStr6; varyingInStr6.f = (int)f7; varyingInStr6.g = (int*)&gin6; varyingInStr6.h = (int)f2; \
-		StrI3 varyingInStr7; varyingInStr7.f = (int)f4; varyingInStr7.g = (int*)&gin7; varyingInStr7.h = (int)f3; \
+		ALIGN StrI3 varyingInStr0; varyingInStr0.f = (int)f0; varyingInStr0.g = (int*)&gin0; varyingInStr0.h = (int)f7; \
+		ALIGN StrI3 varyingInStr1; varyingInStr1.f = (int)f1; varyingInStr1.g = (int*)&gin1; varyingInStr1.h = (int)f6; \
+		ALIGN StrI3 varyingInStr2; varyingInStr2.f = (int)f3; varyingInStr2.g = (int*)&gin2; varyingInStr2.h = (int)f4; \
+		ALIGN StrI3 varyingInStr3; varyingInStr3.f = (int)f5; varyingInStr3.g = (int*)&gin3; varyingInStr3.h = (int)f1; \
+		ALIGN StrI3 varyingInStr4; varyingInStr4.f = (int)f6; varyingInStr4.g = (int*)&gin4; varyingInStr4.h = (int)f5; \
+		ALIGN StrI3 varyingInStr5; varyingInStr5.f = (int)f2; varyingInStr5.g = (int*)&gin5; varyingInStr5.h = (int)f0; \
+		ALIGN StrI3 varyingInStr6; varyingInStr6.f = (int)f7; varyingInStr6.g = (int*)&gin6; varyingInStr6.h = (int)f2; \
+		ALIGN StrI3 varyingInStr7; varyingInStr7.f = (int)f4; varyingInStr7.g = (int*)&gin7; varyingInStr7.h = (int)f3; \
  \
 		/* Vectorized input structs (equivalent to varyingInStr0-varyingInStr7) */ \
-		VECI gin_pkt_0 = _mm_set_epi32((int)f3, (int)f2, (int)f1, (int)f0); \
-		VECI gin_pkt_1 = _mm_set_epi32((int)f7, (int)f6, (int)f5, (int)f4); \
-		StrI3_pkt varyingInStr_pkt_0; varyingInStr_pkt_0.f = _mm_set_epi32((int)f5, (int)f3, (int)f1, (int)f0); varyingInStr_pkt_0.g = &gin_pkt_0; varyingInStr_pkt_0.h = _mm_set_epi32((int)f1, (int)f4, (int)f6, (int)f7); \
-		StrI3_pkt varyingInStr_pkt_1; varyingInStr_pkt_1.f = _mm_set_epi32((int)f4, (int)f7, (int)f2, (int)f6); varyingInStr_pkt_1.g = &gin_pkt_1; varyingInStr_pkt_1.h = _mm_set_epi32((int)f3, (int)f2, (int)f0, (int)f5); \
+		ALIGN VECI gin_pkt_0 = _mm_set_epi32((int)f3, (int)f2, (int)f1, (int)f0); \
+		ALIGN VECI gin_pkt_1 = _mm_set_epi32((int)f7, (int)f6, (int)f5, (int)f4); \
+		ALIGN StrI3_pkt varyingInStr_pkt_0; varyingInStr_pkt_0.f = _mm_set_epi32((int)f5, (int)f3, (int)f1, (int)f0); varyingInStr_pkt_0.g = &gin_pkt_0; varyingInStr_pkt_0.h = _mm_set_epi32((int)f1, (int)f4, (int)f6, (int)f7); \
+		ALIGN StrI3_pkt varyingInStr_pkt_1; varyingInStr_pkt_1.f = _mm_set_epi32((int)f4, (int)f7, (int)f2, (int)f6); varyingInStr_pkt_1.g = &gin_pkt_1; varyingInStr_pkt_1.h = _mm_set_epi32((int)f3, (int)f2, (int)f0, (int)f5); \
  \
 		/* Uniform output array for scalar calls */ \
-		ArrI8 out = { 13, 13, 13, 13, 13, 13, 13, 13 }; \
+		ALIGN ArrI8 out = { 13, 13, 13, 13, 13, 13, 13, 13 }; \
  \
 		/* Uniform output struct for scalar calls, same for scalar and packet function */ \
-		StrI3 uniformOutStr; int g = 33; uniformOutStr.f = 5; uniformOutStr.g = &g; uniformOutStr.h = -1; \
-		StrI3 uniformOutStr_pkt; int g_pkt = 33; uniformOutStr_pkt.f = 5; uniformOutStr_pkt.g = &g_pkt; uniformOutStr_pkt.h = -1; \
+		ALIGN StrI3 uniformOutStr; int g = 33; uniformOutStr.f = 5; uniformOutStr.g = &g; uniformOutStr.h = -1; \
+		ALIGN StrI3 uniformOutStr_pkt; int g_pkt = 33; uniformOutStr_pkt.f = 5; uniformOutStr_pkt.g = &g_pkt; uniformOutStr_pkt.h = -1; \
  \
 		/* Varying output structs, different for each call, supplied via pointer */ \
 		int gout0 = 33, gout1 = 33, gout2 = 33, gout3 = 33, gout4 = 33, gout5 = 33, gout6 = 33, gout7 = 33; \
-		StrI3 varyingOutStr0; varyingOutStr0.f = 5; varyingOutStr0.g = &gout0; varyingOutStr0.h = -1; \
-		StrI3 varyingOutStr1; varyingOutStr1.f = 5; varyingOutStr1.g = &gout1; varyingOutStr1.h = -1; \
-		StrI3 varyingOutStr2; varyingOutStr2.f = 5; varyingOutStr2.g = &gout2; varyingOutStr2.h = -1; \
-		StrI3 varyingOutStr3; varyingOutStr3.f = 5; varyingOutStr3.g = &gout3; varyingOutStr3.h = -1; \
-		StrI3 varyingOutStr4; varyingOutStr4.f = 5; varyingOutStr4.g = &gout4; varyingOutStr4.h = -1; \
-		StrI3 varyingOutStr5; varyingOutStr5.f = 5; varyingOutStr5.g = &gout5; varyingOutStr5.h = -1; \
-		StrI3 varyingOutStr6; varyingOutStr6.f = 5; varyingOutStr6.g = &gout6; varyingOutStr6.h = -1; \
-		StrI3 varyingOutStr7; varyingOutStr7.f = 5; varyingOutStr7.g = &gout7; varyingOutStr7.h = -1; \
+		ALIGN StrI3 varyingOutStr0; varyingOutStr0.f = 5; varyingOutStr0.g = &gout0; varyingOutStr0.h = -1; \
+		ALIGN StrI3 varyingOutStr1; varyingOutStr1.f = 5; varyingOutStr1.g = &gout1; varyingOutStr1.h = -1; \
+		ALIGN StrI3 varyingOutStr2; varyingOutStr2.f = 5; varyingOutStr2.g = &gout2; varyingOutStr2.h = -1; \
+		ALIGN StrI3 varyingOutStr3; varyingOutStr3.f = 5; varyingOutStr3.g = &gout3; varyingOutStr3.h = -1; \
+		ALIGN StrI3 varyingOutStr4; varyingOutStr4.f = 5; varyingOutStr4.g = &gout4; varyingOutStr4.h = -1; \
+		ALIGN StrI3 varyingOutStr5; varyingOutStr5.f = 5; varyingOutStr5.g = &gout5; varyingOutStr5.h = -1; \
+		ALIGN StrI3 varyingOutStr6; varyingOutStr6.f = 5; varyingOutStr6.g = &gout6; varyingOutStr6.h = -1; \
+		ALIGN StrI3 varyingOutStr7; varyingOutStr7.f = 5; varyingOutStr7.g = &gout7; varyingOutStr7.h = -1; \
  \
 		/* Vectorized output structs (equivalent to varyingOutStr0-varyingOutStr7) */ \
-		VECI gout_pkt_0 = _mm_set_epi32(33, 33, 33, 33); \
-		VECI gout_pkt_1 = _mm_set_epi32(33, 33, 33, 33); \
-		StrI3_pkt varyingOutStr_pkt_0; varyingOutStr_pkt_0.f = _mm_set_epi32(5, 5, 5, 5); varyingOutStr_pkt_0.g = &gout_pkt_0; varyingOutStr_pkt_0.h = _mm_set_epi32(-1, -1, -1, -1); \
-		StrI3_pkt varyingOutStr_pkt_1; varyingOutStr_pkt_1.f = _mm_set_epi32(5, 5, 5, 5); varyingOutStr_pkt_1.g = &gout_pkt_1; varyingOutStr_pkt_1.h = _mm_set_epi32(-1, -1, -1, -1); \
+		ALIGN VECI gout_pkt_0 = _mm_set_epi32(33, 33, 33, 33); \
+		ALIGN VECI gout_pkt_1 = _mm_set_epi32(33, 33, 33, 33); \
+		ALIGN StrI3_pkt varyingOutStr_pkt_0; varyingOutStr_pkt_0.f = _mm_set_epi32(5, 5, 5, 5); varyingOutStr_pkt_0.g = &gout_pkt_0; varyingOutStr_pkt_0.h = _mm_set_epi32(-1, -1, -1, -1); \
+		ALIGN StrI3_pkt varyingOutStr_pkt_1; varyingOutStr_pkt_1.f = _mm_set_epi32(5, 5, 5, 5); varyingOutStr_pkt_1.g = &gout_pkt_1; varyingOutStr_pkt_1.h = _mm_set_epi32(-1, -1, -1, -1); \
  \
 		testfn_scalar(out, &uniformOutStr, &varyingOutStr0, uniformInStr, varyingInStr0, 0, 1); \
 		testfn_scalar(out, &uniformOutStr, &varyingOutStr1, uniformInStr, varyingInStr1, 1, 1); \
@@ -387,11 +387,21 @@ typedef bool (*executeFnType)(float, float, float, float,
 		testfn_scalar(out, &uniformOutStr, &varyingOutStr7, uniformInStr, varyingInStr7, 6, 1); \
  \
 		/* Varying 'varyingInX' parameter, equivalent to 4th parameters of scalar calls */ \
-		VECI varyingInX0 = _mm_set_epi32(3, 2, 1, 0); \
-		VECI varyingInX1 = _mm_set_epi32(6, 5, 4, 7); \
+		ALIGN VECI varyingInX0 = _mm_set_epi32(3, 2, 1, 0); \
+		ALIGN VECI varyingInX1 = _mm_set_epi32(6, 5, 4, 7); \
  \
 		/* Uniform output array for vectorized calls */ \
-		ArrI8 out_pkt = { 13, 13, 13, 13, 13, 13, 13, 13 }; \
+		ALIGN ArrI8 out_pkt = { 13, 13, 13, 13, 13, 13, 13, 13 }; \
+ \
+		if (false) { \
+			printf("\nInputs:\n"); \
+			printf("uniform input: { %d %d %d }\n", uniformInStr.f, *(uniformInStr.g), uniformInStr.h); \
+			\
+			printf("input.f: %d %d %d %d %d %d %d %d\n", get(varyingInStr_pkt_0.f, 0), get(varyingInStr_pkt_0.f, 1), get(varyingInStr_pkt_0.f, 2), get(varyingInStr_pkt_0.f, 3), get(varyingInStr_pkt_1.f, 0), get(varyingInStr_pkt_1.f, 1), get(varyingInStr_pkt_1.f, 2), get(varyingInStr_pkt_1.f, 3)); \
+			printf("input.h: %d %d %d %d %d %d %d %d\n", get(varyingInStr_pkt_0.h, 0), get(varyingInStr_pkt_0.h, 1), get(varyingInStr_pkt_0.h, 2), get(varyingInStr_pkt_0.h, 3), get(varyingInStr_pkt_1.h, 0), get(varyingInStr_pkt_1.h, 1), get(varyingInStr_pkt_1.h, 2), get(varyingInStr_pkt_1.h, 3)); \
+			printf("input.g: %d %d %d %d %d %d %d %d\n", get(*varyingInStr_pkt_0.g, 0), get(*varyingInStr_pkt_0.g, 1), get(*varyingInStr_pkt_0.g, 2), get(*varyingInStr_pkt_0.g, 3), get(*varyingInStr_pkt_1.g, 0), get(*varyingInStr_pkt_1.g, 1), get(*varyingInStr_pkt_1.g, 2), get(*varyingInStr_pkt_1.g, 3)); \
+			printf("\n"); \
+		} \
  \
 		testfn_pkt(out_pkt, &uniformOutStr_pkt, &varyingOutStr_pkt_0, uniformInStr, varyingInStr_pkt_0, varyingInX0, 1); \
 		testfn_pkt(out_pkt, &uniformOutStr_pkt, &varyingOutStr_pkt_1, uniformInStr, varyingInStr_pkt_1, varyingInX1, 1); \

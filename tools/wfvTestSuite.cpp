@@ -151,7 +151,7 @@ int main(int argc, char** argv) {
 	const unsigned packetizationSize = use_avx ? 8 : 4;
 
 	Packetizer::Packetizer packetizer(*module,
-                                         LLVMWrapper::getContext(*module),
+                                         module->getContext(),
                                          simdWidth,
                                          packetizationSize,
                                          use_sse41,
@@ -493,7 +493,7 @@ int main(int argc, char** argv) {
 
 	// Compile and store function pointer to 'main()'.
 	// This takes ownership of the module
-	llvm::ExecutionEngine* engine = LLVMWrapper::createExecutionEngine(module);
+	llvm::ExecutionEngine* engine = LLVMWrapper::createExecutionEngine(module, use_avx);
 	std::cout << "JIT compiling test suite... ";
 	void* mainPtr = LLVMWrapper::getPointerToFunction(mainFn, engine);
 	if (!mainPtr) {

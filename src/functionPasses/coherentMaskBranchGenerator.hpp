@@ -223,13 +223,13 @@ private:
 			//match successor and end blocks to first and second path
 			BasicBlock* firstBlock = firstPath == 1 ? successorTrue : successorFalse;
 			BasicBlock* secondBlock = firstPath == 1 ? successorFalse : successorTrue;
-			DEBUG_PKT( outs() << "    firstBlock: " << firstBlock->getNameStr() << "\n"; );
-			DEBUG_PKT( outs() << "    secondBlock: " << secondBlock->getNameStr() << "\n"; );
+			DEBUG_PKT( outs() << "    firstBlock: " << firstBlock->getName() << "\n"; );
+			DEBUG_PKT( outs() << "    secondBlock: " << secondBlock->getName() << "\n"; );
 
 			BasicBlock* firstPathEndBlock = firstPath == 1 ? truePathEndBlock : falsePathEndBlock;
 			BasicBlock* secondPathEndBlock = firstPath == 1 ? falsePathEndBlock : truePathEndBlock;
-			DEBUG_PKT( outs() << "    firstPathEndBlock: " << firstPathEndBlock->getNameStr() << "\n"; );
-			DEBUG_PKT( outs() << "    secondPathEndBlock: " << secondPathEndBlock->getNameStr() << "\n"; );
+			DEBUG_PKT( outs() << "    firstPathEndBlock: " << firstPathEndBlock->getName() << "\n"; );
+			DEBUG_PKT( outs() << "    secondPathEndBlock: " << secondPathEndBlock->getName() << "\n"; );
 
 			//delete old edges
 			analysisResults->removeValueInfo(source->getTerminator());
@@ -531,7 +531,6 @@ private:
 				case Instruction::Br:          cost += 1; break; // weight conditional branches?
 				case Instruction::Switch:      cost += 4; break; // no idea
 				case Instruction::Invoke:      cost += 15; break; // no idea
-				case Instruction::Unwind:      cost += 0; break; // no idea
 				case Instruction::Unreachable: cost += 0; break; // no idea
 
 				// Standard binary operators...

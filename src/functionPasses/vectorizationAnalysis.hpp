@@ -75,7 +75,7 @@ public:
 						  bool* failedFlag,
 						  const bool verbose_flag=false,
 						  AnalysisResults* res=NULL) // if NULL, result is destroyed when analysis object is destroyed
-						  
+
 	: FunctionPass(ID),
 			mInfo(info),
 			source(sourceFunction),
@@ -147,7 +147,7 @@ public:
 
 		DEBUG_PKT( outs() << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 				<< "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; );
-		DEBUG_PKT( outs() << "analyzing function '" << source->getNameStr() <<
+		DEBUG_PKT( outs() << "analyzing function '" << source->getName() <<
 				"' for uniform, consecutive, and aligned values\n"; );
 		DEBUG_PKT( outs() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 				<< "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; );
@@ -231,7 +231,7 @@ public:
 		}
 	}
 
-	
+
 private:
 	const Packetizer::PacketizerInfo* mInfo;
 	Function* source;
@@ -1431,17 +1431,17 @@ private:
 		// Now mark all other instructions according to their dependencies.
 		//
 
-		DEBUG_PKT( outs() << "\nmarking instructions...\n"; );
-		for (std::set<Value*>::iterator it=workSet.begin(), E=workSet.end(); it!=E; ++it) {
-			Value* value = *it;
-			markConsecutiveAlignedValueAndOperands(value, markedValues, info);
-			assert (analysisResults->getValueInfo(value));
-			assert (analysisResults->getValueInfo(value)->alignmentInfo != AnalysisResults::ALIGN_NOT_INITIALIZED);
-			assert (analysisResults->getValueInfo(value)->alignmentInfo != AnalysisResults::ALIGN_UNKNOWN);
-			assert (analysisResults->getValueInfo(value)->indexInfo != AnalysisResults::INDEX_NOT_INITIALIZED);
-			assert (analysisResults->getValueInfo(value)->indexInfo != AnalysisResults::INDEX_UNKNOWN);
-			assert (!(analysisResults->getValueInfo(value)->indexInfo == AnalysisResults::INDEX_SAME && !analysisResults->isUniform(value)) && "value must not be VARYING / INDEX_SAME!");
-		}
+        DEBUG_PKT( outs() << "\nmarking instructions...\n"; );
+        for (std::set<Value*>::iterator it=workSet.begin(), E=workSet.end(); it!=E; ++it) {
+            Value* value = *it;
+            markConsecutiveAlignedValueAndOperands(value, markedValues, info);
+            assert (analysisResults->getValueInfo(value));
+            assert (analysisResults->getValueInfo(value)->alignmentInfo != AnalysisResults::ALIGN_NOT_INITIALIZED);
+            assert (analysisResults->getValueInfo(value)->alignmentInfo != AnalysisResults::ALIGN_UNKNOWN);
+            assert (analysisResults->getValueInfo(value)->indexInfo != AnalysisResults::INDEX_NOT_INITIALIZED);
+            assert (analysisResults->getValueInfo(value)->indexInfo != AnalysisResults::INDEX_UNKNOWN);
+            assert (!(analysisResults->getValueInfo(value)->indexInfo == AnalysisResults::INDEX_SAME && !analysisResults->isUniform(value)) && "value must not be VARYING / INDEX_SAME!");
+        }
 
 	}
 
@@ -1488,12 +1488,12 @@ private:
 			Value* preheaderVal = phi->getIncomingValueForBlock(preheaderBB);
 			markConsecutiveAlignedValueAndOperands(preheaderVal, markedValues, info);
 
-			ValueInfo* valInfo = analysisResults->getValueInfo(preheaderVal);
-			assert (valInfo);
-			assert (valInfo->indexInfo != AnalysisResults::INDEX_NOT_INITIALIZED);
-			assert (valInfo->alignmentInfo != AnalysisResults::ALIGN_NOT_INITIALIZED);
-			assert (valInfo->indexInfo != AnalysisResults::INDEX_UNKNOWN);
-			assert (valInfo->alignmentInfo != AnalysisResults::ALIGN_UNKNOWN);
+			ValueInfo* preheaderValInfo = analysisResults->getValueInfo(preheaderVal);
+			assert (preheaderValInfo);
+			assert (preheaderValInfo->indexInfo != AnalysisResults::INDEX_NOT_INITIALIZED);
+			assert (preheaderValInfo->alignmentInfo != AnalysisResults::ALIGN_NOT_INITIALIZED);
+			assert (preheaderValInfo->indexInfo != AnalysisResults::INDEX_UNKNOWN);
+			assert (preheaderValInfo->alignmentInfo != AnalysisResults::ALIGN_UNKNOWN);
 
 			// Mark the phi according to this predecessor, unless the phi is
 			// known to be VARYING and the predecessor is INDEX_SAME - this
@@ -1502,11 +1502,29 @@ private:
 			// NOTE: Unfortunately, marking the phi as INDEX_RANDOM  might
 			//       introduce some imprecision in cases where the other
 			//       incoming value is INDEX_CONSECUTIVE.
-			analysisResults->setIndexInfo(phi, valInfo->indexInfo);
-			analysisResults->setAlignmentInfo(phi, valInfo->alignmentInfo);
+            // NOTE: Only do this if the phi does not have a mark already (fixpoint iteration).
+            std::vector<IndexInfo>     iiVec;
+            std::vector<AlignmentInfo> aiVec;
+            iiVec.push_back(preheaderValInfo->indexInfo);
+			aiVec.push_back(preheaderValInfo->alignmentInfo);
+			ValueInfo* valInfo = analysisResults->getValueInfo(phi);
+			assert (valInfo);
+			if (valInfo->indexInfo != AnalysisResults::INDEX_NOT_INITIALIZED)
+            {
+                iiVec.push_back(valInfo->indexInfo);
+            }
+			if (valInfo->alignmentInfo != AnalysisResults::ALIGN_NOT_INITIALIZED);
+            {
+                aiVec.push_back(valInfo->alignmentInfo);
+            }
+
+			IndexInfo     ii = deriveIndexInfo(phi, iiVec);
+			AlignmentInfo ai = deriveAlignmentInfo(phi, aiVec);
+			analysisResults->setIndexInfo(phi, ii);
+			analysisResults->setAlignmentInfo(phi, ai);
 			DEBUG_PKT( outs() << "marked loop phi: " << *phi << " as "
-				<< AnalysisResults::getIndexInfoString(valInfo->indexInfo) << " / "
-				<< AnalysisResults::getAlignmentInfoString(valInfo->alignmentInfo) << "!\n"; );
+				<< AnalysisResults::getIndexInfoString(preheaderValInfo->indexInfo) << " / "
+				<< AnalysisResults::getAlignmentInfoString(preheaderValInfo->alignmentInfo) << "!\n"; );
 
 			markedValues.insert(phi);
 
@@ -1524,15 +1542,15 @@ private:
 
 			// If necessary, update marks of phi (if backedge-marks differ from
 			// preheader-marks).
-			std::vector<AlignmentInfo> aiVec;
-			std::vector<IndexInfo> iiVec;
-			iiVec.push_back(valInfo->indexInfo);
+            iiVec.clear();
+            aiVec.clear();
+            iiVec.push_back(preheaderValInfo->indexInfo);
+			aiVec.push_back(preheaderValInfo->alignmentInfo);
 			iiVec.push_back(analysisResults->getValueInfo(backedgeVal)->indexInfo);
-			aiVec.push_back(valInfo->alignmentInfo);
 			aiVec.push_back(analysisResults->getValueInfo(backedgeVal)->alignmentInfo);
 
-			IndexInfo ii = deriveIndexInfo(phi, iiVec);
-			AlignmentInfo ai = deriveAlignmentInfo(phi, aiVec);
+			ii = deriveIndexInfo(phi, iiVec);
+			ai = deriveAlignmentInfo(phi, aiVec);
 			analysisResults->setIndexInfo(phi, ii);
 			analysisResults->setAlignmentInfo(phi, ai);
 			DEBUG_PKT( outs() << "updated loop phi: " << *phi << " as "
@@ -1570,7 +1588,7 @@ private:
 
 		// Derive alignment and index info depending on instruction and marks of
 		// operands.
-		IndexInfo ii = deriveIndexInfo(valI, iiVec);
+		IndexInfo     ii = deriveIndexInfo(valI, iiVec);
 		AlignmentInfo ai = deriveAlignmentInfo(valI, aiVec);
 		analysisResults->setIndexInfo(valI, ii);
 		analysisResults->setAlignmentInfo(valI, ai);
@@ -1632,8 +1650,10 @@ private:
 			// Phi is aligned if all incoming values are aligned
 			case Instruction::PHI:
 			{
-				PHINode* phi = cast<PHINode>(inst);
-				for (unsigned i=0, e=phi->getNumIncomingValues(); i!=e; ++i) {
+                // NOTE: We must only iterate over the number of incoming values (in the
+                //       vector), because we also call this function before both edges
+                //       have been visited.
+				for (unsigned i=0, e=aiVec.size(); i!=e; ++i) {
 					// We ignored basic blocks while collecting indexInfo,
 					// so now we can directly index iiVec per incoming value.
 					if (aiVec[i] != AnalysisResults::ALIGN_TRUE) return AnalysisResults::ALIGN_FALSE;
@@ -1818,11 +1838,13 @@ private:
 
 			case Instruction::PHI:
 			{
-				PHINode* phi = cast<PHINode>(inst);
 				bool allSame = true;
 				bool allConsecutive = true;
 				bool allStrided = true;
-				for (unsigned i=0, e=phi->getNumIncomingValues(); i!=e; ++i) {
+                // NOTE: We must only iterate over the number of incoming values (in the
+                //       vector), because we also call this function before both edges
+                //       have been visited.
+				for (unsigned i=0, e=iiVec.size(); i!=e; ++i) {
 					// We ignored basic blocks while collecting indexInfo,
 					// so now we can directly index iiVec per incoming value.
 					allSame &= iiVec[i] == AnalysisResults::INDEX_SAME;

@@ -119,7 +119,7 @@ public:
 		assert (!maskGraph->hasCompoundMasks() && "mask operation insertion not complete!");
 
 		DEBUG_PKT( outs() << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; );
-		DEBUG_PKT( outs() << "linearizing CFG of function '" << f.getNameStr() << "'...\n"; );
+		DEBUG_PKT( outs() << "linearizing CFG of function '" << f.getName() << "'...\n"; );
 		DEBUG_PKT( outs() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n"; );
 
 		try {
@@ -264,7 +264,7 @@ private:
 				DEBUG_PKT ( outs() << "    next block is target block of "
 						"uniform conditional branch!\n"; );
 				uniformTargetBlocks.erase(BB2);
-
+#if 0
 				// Here we know which block is the final join point of the
 				// uniform conditional branch.
 				BasicBlock* endBB;
@@ -281,6 +281,7 @@ private:
 					endBB = br->getSuccessor(0);
 				}
 				//DEBUG_PKT( replaceSelectsByPhiNodes(endBB); );
+#endif
 				continue;
 			}
 
@@ -288,7 +289,7 @@ private:
 			// -> Replace branches.
 
 			DEBUG_PKT ( outs() << "    back-edge-type of block '"
-					<< BB1->getNameStr() << "': "
+					<< BB1->getName() << "': "
 					<< getBackedgeTypeString(backedgeType) << "\n"; );
 
 			switch (backedgeType) {
@@ -349,7 +350,7 @@ private:
 			}
 		}
 	}
-	
+
 
 	inline BackedgeType getBackedgeType(BasicBlock* block) {
 		Loop* loop = loopInfo->getLoopFor(block);
@@ -366,7 +367,7 @@ private:
 
 	std::list<BasicBlock*> findLinearizedBlockOrdering(Function* f) {
 		DEBUG_PKT( outs() << "\n-----------------------------------------------------\n"; );
-		DEBUG_PKT( outs() << "determining linearization of function '" << f->getNameStr() << "'...\n"; );
+		DEBUG_PKT( outs() << "determining linearization of function '" << f->getName() << "'...\n"; );
 
 		BasicBlock* returnBlock = findReturnBlock(f);
 		assert (loopInfo->getLoopDepth(returnBlock) == 0 && "return-block of a function must not be inside a loop!");
@@ -383,7 +384,7 @@ private:
 			outs() << "\nprinting list of blocks outside of all loops:\n";
 			for (std::list<BasicBlock*>::iterator it=list.begin(), E=list.end(); it!=E; ++it) {
 				BasicBlock* BB = *it;
-				outs() << "  * " << BB->getNameStr() << " (" << loopInfo->getLoopDepth(BB) << ")\n";
+				outs() << "  * " << BB->getName() << " (" << loopInfo->getLoopDepth(BB) << ")\n";
 			}
 			outs() << "\n";
 		);
@@ -416,7 +417,7 @@ private:
 			for (std::list<BasicBlock*>::iterator it=list.begin(), E=list.end(); it!=E; ) {
 				if (loop->getLoopPreheader() == *it) {
 					assert (!preheaderFound && "loop cannot have more than one pre-header!");
-					//DEBUG_PKT ( outs() << "  preheader found (1): " << (*it)->getNameStr() << "\n"; );
+					//DEBUG_PKT ( outs() << "  preheader found (1): " << (*it)->getName() << "\n"; );
 					list.insert(++it, loopLists[i].begin(), loopLists[i].end());
 					preheaderFound = true;
 					DEBUG_PKT( outs() << "inserted top-level-loop list " << i << "!\n"; );
@@ -435,7 +436,7 @@ private:
 
 		assert (verified && "verification of linearized block ordering failed!");
 
-		DEBUG_PKT( outs() << "linearization determined for function '" << f->getNameStr() << "'.\n"; );
+		DEBUG_PKT( outs() << "linearization determined for function '" << f->getName() << "'.\n"; );
 		DEBUG_PKT( printLinearizedBlockList(outs(), list); );
 		DEBUG_PKT( outs() << "-----------------------------------------------------\n"; );
 		return list;
@@ -457,7 +458,7 @@ private:
 		//IFF it does not belong to a loop
 		if (loopInfo->getLoopDepth(block) == 0) {
 			list.push_back(block);
-			DEBUG_PKT( outs() << "      added block: " << block->getNameStr() << "\n"; );
+			DEBUG_PKT( outs() << "      added block: " << block->getName() << "\n"; );
 		}
 	}
 
@@ -501,7 +502,7 @@ private:
 			for (unsigned i=0; i<loop->getSubLoops().size(); ++i) {
 				outs() << "  sub-loop " << i << "\n";
 				for (std::list<BasicBlock*>::iterator it=subLoopLists[i].begin(); it!=subLoopLists[i].end(); ++it) {
-					outs() << "   * " << (*it)->getNameStr() << "\n";
+					outs() << "   * " << (*it)->getName() << "\n";
 				}
 			}
 		);
@@ -517,7 +518,7 @@ private:
 			bool subLoopEntryFound = false;
 			for (std::list<BasicBlock*>::iterator it=loopList.begin(), E=loopList.end(); it!=E; ) {
 				if (subLoop->getLoopPreheader() == *it) {
-					//DEBUG_PKT ( outs() << "  preheader found: " << (*it)->getNameStr() << "\n"; );
+					//DEBUG_PKT ( outs() << "  preheader found: " << (*it)->getName() << "\n"; );
 					assert (!subLoopEntryFound && "block cannot be preheader of several sub-loops!");
 					loopList.insert(++it, subLoopLists[j].begin(), subLoopLists[j].end());
 					subLoopEntryFound = true;
@@ -531,7 +532,7 @@ private:
 		DEBUG_PKT(
 			if (!loopList.empty()) outs() << "\nprinting list of merged loop:\n";
 			for (std::list<BasicBlock*>::iterator it=loopList.begin(); it!=loopList.end(); ++it) {
-				outs() << "  * " << (*it)->getNameStr() << "\n";
+				outs() << "  * " << (*it)->getName() << "\n";
 			}
 			outs() << "\n";
 		);
@@ -550,7 +551,7 @@ private:
 		if (visitedBlocks.find(block) != visitedBlocks.end()) return;
 		visitedBlocks.insert(block);
 
-		//DEBUG_PKT ( outs() << "    recFindLoopLinearization(" << block->getNameStr() << ", " << loop->getLoopDepth() << ")\n"; );
+		//DEBUG_PKT ( outs() << "    recFindLoopLinearization(" << block->getName() << ", " << loop->getLoopDepth() << ")\n"; );
 
 		//recurse into all predecessors that belong to the same loop
 		//and are not yet in the list
@@ -565,7 +566,7 @@ private:
 		//IFF it belongs to current loop (excluding sub-loops!)
 		if (loopInfo->getLoopDepth(block) == loop->getLoopDepth()) {
 			list.push_back(block);
-			DEBUG_PKT( outs() << "      added loop-block: " << block->getNameStr() << "\n"; );
+			DEBUG_PKT( outs() << "      added loop-block: " << block->getName() << "\n"; );
 		}
 	}
 
@@ -577,7 +578,7 @@ private:
 				BasicBlock* BB2 = *it2;
 				if (it2 == it) continue;
 				if (BB == BB2) {
-					errs() << "ERROR: block '" << BB->getNameStr() << "' appears in list more than once!\n";
+					errs() << "ERROR: block '" << BB->getName() << "' appears in list more than once!\n";
 					verified = false;
 				}
 			}
@@ -596,7 +597,7 @@ private:
 				BasicBlock* BB2 = *it2;
 				if (it2 == it) continue;
 				if (BB == BB2) {
-					errs() << "ERROR: block '" << BB->getNameStr() << "' appears in loop-list more than once!\n";
+					errs() << "ERROR: block '" << BB->getName() << "' appears in loop-list more than once!\n";
 					verified = false;
 				}
 			}
@@ -608,7 +609,7 @@ private:
 				outs() << "loop->getBlocks().size(): " << loop->getBlocks().size() << "\n";
 				outs() << "loop-blocks:\n";
 				for (std::vector<BasicBlock*>::const_iterator it=loop->getBlocks().begin(); it!=loop->getBlocks().end(); ++it) {
-					outs() << "  * " << (*it)->getNameStr() << "\n";
+					outs() << "  * " << (*it)->getName() << "\n";
 				}
 			);
 			verified = false;
@@ -624,7 +625,7 @@ private:
 		o << "\nlinearized order of blocks:\n";
 		for (std::list<BasicBlock*>::const_iterator it=list.begin(), E=list.end(); it!=E; ++it) {
 			BasicBlock* BB = *it;
-			o << "  * " << BB->getNameStr() << " (" << loopInfo->getLoopDepth(BB) << ")\n";
+			o << "  * " << BB->getName() << " (" << loopInfo->getLoopDepth(BB) << ")\n";
 		}
 		o << "\n";
 	}
@@ -670,7 +671,7 @@ private:
 
 			SelectInst* sel = cast<SelectInst>(I++);
 			// ignore result selects
-			if (std::strstr(sel->getNameStr().c_str(), "result.vec") != 0) continue;
+			if (std::strstr(sel->getName().str().c_str(), "result.vec") != 0) continue;
 
 
 			Value* trueVal = sel->getTrueValue();

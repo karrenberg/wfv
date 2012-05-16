@@ -219,7 +219,7 @@ public:
 		for (unsigned i=0, e=incomingMasks.size(); i<e; ++i) {
 			o << "[ ";
 			if (!incomingMasks[i].first) o << "NULL"; else incomingMasks[i].first->print(o); //o << incomingMasks[i].first->getID();
-			if (!incomingMasks[i].second) o << ", NULL ]"; else o << ", " << incomingMasks[i].second->getNameStr() << " ]"; //o << ", " << incomingMasks[i].second->getNameStr() << " ]";
+			if (!incomingMasks[i].second) o << ", NULL ]"; else o << ", " << incomingMasks[i].second->getName() << " ]"; //o << ", " << incomingMasks[i].second->getName() << " ]";
 			if (i+1 < e) o << ", ";
 		}
 		o << " )";
@@ -982,7 +982,7 @@ public:
 
 	void print(raw_ostream& o) const {
 		assert (mBlock);
-		o << "Node: " << mBlock->getNameStr() << "\n";
+		o << "Node: " << mBlock->getName() << "\n";
 		if (!mEntryMask) o << "  entry mask: NULL\n";
 		else {
 			o << "  entry mask: "; mEntryMask->print(o); o << "\n";
@@ -1003,20 +1003,20 @@ public:
 		if (mPreds.empty()) o << "  no predecessors!\n";
 		else {
 			for (unsigned i=0, e=mPreds.size(); i<e; ++i) {
-				o << "  predecessor " << i << ": " << mPreds[i]->getBlock()->getNameStr() << "\n";
+				o << "  predecessor " << i << ": " << mPreds[i]->getBlock()->getName() << "\n";
 			}
 		}
 
 		if (hasExitEdge()) {
 			if (!mSuccTrue) o << "  successor T: NULL\n";
 			else {
-				o << "  successor T: " << mSuccTrue->getBlock()->getNameStr() << "\n";
+				o << "  successor T: " << mSuccTrue->getBlock()->getName() << "\n";
 			}
 		}
 		if (hasConditionalExit()) {
 			if (!mSuccFalse) o << "  successor F: NULL\n";
 			else {
-				o << "  successor F: " << mSuccFalse->getBlock()->getNameStr() << "\n";
+				o << "  successor F: " << mSuccFalse->getBlock()->getName() << "\n";
 			}
 		}
 	}
@@ -1044,7 +1044,7 @@ public:
 		const bool res = x && a && b && c && d && e && f && g && h && i && j;
 		if (!res) {
 			errs() << "\nERROR: verification of mask graph node failed!\n";
-			if (mBlock) errs() << "block: " << mBlock->getNameStr() << "\n";
+			if (mBlock) errs() << "block: " << mBlock->getName() << "\n";
 			if (!mEntryMask) errs() << "  entry mask is NULL!\n";
 			if (!a) errs() << "  exit mask true is NULL!\n";
 			if (!b) errs() << "  exit mask false is NULL!\n";
@@ -1193,7 +1193,7 @@ public:
 	}
 	inline void print(raw_ostream& o) const {
 		assert (block && target);
-		o << "Loop Exit '" << block->getNameStr() << "' -> '" << target->getNameStr() << "':\n";
+		o << "Loop Exit '" << block->getName() << "' -> '" << target->getName() << "':\n";
 		o << "  innermost loop: "; if (!innermostLoop) o << "NULL!\n"; else innermostLoop->print(o);
 		o << "  mask update operation: "; if (!maskUpdateOp) o << "NULL!\n"; else { maskUpdateOp->print(o); o << "\n"; }
 		o << "  exited loops & corresponding loop mask phis:\n";
@@ -1275,7 +1275,7 @@ public:
 		assert (!loopExits.empty());
 		o << "  loop exits:\n";
 		for (std::set<BasicBlock*>::const_iterator BB=loopExits.begin(), BBE=loopExits.end(); BB!=BBE; ++BB) {
-			o << "   * " << (*BB)->getNameStr() << "\n";
+			o << "   * " << (*BB)->getName() << "\n";
 		}
 
 		if (!nestedLoopNodes.empty()) o << "\n  nested loops:\n";
@@ -1727,7 +1727,7 @@ public:
 		assert (mInitialized && source && dir);
 		MaskGraphType::const_iterator node = find(source);
 		if (node == mMaskGraph.end()) {
-			//errs() << "ERROR: getExitMaskInDir(): source block '" << source->getNameStr() << "'\n";
+			//errs() << "ERROR: getExitMaskInDir(): source block '" << source->getName() << "'\n";
 			return NULL;
 		}
 
@@ -1766,7 +1766,7 @@ public:
 
 			const bool nodeVerified = it->second->verify();
 			if (!nodeVerified)
-				errs() << "ERROR: verification of node of block '" << it->first->getNameStr() << "' failed!\n";
+				errs() << "ERROR: verification of node of block '" << it->first->getName() << "' failed!\n";
 
 			verified &= nodeVerified;
 		}
@@ -2142,11 +2142,11 @@ MaskNodeReference::MaskNodeReference(MaskGraphNode* n, MaskGraphNode* dir) : Mas
 }
 void MaskNodeReference::print(raw_ostream& o) const {
 	o << getID() << ": REF( ";
-	if (referencesEntryMask()) o << "entry (" << node->getBlock()->getNameStr() << ")";
-	else if (referencesExitMaskTrue()) o << "exit true (" << node->getBlock()->getNameStr() << ")";
-	else if (referencesExitMaskFalse()) o << "exit false (" << node->getBlock()->getNameStr() << ")";
-	else if (referencesLoopExitPhi()) o << "loop exit phi (" << node->getBlock()->getNameStr() << ")";
-	else o << "none (" << node->getBlock()->getNameStr() << ")";
+	if (referencesEntryMask()) o << "entry (" << node->getBlock()->getName() << ")";
+	else if (referencesExitMaskTrue()) o << "exit true (" << node->getBlock()->getName() << ")";
+	else if (referencesExitMaskFalse()) o << "exit false (" << node->getBlock()->getName() << ")";
+	else if (referencesLoopExitPhi()) o << "loop exit phi (" << node->getBlock()->getName() << ")";
+	else o << "none (" << node->getBlock()->getName() << ")";
 	o << " )";
 }
 

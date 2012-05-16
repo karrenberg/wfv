@@ -110,7 +110,7 @@ public:
 		maskGraph             = getAnalysis<MaskGenerator>().getMaskGraph();
 
 		DEBUG_PKT( outs() << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; );
-		DEBUG_PKT( outs() << "generating selects for function '" << F.getNameStr() << "'...\n"; );
+		DEBUG_PKT( outs() << "generating selects for function '" << F.getName() << "'...\n"; );
 		DEBUG_PKT( outs() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n"; );
 
 		try {
@@ -152,7 +152,7 @@ public:
 	//       break the SSA dominance property (masks/selects that rely on CFG
 	//       linearization).
 	inline bool verify(const Function& f) const {
-		DEBUG_PKT( outs() << "verifying generation of selects for function '" << f.getNameStr() << "'... "; );
+		DEBUG_PKT( outs() << "verifying generation of selects for function '" << f.getName() << "'... "; );
 		bool verified = true;
 		// TODO: implement
 //		for (Function::const_iterator BB=f.begin(); BB!=f.end(); ++BB) {
@@ -219,7 +219,7 @@ public:
 
 		return it->second->incomingBlockFalse;
 	}
-	
+
 
 private:
 	bool* failed;
@@ -289,7 +289,7 @@ private:
 				}
 			}
 
-			DEBUG_PKT( outs() << "\n  generating selects for block '" << BB->getNameStr() << "'...\n"; );
+			DEBUG_PKT( outs() << "\n  generating selects for block '" << BB->getName() << "'...\n"; );
 			for (BasicBlock::iterator I=BB->begin(); I!=BB->end(); ) {
 				if (!isa<PHINode>(I)) break; //it is guaranteed that no phis can follow
 				assert (!analysisResults->isMask(I) && "there is a mask phi where there should not be one");
@@ -297,7 +297,7 @@ private:
 
 				changed |= generateSelectFromPhi(cast<PHINode>(I++));
 			}
-			DEBUG_PKT( outs() << "  select-generation for block '" << BB->getNameStr() << "' finished.\n"; );
+			DEBUG_PKT( outs() << "  select-generation for block '" << BB->getName() << "' finished.\n"; );
 		}
 		return changed;
 	}
@@ -477,7 +477,7 @@ private:
 	//this function calls 'generateMultipleExitLoopSelects()' for each loop
 	//REQUIRES: loopInfo
 	bool generateLoopSelects(Function& f) {
-		DEBUG_PKT( outs() << "\n  generating selects for loops of function " << f.getNameStr() << "... \n"; );
+		DEBUG_PKT( outs() << "\n  generating selects for loops of function " << f.getName() << "... \n"; );
 
 		if (loopInfo->empty()) {
 			DEBUG_PKT( outs() << "    no loops found in function!\n"; );
@@ -500,7 +500,7 @@ private:
 			DEBUG_PKT(
 				outs() << "\nExiting blocks of top-level loop "; (*L)->print(outs(), (*L)->getLoopDepth());
 				for (SmallVector<BasicBlock*, 4>::iterator it=exitingBlocks->begin(); it!=exitingBlocks->end(); ++it) {
-					outs() << "  * " << (*it)->getNameStr() << "\n";
+					outs() << "  * " << (*it)->getName() << "\n";
 				}
 			);
 			changed |= generateMultipleExitLoopSelects(*L, exitingBlocks);
@@ -639,7 +639,7 @@ private:
 			DEBUG_PKT(
 				outs() << "\nExiting blocks of nested loop "; (*SL)->print(outs(), (*SL)->getLoopDepth());
 				for (SmallVectorImpl<BasicBlock*>::iterator it=exitingBlocksSL->begin(); it!=exitingBlocksSL->end(); ++it) {
-					outs() << "  * " << (*it)->getNameStr() << "\n";
+					outs() << "  * " << (*it)->getName() << "\n";
 				}
 			);
 			changed |= generateMultipleExitLoopSelects(*SL, exitingBlocksSL);
@@ -658,7 +658,7 @@ private:
 		Value* combinedExitMask = NULL;
 		for (SmallVector<BasicBlock*, 4>::iterator it=exitingBlocks->begin(); it!=exitingBlocks->end(); ++it) {
 			BasicBlock* curExitBB = *it;
-			DEBUG_PKT( outs() << "  combining with exit mask of block '" << curExitBB->getNameStr() << "'\n"; );
+			DEBUG_PKT( outs() << "  combining with exit mask of block '" << curExitBB->getName() << "'\n"; );
 
 			//find out mask of loop exit edge
 			assert (isa<BranchInst>(curExitBB->getTerminator()) && cast<BranchInst>(curExitBB->getTerminator())->isConditional());
@@ -712,7 +712,7 @@ private:
 
 			// Make sure we do not blend result vectors more than once.
 			if (SelectInst* sel = dyn_cast<SelectInst>(liveValue)) {
-				if (std::strstr(sel->getNameStr().c_str(), "result.vec") != 0) continue;
+				if (std::strstr(sel->getName().str().c_str(), "result.vec") != 0) continue;
 			}
 
 #ifdef PKT_FIXME
@@ -919,7 +919,7 @@ private:
 
 	//TODO: replace substring-matching...
 	inline bool isExitMaskPhi(PHINode* phi) {
-		return (std::strstr(phi->getNameStr().c_str(), "loop.exit.mask") != 0);
+		return (std::strstr(phi->getName().str().c_str(), "loop.exit.mask") != 0);
 	}
 
 	// TODO: This is not the right place for this!

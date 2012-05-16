@@ -430,11 +430,11 @@ inline void inlineFunctionCalls(Function* f) {
                     continue;
                 }
                 if (callee->getAttributes().hasAttrSomewhere(Attribute::NoInline)) {
-                    //DEBUG_OPT( outs() << "    function '" << callee->getNameStr() << "' has attribute 'no inline', ignored call!\n"; )
+                    //DEBUG_OPT( outs() << "    function '" << callee->getName() << "' has attribute 'no inline', ignored call!\n"; )
                     continue;
                 }
 
-                const std::string calleeName = callee->getNameStr(); //possibly deleted by InlineFunction()
+                const std::string calleeName = callee->getName(); //possibly deleted by InlineFunction()
 
 				InlineFunctionInfo IFI(NULL, NULL); //new TargetData(mod));
                 blockChanged = InlineFunction(call, IFI);
@@ -685,8 +685,10 @@ CallInst* insertPrintf(const std::string& message, Value* value, const bool endL
 
 	Function* func_printf =  mod->getFunction("printf");
 
-	if (!func_printf) {
-		PointerType* PointerTy_6 = PointerType::get(IntegerType::get(mod->getContext(), 8), 0);
+	if (!func_printf)
+    {
+		PointerType* PointerTy_6 = PointerType::get(
+                IntegerType::get(mod->getContext(), 8), 0);
 
 		std::vector<Type*>FuncTy_10_args;
 		FuncTy_10_args.push_back(PointerTy_6);
@@ -700,50 +702,61 @@ CallInst* insertPrintf(const std::string& message, Value* value, const bool endL
 				/*Linkage=*/GlobalValue::ExternalLinkage,
 				/*Name=*/"printf", mod); // (external, no body)
 		func_printf->setCallingConv(CallingConv::C);
-		AttrListPtr func_printf_PAL;
-		{
-			SmallVector<AttributeWithIndex, 4> Attrs;
-			AttributeWithIndex PAWI;
-			PAWI.Index = 1U; PAWI.Attrs = 0  | Attribute::NoAlias | Attribute::NoCapture;
-			Attrs.push_back(PAWI);
-			PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind;
-			Attrs.push_back(PAWI);
-			func_printf_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-
-		}
-		func_printf->setAttributes(func_printf_PAL);
+        // Disabled due to weird compilation error.
+//        AttrListPtr func_printf_PAL;
+//        {
+//            SmallVector<AttributeWithIndex, 4> Attrs;
+//            AttributeWithIndex PAWI;
+//            PAWI.Index = 1U; PAWI.Attrs = 0  | Attribute::NoCapture;
+//            Attrs.push_back(PAWI);
+//            PAWI.Index = 4294967295U; PAWI.Attrs = 0  | Attribute::NoUnwind;
+//            Attrs.push_back(PAWI);
+//            func_printf_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
+//        }
+//        func_printf->setAttributes(func_printf_PAL);
 	}
 
 	const bool valueIsVector = value->getType()->isVectorTy();
-	const unsigned vectorSize = valueIsVector ? cast<VectorType>(value->getType())->getNumElements() : 0;
+
+	const unsigned vectorSize = valueIsVector ?
+        cast<VectorType>(value->getType())->getNumElements() :
+        0;
+
 	const unsigned stringSize = message.length() +
 		(valueIsVector ? vectorSize*2 : 2) +
 		(valueIsVector ? vectorSize-1 : 0) +
 		(endLine ? 2 : 1) +
 		7;
-	ArrayType* ArrayTy_0 = ArrayType::get(IntegerType::get(mod->getContext(), 8), stringSize);
-	GlobalVariable* gvar_array__str = new GlobalVariable(/*Module=*/*mod,
-			/*Type=*/ArrayTy_0,
-			/*isConstant=*/true,
-			/*Linkage=*/GlobalValue::PrivateLinkage,
-			/*Initializer=*/0, // has initializer, specified below
-			/*Name=*/".str");
+
+	ArrayType* ArrayTy_0 = ArrayType::get(IntegerType::get(mod->getContext(), 8),
+                                          stringSize);
+	GlobalVariable* gvar_array__str =
+            new GlobalVariable(/*Module=*/*mod,
+                               /*Type=*/ArrayTy_0,
+                               /*isConstant=*/true,
+                               /*Linkage=*/GlobalValue::PrivateLinkage,
+                               /*Initializer=*/0, // has initializer, specified below
+                               /*Name=*/".str");
 	gvar_array__str->setAlignment(1);
 
 	// Constant Definitions
 	std::string str = "";
-	switch (value->getType()->getTypeID()) {
+	switch (value->getType()->getTypeID())
+    {
 		case Type::IntegerTyID : str = "%d"; break;
 		case Type::FloatTyID   : str = "%f"; break;
 		case Type::PointerTyID : str = "%x"; break;
-		case Type::VectorTyID  : {
+		case Type::VectorTyID  :
+        {
 			std::string tmp;
-			switch (value->getType()->getContainedType(0)->getTypeID()) {
+			switch (value->getType()->getContainedType(0)->getTypeID())
+            {
 				case Type::IntegerTyID : tmp = "%d"; break;
 				case Type::FloatTyID   : tmp = "%f"; break;
 				default                : tmp = "%x"; break;
 			}
-			for (unsigned i=0; i<vectorSize; ++i) {
+			for (unsigned i=0; i<vectorSize; ++i)
+            {
 				if (i != 0) str += " ";
 				str += tmp;
 			}
@@ -754,12 +767,15 @@ CallInst* insertPrintf(const std::string& message, Value* value, const bool endL
 
 	std::stringstream sstr;
 	sstr << "DEBUG: " << message << str << (endLine ? "\x0A" : "");
-	Constant* const_array_11 = ConstantArray::get(mod->getContext(), sstr.str(), true);
+	Constant* const_array_11 = ConstantDataArray::getString(mod->getContext(), sstr.str(), true);
 	std::vector<Constant*> const_ptr_17_indices;
-	ConstantInt* const_int64_18 = ConstantInt::get(mod->getContext(), APInt(64, StringRef("0"), 10));
+	ConstantInt* const_int64_18 = ConstantInt::get(mod->getContext(),
+                                                   APInt(64, StringRef("0"), 10));
 	const_ptr_17_indices.push_back(const_int64_18);
 	const_ptr_17_indices.push_back(const_int64_18);
-	Constant* const_ptr_17 = ConstantExpr::getGetElementPtr(gvar_array__str, ArrayRef<Constant*>(const_ptr_17_indices));
+	Constant* const_ptr_17 =
+            ConstantExpr::getGetElementPtr(gvar_array__str,
+                                           ArrayRef<Constant*>(const_ptr_17_indices));
 
 	// Global Variable Definitions
 	gvar_array__str->setInitializer(const_array_11);
@@ -767,17 +783,31 @@ CallInst* insertPrintf(const std::string& message, Value* value, const bool endL
 
 	std::vector<Value*> int32_51_params;
 	int32_51_params.push_back(const_ptr_17);
-	if (valueIsVector) {
-		for (unsigned i=0; i<vectorSize; ++i) {
-			ExtractElementInst* ei = ExtractElementInst::Create(value, ConstantInt::get(mod->getContext(), APInt(32, i)), "printfElem", insertBefore);
+
+    if (valueIsVector)
+    {
+		for (unsigned i=0; i<vectorSize; ++i)
+        {
+			ExtractElementInst* ei =
+                    ExtractElementInst::Create(value,
+                                               ConstantInt::get(mod->getContext(), APInt(32, i)),
+                                               "printfElem",
+                                               insertBefore);
 			int32_51_params.push_back(ei);
 		}
-	} else {
+	}
+    else
+    {
 		int32_51_params.push_back(value);
 	}
-	CallInst* int32_51 = CallInst::Create(func_printf, ArrayRef<Value*>(int32_51_params), "", insertBefore);
+
+	CallInst* int32_51 = CallInst::Create(func_printf,
+                                          ArrayRef<Value*>(int32_51_params),
+                                          "",
+                                          insertBefore);
 	return int32_51;
 }
+
 
 
 } // namespace Packetizer

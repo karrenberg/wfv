@@ -116,7 +116,7 @@ public:
 		const MaskGraph& oldMaskGraph = *getAnalysis<MaskGenerator>().getMaskGraph();
 
 		DEBUG_PKT( outs() << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; );
-		DEBUG_PKT( outs() << "packetizing function '" << source->getNameStr() << "'...\n"; );
+		DEBUG_PKT( outs() << "packetizing function '" << source->getName() << "'...\n"; );
 		DEBUG_PKT( outs() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n"; );
 
 		try {
@@ -136,7 +136,7 @@ public:
 		}
 
 		DEBUG_PKT( outs() << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; );
-		DEBUG_PKT( outs() << "packetization of function '" << source->getNameStr() << "' finished!\n"; );
+		DEBUG_PKT( outs() << "packetization of function '" << source->getName() << "' finished!\n"; );
 		DEBUG_PKT( print(outs()); );
 		DEBUG_PKT( outs() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n"; );
 
@@ -218,16 +218,16 @@ private:
 	 * @param extF the externally declared function that is replaced by the generated one
 	 **/
 	bool packetizeFunction(const Function* f, Function* f_SIMD, const MaskGraph& oldMaskGraph) {
-		DEBUG_PKT( outs() << "\npacketizing function '" << f->getNameStr()
+		DEBUG_PKT( outs() << "\npacketizing function '" << f->getName()
 				<< "' in module '" << mInfo->mModule->getModuleIdentifier() << "'... \n\n"; );
 
-		const std::string functionName = f->getNameStr();
+		const std::string functionName = f->getName();
 
 		ValueToValueMapTy valueMap;
 		Function::arg_iterator destI = f_SIMD->arg_begin();
 		for (Function::const_arg_iterator I = f->arg_begin(), E = f->arg_end(); I != E; ++I) {
 			if (valueMap.count(I) == 0) {     // Is this argument preserved?
-				destI->setName(I->getNameStr()); // Copy the name over...
+				destI->setName(I->getName()); // Copy the name over...
 				valueMap[I] = destI++;        // Add mapping to ValueMap
 			}
 		}
@@ -238,8 +238,27 @@ private:
 
 		DEBUG_PKT( verifyFunction(*f); );
 
+		// FIXME: This temporary declaration is only required to retain the attributes of f_SIMD.
+		//        During CloneFunctionInto(), attributes are overwritten with those from f, which
+		//        may lead to crashes due to wrong alignment of scalar byval struct parameters.
+		//        The only thing that currently (3.2svn, 2012-05-16) works is copyAttributesFrom(),
+		//        setAttributes() ignores alignment, removeAttr()/addAttr() fire assertions when
+		//        attempting to modify alignment.
+		Function* tmpF = Function::Create(f_SIMD->getFunctionType(), GlobalValue::ExternalLinkage, f_SIMD->getName().str()+".tmp", f_SIMD->getParent());
+		tmpF->setCallingConv(f_SIMD->getCallingConv());
+		tmpF->setAttributes(f_SIMD->getAttributes());
+		tmpF->setAlignment(f_SIMD->getAlignment());
+		tmpF->setLinkage(f_SIMD->getLinkage());
+
 		//clone without optimizing (need exactly the same function for mask-mapping)
 		CloneFunctionInto(f_SIMD, f, valueMap, false, returns, nameSuffix, &newFInfo);
+
+		// Set all properties of the simd function again.
+		f_SIMD->setCallingConv(tmpF->getCallingConv());
+		f_SIMD->copyAttributesFrom(tmpF);
+		f_SIMD->setAlignment(tmpF->getAlignment());
+		f_SIMD->setLinkage(tmpF->getLinkage());
+		tmpF->eraseFromParent();
 
 		DEBUG_PKT( outs() << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; );
 		DEBUG_PKT( outs() << "mapping masks...\n"; );
@@ -516,7 +535,7 @@ private:
 			assert (BB->getTerminator());
 			if (!isa<BranchInst>(BB->getTerminator())) continue;
 			BranchInst* brInst = cast<BranchInst>(BB->getTerminator());
-			DEBUG_PKT( outs() << "  adjusting block '" << BB->getNameStr() << "' with branch: " << *brInst << "\n"; );
+			DEBUG_PKT( outs() << "  adjusting block '" << BB->getName() << "' with branch: " << *brInst << "\n"; );
 
 			//ignore this block if its exit-branch is either unconditional or its condition is of scalar type
 			if (brInst->isUnconditional()) {
@@ -579,11 +598,11 @@ private:
 		// Verify.
 		// Do not verify vectorization analysis -> we don't care anymore here,
 		// plus it is only constants that are missing a mark.
-		DEBUG_PKT( Packetizer::writeFunctionToFile(f_SIMD, f_SIMD->getNameStr()+".pkt.unopt.ll"); );
+		DEBUG_PKT( Packetizer::writeFunctionToFile(f_SIMD, f_SIMD->getName().str()+".pkt.unopt.ll"); );
 		DEBUG_PKT( verifyFunction(*f_SIMD); );
 
-		DEBUG_PKT( Packetizer::writeFunctionToFile(f_SIMD, f_SIMD->getNameStr()+".pkt.ll"); );
-		DEBUG_PKT( Packetizer::writeModuleToFile(f_SIMD->getParent(), f_SIMD->getNameStr()+".mod.pkt.ll"); );
+		DEBUG_PKT( Packetizer::writeFunctionToFile(f_SIMD, f_SIMD->getName().str()+".pkt.ll"); );
+		DEBUG_PKT( Packetizer::writeModuleToFile(f_SIMD->getParent(), f_SIMD->getName().str()+".mod.pkt.ll"); );
 
 		DEBUG_PKT( outs() << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; );
 		DEBUG_PKT( outs() << "generation of SIMD-function finished!\n"; );
@@ -602,7 +621,7 @@ private:
 		}
 
 		//save name
-		std::string extName = f_SIMD->getNameStr();
+		std::string extName = f_SIMD->getName();
 
 		//replace extern call with new function
 		//replaceExternalFunctionUses(f_SIMD, f_arr);
@@ -810,15 +829,13 @@ private:
 		switch (oldTypeID) {
 			case Type::FloatTyID :
 			{
-				Type* simdType = Packetizer::packetizeSIMDType(oldC->getType(), *mInfo);
-				assert (isa<VectorType>(simdType));
+				assert (isa<VectorType>(Packetizer::packetizeSIMDType(oldC->getType(), *mInfo)));
 				c = ConstantVector::get(ArrayRef<Constant*>(vecvec));
 				break;
 			}
 			case Type::IntegerTyID :
 			{
-				Type* simdType = Packetizer::packetizeSIMDType(oldC->getType(), *mInfo);
-				assert (isa<VectorType>(simdType));
+				assert (isa<VectorType>(Packetizer::packetizeSIMDType(oldC->getType(), *mInfo)));
 				c = ConstantVector::get(ArrayRef<Constant*>(vecvec));
 				break;
 			}
@@ -963,7 +980,7 @@ private:
 			assert (isa<BasicBlock>(tmp->second));
 			BasicBlock* newBB = cast<BasicBlock>(tmp->second);
 
-			DEBUG_PKT( outs() << "  block mapped: '" << oldBB->getNameStr() << "' -> '" << newBB->getNameStr() << "'\n"; );
+			DEBUG_PKT( outs() << "  block mapped: '" << oldBB->getName() << "' -> '" << newBB->getName() << "'\n"; );
 
 			//find corresponding values of mask in new function
 			MaskGraphNode* newNode = newMaskGraph.findMaskNode(newBB);
@@ -1057,11 +1074,9 @@ private:
 	void broadcastNonPacketizedValues(Function* f_SIMD) {
 		DEBUG_PKT( outs() << "\nreplicating non-packetized values...\n"; );
 
-        outs() << *f_SIMD;
-
 		// loop over all instructions, if they are packetized, check their operands
 		for (Function::iterator BB=f_SIMD->begin(), BBE=f_SIMD->end(); BB!=BBE; ++BB) {
-			DEBUG_PKT( outs() << "\n  testing block '" << BB->getNameStr() << "'...\n"; );
+			DEBUG_PKT( outs() << "\n  testing block '" << BB->getName() << "'...\n"; );
 			for (BasicBlock::iterator I=BB->begin(), IE=BB->end(); I!=IE; ++I) {
 
 				// TODO: are we sure extract/insert can not happen in scalar code???
@@ -1077,7 +1092,7 @@ private:
 				}
 #else
                 // Ignore code generated during splitting.
-				if (isa<ExtractElementInst>(I)) continue; 
+				if (isa<ExtractElementInst>(I)) continue;
 #endif
                 // Ignore code generated during splitting.
 				if (isa<InsertElementInst>(I)) continue;
@@ -1087,14 +1102,14 @@ private:
 				// ignore our own introduced pointer casts
 				if (isScalarToVectorPtrCast(I)) {
 					DEBUG_PKT( outs() << "    found pointer cast - ignored (introduced during vectorization)!\n"; );
-					assert (std::strstr(I->getNameStr().c_str(), "pktPtrCast") != 0 &&
+					assert (std::strstr(I->getName().str().c_str(), "pktPtrCast") != 0 &&
 							"bitcast has unexpected name - this means it was not introduced by ouselves!");
 					continue;
 				}
 
 				//handle calls differently (match against signature)
 				if (CallInst* call = dyn_cast<CallInst>(I)) {
-					//if (std::strstr(call->getCalledFunction()->getNameStr().c_str(), "llvm.dbg") != 0) continue;
+					//if (std::strstr(call->getCalledFunction()->getName().c_str(), "llvm.dbg") != 0) continue;
 					DEBUG_PKT( outs() << "    checking arguments of call: " << *call << "\n"; );
 					Function* callee = call->getCalledFunction();
 					if (!callee) {
@@ -1195,6 +1210,8 @@ private:
 		assert (oldType != Type::getVoidTy(*mInfo->mContext) && "must never call broadcastValue() on values of type void!");
 		assert (oldType != Type::getLabelTy(*mInfo->mContext) && "must never call broadcastValue() on values of type label!");
 		Type* newType = Packetizer::packetizeSIMDType(oldType, *mInfo);
+
+        //assert (analysisResults->isUniform(oldVal) && "must never broadcast VARYING value!");
 
 		const bool isConsecutive = analysisResults->isConsecutive(oldVal);
 
@@ -1388,7 +1405,7 @@ private:
 		FunctionType* fTy = FunctionType::get(returnType, argTypes, false); //isVarArg = false
 
 		//create the new function...
-		//std::string name = f_SIMD->getNameStr();
+		//std::string name = f_SIMD->getName();
 		//f_SIMD->setName(name + "_SIMD");
 		//Function* f_arr = Function::Create(fTy, f_SIMD->getLinkage(), name, info.module);
 		Function* f_arr = Function::Create(fTy, f_SIMD->getLinkage(), name, mInfo->mModule);
@@ -1401,7 +1418,7 @@ private:
 		//set names of arguments
 		Function::arg_iterator destI = f_arr->arg_begin();
 		for (Function::const_arg_iterator I = f_SIMD->arg_begin(), E = f_SIMD->arg_end(); I != E; ++I) {
-			destI->setName(I->getNameStr());
+			destI->setName(I->getName());
 			++destI;
 		}
 
@@ -1410,7 +1427,7 @@ private:
 		// insert content
 		//--------------------------------------------------------------------------
 		//insert 'info.packetizationSize / info.simdWidth' calls to f_SIMD
-		//DEBUG_PKT( outs() << "creating loop with " << loopIterations << " calls to " << f_SIMD->getNameStr() << "...\n"; );
+		//DEBUG_PKT( outs() << "creating loop with " << loopIterations << " calls to " << f_SIMD->getName() << "...\n"; );
 
 		BasicBlock* entryBB = BasicBlock::Create(*mInfo->mContext, "entry", f_arr, 0);
 		BasicBlock* loopBB = BasicBlock::Create(*mInfo->mContext, "loop", f_arr, 0);
@@ -2252,8 +2269,6 @@ private:
 											isa<LoadInst>(oldI) ||
 											isa<StoreInst>(oldI) ||
 											isa<GetElementPtrInst>(oldI) ||
-											//isa<CmpInst>(oldI) || // TODO: remove all special cases etc. and implement in handler directly
-											//isa<FCmpInst>(oldI) || // TODO: remove all special cases etc. and implement in handler directly
 											isa<SelectInst>(oldI);
 
 		// If any of the instruction's operands is a constant, packetize it.
@@ -2300,7 +2315,7 @@ private:
 		}
 
 
-		const std::string name = oldI->getNameStr();
+		const std::string name = oldI->getName();
 		Instruction* newI = NULL;
 
 		//the big nasty switch :P
@@ -2322,7 +2337,6 @@ private:
 			}
 			case Instruction::Switch: // fallthrough
 			case Instruction::Invoke: // fallthrough
-			case Instruction::Unwind: // fallthrough
 			case Instruction::Unreachable:
 			{
 				newI = NULL;
@@ -2611,15 +2625,8 @@ private:
 				ICmpInst* icmp = cast<ICmpInst>(oldI);
 
 				if (!mInfo->mUseAVX) {
-					// There is no pcmp for AVX yet, so we only create this for
-					// SSE.
-					BitCastInst* bcInst1 = new BitCastInst(icmp->getOperand(0), mInfo->mVectorTyIntSIMD, "icmp_cast1", icmp);
-					BitCastInst* bcInst2 = new BitCastInst(icmp->getOperand(1), mInfo->mVectorTyIntSIMD, "icmp_cast2", icmp);
-					addFalseValueInfo(bcInst1);
-					addFalseValueInfo(bcInst2);
-					icmp->replaceUsesOfWith(icmp->getOperand(0), bcInst1);
-					icmp->replaceUsesOfWith(icmp->getOperand(1), bcInst2);
-					newI = packetizeICmpInst(icmp);
+					// There is no pcmp for AVX yet, so we only create this for SSE.
+                    newI = packetizeICmpInst(icmp);
 					break;
 				}
 
@@ -2660,9 +2667,6 @@ private:
 				//cast back to packetized old type
 				// TODO: activate this again when we got rid of the SSE intrinsics. #10
 				//Type* newType = Packetizer::packetizeSIMDType(oldType, *mInfo);
-				Type* newType = mInfo->mVectorTyFloatSIMD;
-				newI = new BitCastInst(newI, newType, "icmp_res", oldI);
-				addValueInfo(newI, oldI);
 #endif
 				break;
 			}
@@ -2710,7 +2714,7 @@ private:
 				}
 
 				//now create new phi
-				PHINode* newPhi = PHINode::Create(newType, oldPhi->getNumIncomingValues(), oldPhi->getNameStr(), oldPhi);
+				PHINode* newPhi = PHINode::Create(newType, oldPhi->getNumIncomingValues(), oldPhi->getName(), oldPhi);
 				addValueInfo(newPhi, oldI);
 
 				for (unsigned i=0; i<oldPhi->getNumIncomingValues(); ++i) {
@@ -3652,7 +3656,7 @@ private:
 		);
 
 		//ignore calls to debug functions?
-		//if (std::strstr(f->getNameStr().c_str(), "llvm.dbg") != 0) return oldCall;
+		//if (std::strstr(f->getName().c_str(), "llvm.dbg") != 0) return oldCall;
 
 		BasicBlock* startBB = oldCall->getParent();
 
@@ -3664,7 +3668,7 @@ private:
 		assert (mask && "the mask associated to block with call is NULL!");
 		DEBUG_PKT( outs() << "    mask: " << *mask << "\n"; );
 
-		const std::string& fname = f->getNameStr();
+		const std::string& fname = f->getName();
 		DEBUG_PKT( outs() << "  name of called function: " << fname << "\n"; );
 
 
@@ -3703,8 +3707,8 @@ private:
 	CallInst* generateNativePacketFunctionCall(CallInst* oldCall, Function* vecF, Value* mask) {
 		assert (oldCall && vecF);
 		Function* scalarF = oldCall->getCalledFunction();
-		const std::string& fname = scalarF->getNameStr();
-		DEBUG_PKT( outs() << "  found packetized function: '" << vecF->getNameStr() << "' (replacing call to '" << fname << "')\n"; );
+		const std::string& fname = scalarF->getName();
+		DEBUG_PKT( outs() << "  found packetized function: '" << vecF->getName() << "' (replacing call to '" << fname << "')\n"; );
 		const int natFnMaskIndex = mInfo->mNativeMethods->getNativeFunctionMaskIndex(fname);
 		DEBUG_PKT( outs() << "  mask-argument index: " << natFnMaskIndex << "\n"; );
 
@@ -3798,7 +3802,7 @@ private:
 
 				//don't increment 'oldArg' in this case, we must not miss an argument
 
-				attrs.push_back(0); //save empty attribute
+				attrs.push_back(Attribute::None); //save empty attribute
 				continue;
 			}
 
@@ -3996,7 +4000,7 @@ private:
 
 		// split parent block and move all instructions after I into endBB
 		BasicBlock* parentBB = I->getParent();
-		BasicBlock* endBB = parentBB->splitBasicBlock(I, parentBB->getNameStr()+".casc.end");
+		BasicBlock* endBB = parentBB->splitBasicBlock(I, parentBB->getName()+".casc.end");
 		parentBB->getTerminator()->eraseFromParent(); // newly generated branch is not needed
 		Function* parentF = parentBB->getParent();
 
@@ -4138,7 +4142,7 @@ private:
 
 		// split parent block and move all instructions after I into endBB
 		BasicBlock* parentBB = I->getParent();
-		BasicBlock* endBB = parentBB->splitBasicBlock(I, parentBB->getNameStr()+".if.merge");
+		BasicBlock* endBB = parentBB->splitBasicBlock(I, parentBB->getName()+".if.merge");
 		parentBB->getTerminator()->eraseFromParent(); // newly generated branch is not needed
 		Function* parentF = parentBB->getParent();
 
@@ -4150,7 +4154,7 @@ private:
 										   analysisResults->hasFullyUniformExit(parentBB));
 
 		// create target-block
-		BasicBlock* targetBlock = BasicBlock::Create(*mInfo->mContext, parentBB->getNameStr()+".if.exec", parentF, endBB);
+		BasicBlock* targetBlock = BasicBlock::Create(*mInfo->mContext, parentBB->getName()+".if.exec", parentF, endBB);
 		analysisResults->addBlockInfo(targetBlock, true, true, true, true);
 
 		DEBUG_PKT( outs() << "done.\n    generating unconditional branch statement... "; );
@@ -4263,7 +4267,7 @@ private:
 
 		// split parent block and move all instructions after I into endBB
 		BasicBlock* parentBB = I->getParent();
-		BasicBlock* endBlock = parentBB->splitBasicBlock(I, parentBB->getNameStr()+".if.merge");
+		BasicBlock* endBlock = parentBB->splitBasicBlock(I, parentBB->getName()+".if.merge");
 		parentBB->getTerminator()->eraseFromParent(); // newly generated branch is not needed
 		Function* parentF = parentBB->getParent();
 		assert (parentF);
@@ -4276,11 +4280,11 @@ private:
 										   analysisResults->hasFullyUniformExit(parentBB));
 
 		// create then-block
-		BasicBlock* thenBlock = BasicBlock::Create(*mInfo->mContext, parentBB->getNameStr()+".then", parentF, endBlock);
+		BasicBlock* thenBlock = BasicBlock::Create(*mInfo->mContext, parentBB->getName()+".then", parentF, endBlock);
 		analysisResults->addBlockInfo(thenBlock, true, true, true, true);
 
 		// create else-block
-		BasicBlock* elseBlock = BasicBlock::Create(*mInfo->mContext, parentBB->getNameStr()+".else", parentF, endBlock);
+		BasicBlock* elseBlock = BasicBlock::Create(*mInfo->mContext, parentBB->getName()+".else", parentF, endBlock);
 		analysisResults->addBlockInfo(elseBlock, true, true, true, true);
 
 		DEBUG_PKT( outs() << "done.\n    generating conditional branch statement... "; );
@@ -4344,190 +4348,44 @@ private:
 		return;
 	}
 
-
-	Instruction* packetizeICmpInst(ICmpInst* icmp) {
+    Instruction* packetizeICmpInst(ICmpInst* icmp) {
 		assert (icmp->getOperand(0)->getType() == mInfo->mVectorTyIntSIMD);
 		assert (icmp->getOperand(1)->getType() == mInfo->mVectorTyIntSIMD);
 
-		Value* op0 = icmp->getOperand(0);
-		Value* op1 = icmp->getOperand(1);
+        ICmpInst* newICmp = new ICmpInst(icmp,
+                                         icmp->getPredicate(),
+                                         icmp->getOperand(0),
+                                         icmp->getOperand(1),
+                                         icmp->getName());
+        addValueInfo(newICmp, icmp);
 
-		Function* cmpps = NULL;
-		bool flip = false;
-		bool neg = false;
-		int predCode = -1;
+        // Cast back to <4 x float> because the rest of the code still expects this.
+        SExtInst* sext = new SExtInst(newICmp, mInfo->mVectorTyIntSIMD, "", icmp);
+        addValueInfo(sext, icmp);
+        BitCastInst* bc = new BitCastInst(sext, mInfo->mVectorTyFloatSIMD, "fcmp_res", icmp);
+        addValueInfo(bc, icmp);
 
-		switch (icmp->getPredicate()) {
-			case ICmpInst::ICMP_EQ:
-			{
-				cmpps = Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_sse2_pcmpeq_d);
-				//predCode = 0;
-				//cmpps = Intrinsic::getDeclaration(&info.module, Intrinsic::x86_sse_cmp_ps);
-				break;
-			}
-			case ICmpInst::ICMP_NE:
-			{
-				neg = true;
-				cmpps = Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_sse2_pcmpeq_d);
-				//predCode = 4;
-				//cmpps = Intrinsic::getDeclaration(&info.module, Intrinsic::x86_sse_cmp_ps);
-				break;
-			}
-			case ICmpInst::ICMP_UGT:
-			case ICmpInst::ICMP_SGT:
-			{
-				cmpps = Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_sse2_pcmpgt_d);
-				//predCode = 1;
-				//flip = true;
-				//cmpps = Intrinsic::getDeclaration(&info.module, Intrinsic::x86_sse_cmp_ps);
-				break;
-			}
-			case ICmpInst::ICMP_UGE:
-			case ICmpInst::ICMP_SGE:
-			{
-				predCode = 2;
-				flip = true;
-				cmpps = Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_sse_cmp_ps);
-				break;
-			}
-			case ICmpInst::ICMP_ULT:
-			case ICmpInst::ICMP_SLT:
-			{
-				predCode = 1;
-				cmpps = Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_sse_cmp_ps);
-				break;
-			}
-			case ICmpInst::ICMP_ULE:
-			case ICmpInst::ICMP_SLE:
-			{
-				flip = true;
-				cmpps = Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_sse2_pcmpgt_d);
-				//predCode = 2;
-				//cmpps = Intrinsic::getDeclaration(&info.module, Intrinsic::x86_sse_cmp_ps);
-				break;
-			}
-			default:
-			{
-				errs() << "ERROR: Invalid ICmp Predicate found: " << icmp->getPredicate() << "\n";
-				return NULL;
-			}
-		}
-
-		assert (cmpps);
-
-		if (predCode >= 0) {
-			// This means we require an fcmp -> also fp values
-			BitCastInst* bc0 = new BitCastInst(op0, mInfo->mVectorTyFloatSIMD, "", icmp);
-			BitCastInst* bc1 = new BitCastInst(op1, mInfo->mVectorTyFloatSIMD, "", icmp);
-			addValueInfo(bc0, op0);
-			addValueInfo(bc1, op1);
-			op0 = bc0;
-			op1 = bc1;
-		}
-
-		std::vector<Value* > params;
-		if (flip) {
-			params.push_back(op1);
-			params.push_back(op0);
-		} else {
-			params.push_back(op0);
-			params.push_back(op1);
-		}
-
-		if (predCode >= 0) {
-			Value* pred = ConstantInt::get(Type::getInt8Ty(*mInfo->mContext), predCode);
-			params.push_back(pred);
-		}
-
-		Instruction* cmpCall = createExternalIntrinsicCall(cmpps, params, icmp->getNameStr(), icmp);
-		addValueInfo(cmpCall, icmp);
-
-		if (predCode >= 0) {
-			cmpCall = new BitCastInst(cmpCall, mInfo->mVectorTyIntSIMD, "", icmp);
-			addValueInfo(cmpCall, icmp);
-		}
-
-		if (neg) {
-			cmpCall = BinaryOperator::CreateNot(cmpCall, "", icmp);
-			addValueInfo(cmpCall, icmp);
-		}
-
-		return cmpCall;
+        return bc;
 	}
-
 
 	Instruction* packetizeFCmpInst(FCmpInst* fcmp) {
 		assert (fcmp->getOperand(0)->getType() == mInfo->mVectorTyFloatSIMD);
 		assert (fcmp->getOperand(1)->getType() == mInfo->mVectorTyFloatSIMD);
 
-		Function *cmpps = mInfo->mUseAVX ? Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_avx_cmp_ps_256)
-			: Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_sse_cmp_ps);
-		bool flip = false;
-		unsigned predCode = 0;
+        FCmpInst* newFcmp = new FCmpInst(fcmp,
+                                         fcmp->getPredicate(),
+                                         fcmp->getOperand(0),
+                                         fcmp->getOperand(1),
+                                         fcmp->getName());
+        addValueInfo(newFcmp, fcmp);
 
-		// TODO: adjust this for AVX (unordered/ordered seem to exist)
-		switch (fcmp->getPredicate()) {
-			case FCmpInst::FCMP_FALSE:
-			{
-				//not available
-				errs() << "ERROR: FCMP_FALSE not available yet!\n";
-				return NULL;
-			}
-			case FCmpInst::FCMP_ORD:   predCode = 7; break; //IX86_BUILTIN_CMPORDPS
-			case FCmpInst::FCMP_UNO:   predCode = 3; break; //IX86_BUILTIN_CMPUNORDPS
-			case FCmpInst::FCMP_OEQ:   predCode = 0; break; //IX86_BUILTIN_CMPEQPS
-			case FCmpInst::FCMP_UEQ:   predCode = 0; break; //IX86_BUILTIN_CMPEQPS
-			case FCmpInst::FCMP_ONE:   predCode = 4; break; //IX86_BUILTIN_CMPNEQPS
-			case FCmpInst::FCMP_UNE:   predCode = 4; break; //IX86_BUILTIN_CMPNEQPS
-			case FCmpInst::FCMP_OLT:   predCode = 1; break; //IX86_BUILTIN_CMPLTPS
-			case FCmpInst::FCMP_ULT:   predCode = 1; break; //IX86_BUILTIN_CMPLTPS
-			case FCmpInst::FCMP_OGT:   predCode = 1; flip = true; break; //IX86_BUILTIN_CMPGTPS
-			case FCmpInst::FCMP_UGT:   predCode = 1; flip = true; break; //IX86_BUILTIN_CMPGTPS
-			case FCmpInst::FCMP_OLE:   predCode = 2; break; //IX86_BUILTIN_CMPLEPS
-			case FCmpInst::FCMP_ULE:   predCode = 2; break; //IX86_BUILTIN_CMPLEPS
-			case FCmpInst::FCMP_OGE:   predCode = 2; flip = true; break; //IX86_BUILTIN_CMPGEPS
-			case FCmpInst::FCMP_UGE:   predCode = 2; flip = true; break; //IX86_BUILTIN_CMPGEPS
-			case FCmpInst::FCMP_TRUE:
-			{
-				//not available
-				errs() << "ERROR: FCMP_TRUE not available yet!\n";
-				return NULL;
-			}
-			default:
-			{
-				errs() << "ERROR: Invalid FCmp Predicate found: " << fcmp->getPredicate() << "\n";
-				return NULL;
-			}
-		}
-		Value* pred = ConstantInt::get(Type::getInt8Ty(*mInfo->mContext), predCode);
+        // Cast back to <4 x float> because the rest of the code still expects this.
+        SExtInst* sext = new SExtInst(newFcmp, mInfo->mVectorTyIntSIMD, "", fcmp);
+        addValueInfo(sext, fcmp);
+        BitCastInst* bc = new BitCastInst(sext, mInfo->mVectorTyFloatSIMD, "fcmp_res", fcmp);
+        addValueInfo(bc, fcmp);
 
-		std::vector<Value* > params;
-		if (flip) {
-			params.push_back(fcmp->getOperand(1));
-			params.push_back(fcmp->getOperand(0));
-		} else {
-			params.push_back(fcmp->getOperand(0));
-			params.push_back(fcmp->getOperand(1));
-		}
-		params.push_back(pred);
-
-#ifdef PACKETIZER_USE_SCALAR_MASKS
-		// create comparison + movmask
-		CallInst* newCmp = createExternalIntrinsicCall(cmpps, params, fcmp->getNameStr(), fcmp);
-		addFalseValueInfo(newCmp);
-		assert (newCmp->getType() == mInfo->mVectorTyFloatSIMD);
-		Function* movmskps = mInfo->mUseAVX ? Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_avx_movmsk_ps_256)
-			: Intrinsic::getDeclaration(mInfo->mModule, Intrinsic::x86_sse_movmsk_ps);
-		params.clear();
-		params.push_back(newCmp);
-		CallInst* movmskI = createExternalIntrinsicCall(movmskps, params, "", fcmp);
-		addValueInfo(movmskI, fcmp);
-		return movmskI;
-#else
-		CallInst* cmpCall = createExternalIntrinsicCall(cmpps, params, fcmp->getNameStr(), fcmp);
-		addValueInfo(cmpCall, fcmp);
-		return cmpCall;
-#endif
+        return bc;
 	}
 
 	CmpInst::Predicate convertICmpToFCmpPredicate(CmpInst::Predicate predicate) {
@@ -4565,22 +4423,18 @@ private:
 	CallInst* createExternalIntrinsicCall(Function* f, std::vector<Value*> params, std::string name, Instruction* insertBefore) {
 		CallInst* callInst = CallInst::Create(f, ArrayRef<Value*>(params), name, insertBefore);
 		callInst->setCallingConv(CallingConv::C);
-		callInst->setTailCall(true); AttrListPtr ret_PAL;
-		{
-			SmallVector<AttributeWithIndex, 4> Attrs;
-			AttributeWithIndex PAWI;
-			//PAWI.Index = 65535; PAWI.Attrs = 0 | Attribute::NoUnwind | Attribute::ReadNone;
-			PAWI.Index = 4294967295U; PAWI.Attrs = 0 | Attribute::NoUnwind | Attribute::ReadNone;
-			Attrs.push_back(PAWI);
-			ret_PAL = AttrListPtr::get(Attrs.begin(), Attrs.end());
-		}
+		callInst->setTailCall(true);
+        Attributes Attrs;
+        Attrs |= Attribute::NoUnwind;
+        Attrs |= Attribute::ReadNone;
+        AttrListPtr ret_PAL = AttrListPtr().addAttr(~0u, Attrs);
 		callInst->setAttributes(ret_PAL);
 		return callInst;
 	}
 
 	bool packetizeBranches(Function* f) {
 		DEBUG_PKT( outs() << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; );
-		DEBUG_PKT( outs() << "packetizing conditional branches of function '" << f->getNameStr() << "'...\n"; );
+		DEBUG_PKT( outs() << "packetizing conditional branches of function '" << f->getName() << "'...\n"; );
 		DEBUG_PKT( outs() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n"; );
 
 		bool changed = false;
@@ -4589,7 +4443,7 @@ private:
 			assert (BB->getTerminator());
 			if (!isa<BranchInst>(BB->getTerminator())) continue;
 			BranchInst* brInst = cast<BranchInst>(BB->getTerminator());
-			DEBUG_PKT( outs() << "  adjusting block '" << BB->getNameStr() << "' with branch: " << *brInst << "\n"; );
+			DEBUG_PKT( outs() << "  adjusting block '" << BB->getName() << "' with branch: " << *brInst << "\n"; );
 
 			//ignore this block if its exit-branch is either unconditional or its condition is of scalar type
 			if (brInst->isUnconditional()) {

@@ -100,7 +100,7 @@ public:
 		maskGraph             = new MaskGraph(F, *loopInfo, F.getContext(), mVerbose);
 
 		DEBUG_PKT( outs() << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; );
-		DEBUG_PKT( outs() << "generating mask information for blocks of function " << F.getNameStr() << "...\n"; );
+		DEBUG_PKT( outs() << "generating mask information for blocks of function " << F.getName() << "...\n"; );
 		DEBUG_PKT( outs() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n"; );
 
 		try {
@@ -124,7 +124,7 @@ public:
 		}
 
 		DEBUG_PKT( outs() << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; );
-		DEBUG_PKT( outs() << "generating mask information for loops of function " << F.getNameStr() << "...\n"; );
+		DEBUG_PKT( outs() << "generating mask information for loops of function " << F.getName() << "...\n"; );
 		DEBUG_PKT( outs() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n"; );
 
 		// We have to be sure to create loop exit masks for every nested varying
@@ -201,14 +201,14 @@ public:
 	// NOTE: We must not use llvm's verification because we generate values that
 	//       break the SSA dominance property (masks that rely on CFG linearization).
 	bool verify(Function& F) {
-		DEBUG_PKT( outs() << "verifying generation of masks for function '" << F.getNameStr() << "'... "; );
+		DEBUG_PKT( outs() << "verifying generation of masks for function '" << F.getName() << "'... "; );
 		bool verified = true;
 		for (Function::iterator BB=F.begin(); BB!=F.end(); ++BB) {
 			if (const MaskGraphNode* node = maskGraph->findMaskNode(BB)) {
 				verified &= node->verify();
 			} else {
 				DEBUG_PKT( if (verified) outs() << "\n"; );
-				errs() << "ERROR: no masks generated for block '" << BB->getNameStr() << "'!\n";
+				errs() << "ERROR: no masks generated for block '" << BB->getName() << "'!\n";
 				verified = false;
 			}
 		}
@@ -250,7 +250,7 @@ private:
 		}
 
 		DEBUG_PKT( outs() << "\n  generating mask information for block '"
-				<< block->getNameStr() << "'... \n"; );
+				<< block->getName() << "'... \n"; );
 
 		//
 		// Create entry mask.
@@ -535,7 +535,7 @@ private:
 
 		DEBUG_PKT(
 			node->verify();
-			outs() << "  generated mask information for block '" << block->getNameStr() << "':\n";
+			outs() << "  generated mask information for block '" << block->getName() << "':\n";
 			node->print(outs());
 		);
 	}
@@ -570,7 +570,7 @@ private:
 			DEBUG_PKT(
 				outs() << "\nExiting blocks of nested loop "; (*SL)->print(outs(), (*SL)->getLoopDepth());
 				for (SmallVector<BasicBlock*, 4>::iterator it=exitingBlocksSL->begin(); it!=exitingBlocksSL->end(); ++it) {
-					outs() << "  * " << (*it)->getNameStr() << "\n";
+					outs() << "  * " << (*it)->getName() << "\n";
 				}
 			);
 			generateLoopExitMaskInfo(*SL, exitingBlocksSL);
@@ -589,7 +589,7 @@ private:
 		for (SmallVector<BasicBlock*, 4>::iterator it=exitingBlocks->begin(); it!=exitingBlocks->end(); ++it) {
 			BasicBlock* curExitBB = *it;
 
-			DEBUG_PKT( outs() << "  generating exit mask phi for exiting block '" << curExitBB->getNameStr() << "'...\n"; );
+			DEBUG_PKT( outs() << "  generating exit mask phi for exiting block '" << curExitBB->getName() << "'...\n"; );
 
 			const bool exitsMultipleLoops = maskGraph->exitsMultipleLoops(curExitBB);
 			DEBUG_PKT( if (exitsMultipleLoops) outs() << "    block has multi-loop exit!\n"; );
@@ -672,14 +672,14 @@ private:
 
 			const bool nodeVerified = it->second->verify();
 			if (!nodeVerified)
-				errs() << "ERROR: verification of node of block '" << it->first->getNameStr() << "' failed!\n";
+				errs() << "ERROR: verification of node of block '" << it->first->getName() << "' failed!\n";
 
 			//mask insertion was successfull if all masks are MaskValues with direct value
 			const bool maskVerified = (!it->second->hasPredecessors() || it->second->getEntryMask()->isMaskValue()) &&
 				(!it->second->hasExitEdge() || it->second->getExitMaskTrue()->isMaskValue()) &&
 				(!it->second->hasConditionalExit() || it->second->getExitMaskFalse()->isMaskValue());
 			if (!maskVerified)
-				errs() << "ERROR: block '" << it->first->getNameStr() << "' still has compound masks in graph!\n";
+				errs() << "ERROR: block '" << it->first->getName() << "' still has compound masks in graph!\n";
 
 			verified &= nodeVerified && maskVerified;
 		}

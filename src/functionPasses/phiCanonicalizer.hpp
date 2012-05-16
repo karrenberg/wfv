@@ -80,7 +80,7 @@ public:
 		loopInfo = &LI;
 
 		DEBUG_PKT( outs() << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; );
-		DEBUG_PKT( outs() << "canonicalizing non-loop-related phis of function '" << f.getNameStr() << "'...\n"; );
+		DEBUG_PKT( outs() << "canonicalizing non-loop-related phis of function '" << f.getName() << "'...\n"; );
 		DEBUG_PKT( outs() << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n"; );
 
 		canonicalizePhiNodes(&f);
@@ -134,7 +134,7 @@ public:
 			}
 			if (predNr > 2) {
 				if (verified) errs() << "\n";
-				errs() << "ERROR: block has more than 2 incoming edges after canonicalization: " << BB->getNameStr() << "\n";
+				errs() << "ERROR: block has more than 2 incoming edges after canonicalization: " << BB->getName() << "\n";
 				verified = false;
 			}
 
@@ -169,13 +169,13 @@ private:
 			for (Function::iterator BB=f->begin(), BBE=f->end(); BB!=BBE; ++BB) {
 				if (BB->getFirstNonPHI() == BB->begin()) continue; //no phi, no splitting :p
 				//if the block has less than 3 predecessors, we also do not need to do anything
-				//DEBUG_PHIC( outs() << "  found phi(s) in block '" << BB->getNameStr() << "'... \n"; )
+				//DEBUG_PHIC( outs() << "  found phi(s) in block '" << BB->getName() << "'... \n"; )
 				unsigned predNr = 0;
 				pred_iterator P = pred_begin(BB);
 				while (P != pred_end(BB)) { ++predNr; ++P; }
 				if (predNr <= 2) continue;
 
-				DEBUG_PKT( outs() << "canonicalizing non-loop-related phis of block '" << BB->getNameStr() << "'... \n"; );
+				DEBUG_PKT( outs() << "canonicalizing non-loop-related phis of block '" << BB->getName() << "'... \n"; );
 
 				//save loop of current block in order to avoid splitting the values from the latch
 				Loop* loop = loopInfo->getLoopFor(BB);
@@ -205,7 +205,7 @@ private:
 						//if (!ccdBlock) continue; //no common CD for these two incoming values
 						////NOTE: those are cases where other conversions have to be performed first
 						////TODO: actually, we do not necessarily need to incorporate CD at all
-						//DEBUG_PHIC( outs() << "        common control dependence found: " << ccdBlock->getNameStr() << "\n"; )
+						//DEBUG_PHIC( outs() << "        common control dependence found: " << ccdBlock->getName() << "\n"; )
 
 						BasicBlock* phiBB = NULL;
 						bool changed = false;
@@ -249,14 +249,14 @@ private:
 						BranchInst::Create(BB, phiBB);
 
 						DEBUG_PKT(
-							outs() << "  created new block '" << phiBB->getNameStr()
+							outs() << "  created new block '" << phiBB->getName()
 								<< "' that joins edges from blocks '"
-								<< predI->getNameStr() << "' and '" << predJ->getNameStr() << "'!\n";
+								<< predI->getName() << "' and '" << predJ->getName() << "'!\n";
 						);
 					}
 				}
 
-				DEBUG_PKT( outs() << "canonicalization of non-loop-related phis of block '" << BB->getNameStr() << "' finished.\n"; );
+				DEBUG_PKT( outs() << "canonicalization of non-loop-related phis of block '" << BB->getName() << "' finished.\n"; );
 			}
 		}
 	}
@@ -281,7 +281,7 @@ private:
 
 				fixPointNotReached = true;
 
-				DEBUG_PKT( outs() << "canonicalizing incoming edges of block '" << BB->getNameStr() << "'... \n"; );
+				DEBUG_PKT( outs() << "canonicalizing incoming edges of block '" << BB->getName() << "'... \n"; );
 
 				ListNode* bestBlockPair = sortIncomingEdges(BB);
 
@@ -291,8 +291,8 @@ private:
 				delete bestBlockPair;
 
 				//create new block that joins the two incoming edges from predI and predJ
-				BasicBlock* joinBB = BasicBlock::Create(getGlobalContext(), "bb_phi." + predI->getNameStr() + "." + predJ->getNameStr(), BB->getParent(), BB);
-				DEBUG_PKT( outs() << "      generated new block: " << joinBB->getNameStr() << "\n"; );
+				BasicBlock* joinBB = BasicBlock::Create(getGlobalContext(), "bb_phi." + predI->getName() + "." + predJ->getName(), BB->getParent(), BB);
+				DEBUG_PKT( outs() << "      generated new block: " << joinBB->getName() << "\n"; );
 				++NewBlocksCounter;
 				//update dominator tree
 				idom->addNewBlock(joinBB, domBB);
@@ -334,12 +334,12 @@ private:
 				BranchInst::Create(BB, joinBB);
 
 				DEBUG_PKT(
-					outs() << "  created new block '" << joinBB->getNameStr()
+					outs() << "  created new block '" << joinBB->getName()
 						<< "' that joins edges from blocks '"
-						<< predI->getNameStr() << "' and '" << predJ->getNameStr() << "'!\n";
+						<< predI->getName() << "' and '" << predJ->getName() << "'!\n";
 				);
 
-				DEBUG_PKT( outs() << "canonicalization of non-loop-related phis of block '" << BB->getNameStr() << "' finished.\n"; );
+				DEBUG_PKT( outs() << "canonicalization of non-loop-related phis of block '" << BB->getName() << "' finished.\n"; );
 			}
 		}
 	}
@@ -365,7 +365,7 @@ private:
 				if (PI == PJ) continue;
 				BasicBlock* domBB = idom->findNearestCommonDominator(*PI, *PJ);
 				assert (domBB && "blocks must have a common dominator!");
-				//outs() << "    common dominator: " << domBB->getNameStr() << "\n";
+				//outs() << "    common dominator: " << domBB->getName() << "\n";
 				unsigned lengthI = recGetMaxPathLength(*PI, domBB, 0);
 				unsigned lengthJ = recGetMaxPathLength(*PJ, domBB, 0);
 				list.push_back(new ListNode(lengthI > lengthJ ? lengthI : lengthJ, *PI, *PJ, domBB));
@@ -386,10 +386,10 @@ private:
 			outs() << "  sorted list of path lengths of incoming edges to common dominator:\n";
 			for (std::list<ListNode*>::const_iterator it=list.begin(), E=list.end(); it!=E; ++it) {
 				outs() << "   * " << (*it)->maxPathLength << " | "
-					<< (*it)->predI->getNameStr() << " / " << (*it)->predJ->getNameStr() << " (" << (*it)->domBB->getNameStr() << ")\n";
+					<< (*it)->predI->getName() << " / " << (*it)->predJ->getName() << " (" << (*it)->domBB->getName() << ")\n";
 			}
 			outs() << "  minimal element: " << min->maxPathLength << " | "
-				<< min->predI->getNameStr() << " / " << min->predJ->getNameStr() << " (" << min->domBB->getNameStr() << ")\n";
+				<< min->predI->getName() << " / " << min->predJ->getName() << " (" << min->domBB->getName() << ")\n";
 		);
 
 		// cleanup

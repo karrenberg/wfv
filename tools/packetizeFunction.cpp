@@ -268,7 +268,7 @@ int main(int argc, char** argv) {
 	PKTAddFunction(packetizer, functionName.c_str(), targetFunctionName.c_str());
 	PKTRun(packetizer);
 #else
-	Packetizer::Packetizer packetizer(*mod, simdWidth, packetizationSize, use_sse41, use_avx, verbose);
+	Packetizer::Packetizer packetizer(*mod, mod->getContext(), simdWidth, packetizationSize, use_sse41, use_avx, verbose);
 	packetizer.addFunction(functionName, targetFunctionName);
 	packetizer.run();
 #endif

@@ -128,9 +128,9 @@ public:
 		BasicBlock* falsePathEndBlock;
 
 		void print(raw_ostream& o) {
-			o << "  " << source->getNameStr() << " -> ("
-				<< successorTrue->getNameStr() << ", " << successorFalse->getNameStr()
-				<< ") -> " << joinBlock->getNameStr() << "\n";
+			o << "  " << source->getName() << " -> ("
+				<< successorTrue->getName() << ", " << successorFalse->getName()
+				<< ") -> " << joinBlock->getName() << "\n";
 		}
 	};
 	typedef std::map<BasicBlock*, BranchMapNode*> BranchMapType;

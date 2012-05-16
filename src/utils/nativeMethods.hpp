@@ -14,6 +14,11 @@
 
 #define USE_NATIVE_FUNCTIONS
 
+#include <llvm/Bitcode/ReaderWriter.h>
+#include <llvm/Support/MemoryBuffer.h>
+#include <llvm/Support/system_error.h>
+#include <llvm/Linker.h>
+
 #include "nativeSSEMathFunctions.hpp"
 #include "nativeAVXMathFunctions.hpp"
 
@@ -118,13 +123,47 @@ private:
         return getNativeFunction(scalarName, mod, 4);
     }
 
+    llvm::Module* loadWfvLib(llvm::Module& mod) const {
+        // compute path
+        std::string wfvLibPath;
+        wfvLibPath = getenv("WFV_INSTALL_DIR");
+        wfvLibPath += "/lib/wfv/wfv.bc";
+
+        // load
+        llvm::OwningPtr<llvm::MemoryBuffer> mb;
+        llvm::MemoryBuffer::getFile(wfvLibPath.c_str(), mb);
+        llvm::Module* wfvLib = llvm::ParseBitcodeFile(
+            mb.get(),
+            mod.getContext()
+        );
+
+        return wfvLib;
+    }
+
+    llvm::Function* getFunctionFromLib(llvm::Module& mod, const char* fnName) const {
+        llvm::Function* fn = mod.getFunction(fnName);
+
+        // link the lib module if the function has not been found
+        if (fn == NULL) {
+            // link in wfv lib module
+            llvm::Module* wfvLib = loadWfvLib(mod);
+            llvm::Linker linker("wfv prog", &mod);
+            linker.LinkInModule(wfvLib);
+            linker.releaseModule(); // or the linker deletes the module
+            fn = mod.getFunction(fnName);
+        }
+
+        assert(fn != NULL && "Function not found in WFV library");
+        return fn;
+    }
+
 public:
     NativeMethods(const bool use_sse41_flag,
                   const bool use_avx_flag,
                   const bool verbose_flag=false)
 			: mUseSSE41(use_sse41_flag), mUseAVX(use_avx_flag), mVerbose(verbose_flag)
     {}
-	
+
     ~NativeMethods()
     {
         mNativeFunctions.clear();
@@ -137,7 +176,7 @@ public:
                       const int maskIndex)
     {
 		assert (nativeF);
-		addNativeFunction(scalarF->getName(), nativeF->getNameStr(), maskIndex);
+		addNativeFunction(scalarF->getName(), nativeF->getName(), maskIndex);
 	}
 
 
@@ -196,10 +235,10 @@ public:
                  const Packetizer::PacketizerInfo& info) const
     {
         assert (index < scalarFn->getArgumentList().size());
-        const Function* nativeFn = getNativeFunction(scalarFn->getNameStr(),
+        const Function* nativeFn = getNativeFunction(scalarFn->getName(),
                                                      scalarFn->getParent());
 
-        const int maskIndex = getNativeFunctionMaskIndex(scalarFn->getNameStr());
+        const int maskIndex = getNativeFunctionMaskIndex(scalarFn->getName());
 
         Function::const_arg_iterator A  = scalarFn->arg_begin();
         Function::const_arg_iterator NA = nativeFn->arg_begin();
@@ -216,7 +255,7 @@ public:
     {
 		assert (!"not implemented!");
         //this can have really bad effects on performance!
-//        const std::string& scalarName = f->getNameStr();
+//        const std::string& scalarName = f->getName();
 //        if (scalarName == "") return false;
 //        if (scalarName == "tanf" ||
 //                scalarName == "atanf" ||

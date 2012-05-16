@@ -7,7 +7,7 @@
 # NOTE: If clang++ fails with "fatal error: 'bits/c++config.h' file not found",
 #       try including /usr/include/c++/4.5/x86_64-linux-gnu/ or sth similar.
 #       This happened on Ubuntu 11.04 64bit (gcc 4.5) as well as Windows 7 32bit (cygwin).
-#       At least for Ubuntu this include solved the issue :).
+#       At least for Ubuntu this include once solved the issue :).
 
 # COMMAND LINE VARIABLES WITH DEFAULT VALUES
 
@@ -107,8 +107,13 @@ endif
 # LIBRARIES
 #
 
-all: $(TARGET)
+all: $(TARGET) lib/wfv/wfv.bc
+linux: all wfvTestSuite wfvUnitTests packetizeFunction
+win: all wfvTestSuite.exe wfvUnitTests.exe packetizeFunction.exe
 
+lib/wfv/wfv.bc: wfvlibsrc/dummy.ll
+	mkdir -p lib/wfv
+	llvm-link -o $@ $^
 
 ###############
 ### WINDOWS ###
@@ -196,7 +201,7 @@ lib/libWFV.so: obj/wfv_dynamic.o
 
 #
 # TEST SUITE (requires clang)
-# TODO: adjust linking of dynamic/shared lib, PACKETIZER_STATIC_LIBS etc. 
+# TODO: adjust linking of dynamic/shared lib, PACKETIZER_STATIC_LIBS etc.
 #
 
 # WINDOWS
@@ -205,16 +210,16 @@ wfvTestSuite.exe: lib/WFV.lib
 
 # UNIX
 wfvTestSuite: lib/libWFV.a tools/wfvTestSuite.cpp test/wfvTests.bc test/wfvTests2.bc test/wfvTests3.bc test/wfvTestsAVX.bc
-	$(CXX) -o $@ tools/wfvTestSuite.cpp $(UNIXFLAGS) -I src -I include -I $(LLVMINCLUDEDIR) -L$(LLVMLIBDIR) -Llib  `$(LLVM_INSTALL_DIR)/bin/llvm-config --cxxflags --ldflags --libs all` lib/libWFV.a -ldl
+	$(CXX) -o $@ tools/wfvTestSuite.cpp $(UNIXFLAGS) -I src -I include -I $(LLVMINCLUDEDIR) -L$(LLVMLIBDIR) -Llib -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS `$(LLVM_INSTALL_DIR)/bin/llvm-config --ldflags` -lLLVM-3.2svn lib/libWFV.a
 
 test/wfvTests.bc: test/wfvTests.cpp
-	$(LLVM_INSTALL_DIR)/bin/clang++ -emit-llvm -c -Wall -msse4.1 -I/usr/include/c++/4.5/x86_64-linux-gnu/ -o $@ $<
+	$(LLVM_INSTALL_DIR)/bin/clang++ -emit-llvm -c -Wall -msse4.1 -o $@ $<
 test/wfvTests2.bc: test/wfvTests2.cpp
-	$(LLVM_INSTALL_DIR)/bin/clang++ -emit-llvm -c -Wall -msse4.1 -I/usr/include/c++/4.5/x86_64-linux-gnu/ -o $@ $<
+	$(LLVM_INSTALL_DIR)/bin/clang++ -emit-llvm -c -Wall -msse4.1 -o $@ $<
 test/wfvTests3.bc: test/wfvTests3.cpp
-	$(LLVM_INSTALL_DIR)/bin/clang++ -emit-llvm -c -Wall -msse4.1 -I/usr/include/c++/4.5/x86_64-linux-gnu/ -o $@ $<
+	$(LLVM_INSTALL_DIR)/bin/clang++ -emit-llvm -c -Wall -msse4.1 -o $@ $<
 test/wfvTestsAVX.bc: test/wfvTestsAVX.cpp
-	$(LLVM_INSTALL_DIR)/bin/clang++ -emit-llvm -c -Wall -mavx -I/usr/include/c++/4.5/x86_64-linux-gnu/ -o $@ $<
+	$(LLVM_INSTALL_DIR)/bin/clang++ -emit-llvm -c -Wall -mavx -o $@ $<
 
 
 #
@@ -234,11 +239,11 @@ unittests:
 	$(LLVM_INSTALL_DIR)/bin/llvm-as -o test/unittests/api/test_api_valid.bc test/unittests/api/test_api_valid.ll
 
 wfvUnitTests: lib/libWFV.a lib/libgtest test/wfvUnitTests.cpp unittests
-	$(CXX) -o $@ test/wfvUnitTests.cpp $(UNIXFLAGS) -I src -I include -I $(LLVMINCLUDEDIR) -I test/gtest/include -L$(LLVMLIBDIR) -Llib -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS `$(LLVM_INSTALL_DIR)/bin/llvm-config --ldflags --libs all` -lgtest lib/libWFV.a
+	$(CXX) -o $@ test/wfvUnitTests.cpp $(UNIXFLAGS) -I src -I include -I $(LLVMINCLUDEDIR) -I test/gtest/include -L$(LLVMLIBDIR) -Llib -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS `$(LLVM_INSTALL_DIR)/bin/llvm-config --ldflags` -lLLVM-3.2svn -lgtest lib/libWFV.a -lpthread
 
 #
 # COMMAND-LINE TOOL
-# TODO: adjust linking of dynamic/shared lib, PACKETIZER_STATIC_LIBS etc. 
+# TODO: adjust linking of dynamic/shared lib, PACKETIZER_STATIC_LIBS etc.
 #
 
 # WINDOWS
@@ -247,7 +252,7 @@ packetizeFunction.exe: lib/WFV.lib tools/packetizeFunction.cpp
 
 # UNIX
 packetizeFunction: lib/libWFV.a tools/packetizeFunction.cpp
-	$(CXX) -o $@ tools/packetizeFunction.cpp $(UNIXFLAGS) -I include -I src -I $(LLVMINCLUDEDIR) -L$(LLVMLIBDIR) -Llib  `$(LLVM_INSTALL_DIR)/bin/llvm-config --cxxflags --ldflags --libs all` lib/libWFV.a
+	$(CXX) -o $@ tools/packetizeFunction.cpp $(UNIXFLAGS) -I include -I src -I $(LLVMINCLUDEDIR) -L$(LLVMLIBDIR) -Llib -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS `$(LLVM_INSTALL_DIR)/bin/llvm-config --ldflags` -lLLVM-3.2svn lib/libWFV.a
 
 
 clean:

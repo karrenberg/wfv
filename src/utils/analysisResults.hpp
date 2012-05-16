@@ -750,9 +750,14 @@ public:
 		}
 		vi->uniformInfo = ui;
 	}
-	void setIndexInfo(const Value* value, IndexInfo ii) {
+	bool setIndexInfo(const Value* value, IndexInfo ii) {
 		assert (value);
 		ValueInfo* vi = getValueInfo(value);
+
+        if (vi->indexInfo == ii)
+        {
+            return false;
+        }
 
 		// prevent overwriting with weaker information
 		IndexInfo oldii = vi->indexInfo;
@@ -762,7 +767,7 @@ public:
 				 oldii == INDEX_RANDOM))
 		{
 			assert (false && "attempting to overwrite INDEX_SHUFFLE, INDEX_STRIDED, or INDEX_RANDOM with INDEX_CONSECUTIVE!");
-			return;
+			return false;
 		}
 
 		if (ii == INDEX_SAME &&
@@ -771,34 +776,50 @@ public:
 				oldii != INDEX_SAME)
 		{
 			assert (false && "attempting to overwrite INDEX_SHUFFLE, INDEX_STRIDED, INDEX_RANDOM, or INDEX_CONSECUTIVE with INDEX_SAME!");
-			return;
+			return false;
 		}
 
 		if (isUniform(value) && ii != INDEX_SAME) {
 			errs() << "attempting to mark UNIFORM value as "
 					<< getIndexInfoString(ii) << ": " << *value << "\n";
 			assert (false && "attempting to mark UNIFORM value as something else than INDEX_SAME!");
-			return;
+			return false;
 		}
 
+        // This is very suspicious...
 		if (!isUniform(value) && ii == INDEX_SAME) {
+#if 0
 			DEBUG_PKT( errs() << "WARNING: attempted to mark VARYING value as "
 					<< "INDEX_SAME: " << *value << " - marking as INDEX_CONSECUTIVE "
 					<< "(possibly introducing some imprecision)\n"; );
 			vi->indexInfo = INDEX_CONSECUTIVE;
+#else
+			DEBUG_PKT( errs() << "WARNING: attempted to mark VARYING value as "
+					<< "INDEX_SAME: " << *value << " - marking as INDEX_RANDOM "
+					<< "(possibly introducing some imprecision)\n"; );
+			vi->indexInfo = INDEX_RANDOM;
+#endif
 		} else {
 			vi->indexInfo = ii;
 		}
+
+        return true;
 	}
-	void setAlignmentInfo(const Value* value, AlignmentInfo ai) {
+	bool setAlignmentInfo(const Value* value, AlignmentInfo ai) {
 		assert (value);
 		ValueInfo* vi = getValueInfo(value);
 
+        if (vi->alignmentInfo == ai)
+        {
+            return false;
+        }
+
 		if (ai == ALIGN_TRUE && vi->alignmentInfo == ALIGN_FALSE) {
 			assert (false && "attempting to overwrite ALIGN_FALSE with ALIGN_TRUE!");
-			return;
+			return false;
 		}
 		vi->alignmentInfo = ai;
+        return true;
 	}
 	void setSplitInfo(const Value* value, SplitInfo si, bool forceUpdate=false) {
 		assert (value);
@@ -899,7 +920,7 @@ public:
 		return true;
 	}
 
-	
+
 
 	inline bool hasBlockInfo(BasicBlock* block) const {
 		assert (block);

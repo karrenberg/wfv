@@ -78,7 +78,7 @@ public:
 
 		if (returns.size() == 1) {
 			DEBUG_PKT( outs() << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; );
-			DEBUG_PKT( outs() << "only one return-statement found in function '" << f.getNameStr() << "'.\n"; );
+			DEBUG_PKT( outs() << "only one return-statement found in function '" << f.getName() << "'.\n"; );
 			DEBUG_PKT( outs() << "return-unification finished!\n"; );
 
 			assert (verify(f) && "verification of return unification failed!");
@@ -168,7 +168,7 @@ public:
 		for (Function::const_iterator BB=f.begin(); BB!=f.end(); ++BB) {
 			if (!BB->getTerminator()) {
 				DEBUG_PKT( if (verified) outs() << "failed!\n"; );
-				errs() << "ERROR: block '" << BB->getNameStr() << "' has no terminator!\n";
+				errs() << "ERROR: block '" << BB->getName() << "' has no terminator!\n";
 				verified = false;
 				continue;
 			}
